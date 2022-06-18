@@ -10,9 +10,8 @@ NES_BG_COLOR = 0x0f  # NES background color (black)
 
 # NES master palette
 # key=index, value=(red, green, blue); source: FCEUX (fceux.pal)
-# colors omitted (hexadecimal): 0d-0e, 1d-20, 2e-2f, 3e-3f
+# colors omitted (hexadecimal): 00, 0d-0e, 10, 1d-20, 2d-2f, 3d-3f
 NES_PALETTE = {
-    0x00: (0x74, 0x74, 0x74),
     0x01: (0x24, 0x18, 0x8c),
     0x02: (0x00, 0x00, 0xa8),
     0x03: (0x44, 0x00, 0x9c),
@@ -26,7 +25,6 @@ NES_PALETTE = {
     0x0b: (0x00, 0x3c, 0x14),
     0x0c: (0x18, 0x3c, 0x5c),
     0x0f: (0x00, 0x00, 0x00),
-    0x10: (0xbc, 0xbc, 0xbc),
     0x11: (0x00, 0x70, 0xec),
     0x12: (0x20, 0x38, 0xec),
     0x13: (0x80, 0x00, 0xf0),
@@ -51,7 +49,6 @@ NES_PALETTE = {
     0x2a: (0x4c, 0xdc, 0x48),
     0x2b: (0x58, 0xf8, 0x98),
     0x2c: (0x00, 0xe8, 0xd8),
-    0x2d: (0x78, 0x78, 0x78),
     0x30: (0xfc, 0xfc, 0xfc),
     0x31: (0xa8, 0xe4, 0xfc),
     0x32: (0xc4, 0xd4, 0xfc),
@@ -65,7 +62,6 @@ NES_PALETTE = {
     0x3a: (0xa8, 0xf0, 0xbc),
     0x3b: (0xb0, 0xfc, 0xcc),
     0x3c: (0x9c, 0xfc, 0xf0),
-    0x3d: (0xc4, 0xc4, 0xc4),
 }
 
 def get_filenames():
@@ -78,7 +74,7 @@ def get_filenames():
 
 def color_diff(rgb1, rgb2):
     # get difference of two colors (0-768)
-    return 2 * abs(rgb1[0] - rgb2[0]) + 3 * abs(rgb1[1] - rgb2[1]) + abs(rgb1[2] - rgb2[2])
+    return abs(rgb1[0] - rgb2[0]) + abs(rgb1[1] - rgb2[1]) + abs(rgb1[2] - rgb2[2])
 
 def closest_nes_color(rgb):
     # get best match (NES color number) for color (red, green, blue)
@@ -92,14 +88,25 @@ def closest_nes_color(rgb):
     return bestColor
 
 def get_color_sets(image):
-    # for each attribute block (16*16 px), generate set of color indexes, e.g. {0, 2}
+    # for each attribute block (16*16 px), generate set of PNG color indexes, e.g. {0, 2}
 
     for ay in range(14):
         for ax in range(16):
             indexes = set()
             for py in range(16):
                 for px in range(16):
-                    indexes.add(image.getpixel((ax*16+px, ay*16+py)))
+                    indexes.add(image.getpixel((ax * 16 + px, ay * 16 + py)))
+            yield indexes
+
+def get_tiles(image):
+    # for each tile (8*8 px), generate PNG indexes of all pixels, e.g. [0, 2, ...]
+
+    for ty in range(28):
+        for tx in range(32):
+            indexes = []
+            for py in range(8):
+                for px in range(8):
+                    indexes.append(image.getpixel((tx * 8 + px, ty * 8 + py)))
             yield indexes
 
 def create_subpalettes(colorSets):
@@ -130,9 +137,18 @@ def get_attr_data(image, subpals, bgIndex):
         for colorSet in get_color_sets(image)
     )
 
-def process_flag(handle):
-    handle.seek(0)
-    image = Image.open(handle)
+def tile_slice_encode(pixels):
+    # encode 8*1 pixels of one tile of CHR data
+    # pixels: eight 2-bit ints
+    # return: (low_bitplane, high_bitplane); both 0x00-0xff
+
+    loByte = hiByte = 0
+    for pixel in pixels:
+        loByte = (loByte << 1) | (pixel &  1)
+        hiByte = (hiByte << 1) | (pixel >> 1)
+    return (loByte, hiByte)
+
+def process_flag(image):
     if image.width != 256 or image.height != 224 or image.mode != "P":
         sys.exit("Image must be 256*224 pixels and have a palette.")
 
@@ -168,14 +184,41 @@ def process_flag(handle):
         [NES_BG_COLOR] + sorted(palette[c] for c in sp) + (3 - len(sp)) * [NES_BG_COLOR]
         for sp in subpals
     ]
-    print("Subpalettes as NES colors (incl. bg color, padded):")
-    print(" ", "; ".join(",".join(f"${c:02x}" for c in sp) for sp in subpalsNes))
+    print("Subpalettes as NES colors (padded):")
+    print(" ", " ".join("".join(f"{c:02x}" for c in sp) for sp in subpalsNes))
 
     attrData = list(get_attr_data(image, subpals, bgIndex))
-    print("Attribute table data:")
-    print(" ", attrData)
+    print("Attribute table data in NES format:")
+    print(bytes(
+        attrData[i*4]  # TODO: fix
+        for i in range(8 * 7)
+    ).hex())
 
-    # TODO: name table data, pattern table data
+    # get pattern & name table data
+    uniqueTiles = []  # each tile is 64 subpalette indexes
+    ntData      = []  # name table data
+    for (i, tile) in enumerate(get_tiles(image)):
+        # get subpalette for this tile (bits: tile = YYYYyXXXXx, attr = YYYYXXXX)
+        subpal = attrData[i >> 2 & 0xf0 | i >> 1 & 0x0f]
+        # convert PNG indexes to subpalette indexes
+        tile = [(0 if i == bgIndex else subpals[subpal].index(i) + 1) for i in tile]
+        # add to pattern & name table data
+        if tile not in uniqueTiles:
+            uniqueTiles.append(tile)
+        ntData.append(uniqueTiles.index(tile))
+    print("Unique tiles:", len(uniqueTiles))
+    print("Name table data in NES format:")
+    print(bytes(ntData).hex())
+
+    # convert pattern table data into NES format
+    ptData = bytearray(len(uniqueTiles) * 16)
+    for (i, tile) in enumerate(uniqueTiles):
+        for y in range(8):
+            (ptData[i*16+y%8], ptData[i*16+y%8+8]) \
+            = tile_slice_encode(tile[y*8+x] for x in range(8))
+    ptData = bytes(ptData)
+    print("Pattern table data:")
+    print(ptData.hex())
 
 def main():
     for file_ in sorted(get_filenames()):
@@ -184,7 +227,9 @@ def main():
 
         try:
             with open(path, "rb") as handle:
-                process_flag(handle)
+                handle.seek(0)
+                image = Image.open(handle)
+                process_flag(image)
         except OSError:
             sys.exit("Error reading file.")
 
