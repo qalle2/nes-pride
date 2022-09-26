@@ -157,7 +157,10 @@ def tile_slice_encode(pixels):
         hiByte = (hiByte << 1) | (pixel >> 1)
     return (loByte, hiByte)
 
-def process_flag(image):
+def process_flag(image, mode=0, uniqueTiles=None):
+    # If mode=0: just gather set of unique tiles (ignore uniqueTiles arg).
+    # If mode=1: use predetermined list uniqueTiles.
+
     if image.width != 256 or image.height != 224 or image.mode != "P":
         sys.exit("Image must be 256*224 pixels and have a palette.")
 
@@ -187,71 +190,102 @@ def process_flag(image):
         + sorted(palette[c] for c in sp) + (3 - len(sp)) * [NES_BG_COLOR]
         for sp in subpals
     ]
-    print("Subpalettes:")
-    print(
-        16 * " " + "hex",
-        " ".join("".join(f"{c:02x}" for c in sp) for sp in subpalsNes)
-    )
+    if mode == 1:
+        print("Subpalettes:")
+        print(
+            16 * " " + "hex",
+            " ".join("".join(f"{c:02x}" for c in sp) for sp in subpalsNes)
+        )
 
     attrData = list(get_attr_data(image, subpals, bgIndex))
-    print("Attribute table data:")
-    atBytes = bytearray()
-    for y in range(7):
-        for x in range(8):
-            s = y * 32 + x * 2  # source index
-            atBytes.append(
-                attrData[s]
-                | (attrData[s+1] << 2)
-                | (attrData[s+16] << 4)
-                | (attrData[s+17] << 6)
-            )
-    for i in range(0, len(atBytes), 8):
-        print(16 * " " + "hex", atBytes[i:i+8].hex())
+    if mode == 1:
+        print("Attribute table data:")
+        atBytes = bytearray()
+        for y in range(7):
+            for x in range(8):
+                s = y * 32 + x * 2  # source index
+                atBytes.append(
+                    attrData[s]
+                    | (attrData[s+1] << 2)
+                    | (attrData[s+16] << 4)
+                    | (attrData[s+17] << 6)
+                )
+        for i in range(0, len(atBytes), 8):
+            print(16 * " " + "hex", atBytes[i:i+8].hex())
 
-    # get pattern & name table data
-    uniqueTiles = []  # each tile is 64 subpalette indexes
-    ntData      = []  # name table data
-    for (i, tile) in enumerate(get_tiles(image)):
-        # get subpalette for this tile (bits: tile YYYYyXXXXx, attr YYYYXXXX)
-        subpal = attrData[(i >> 2) & 0b11110000 | (i >> 1) & 0b1111]
-        # convert PNG indexes to subpalette indexes
-        tile = [subpalsNes[subpal].index(palette[i]) for i in tile]
-        # add to pattern & name table data
-        if tile not in uniqueTiles:
-            uniqueTiles.append(tile)
-        ntData.append(uniqueTiles.index(tile))
+    if mode == 0:
+        # gather set of unique tiles needed and exit
+        uniqueTiles = set()  # each tile is 64 subpalette indexes
+        for (i, tile) in enumerate(get_tiles(image)):
+            # get subpalette for this tile
+            # (bits: tile YYYYyXXXXx, attr YYYYXXXX)
+            subpal = attrData[(i >> 2) & 0b11110000 | (i >> 1) & 0b1111]
+            # convert PNG indexes to subpalette indexes
+            tile = [subpalsNes[subpal].index(palette[i]) for i in tile]
+            # add to set
+            uniqueTiles.add(tuple(tile))
+        return uniqueTiles
+    else:
+        # get pattern & name table data using predetermined list of unique
+        # tiles
+        ntData = []
+        for (i, tile) in enumerate(get_tiles(image)):
+            # get subpalette for this tile
+            # (bits: tile YYYYyXXXXx, attr YYYYXXXX)
+            subpal = attrData[(i >> 2) & 0b11110000 | (i >> 1) & 0b1111]
+            # convert PNG indexes to subpalette indexes
+            tile = tuple(subpalsNes[subpal].index(palette[i]) for i in tile)
+            # add to name table data
+            ntData.append(uniqueTiles.index(tile))
+
     print("Name table data:")
     for i in range(0, len(ntData), 32):
         print(16 * " " + "hex", bytes(ntData[i:i+32]).hex())
 
-    # convert pattern table data into NES format
-    ptData = bytearray(len(uniqueTiles) * 16)
-    for (i, tile) in enumerate(uniqueTiles):
+def print_pt_data(tiles):
+    # convert unique tiles into NES format; each tile is 64 ints
+    ptData = bytearray(len(tiles) * 16)
+    for (i, tile) in enumerate(tiles):
         for y in range(8):
             (ptData[i*16+y%8], ptData[i*16+y%8+8]) \
             = tile_slice_encode(tile[y*8+x] for x in range(8))
-    ptData = bytes(ptData)
-    print("Pattern table data:")
     for i in range(0, len(ptData), 16):
-        print(
-            16 * " " + "hex",
-            bytes(ptData[i:i+8]).hex(), bytes(ptData[i+8:i+16]).hex()
-        )
+        print(16 * " " + "hex", ptData[i:i+8].hex(), ptData[i+8:i+16].hex())
 
 def main():
-    #for file_ in sorted(get_filenames()):
-    for file_ in ("rainbow2",):
-        print("Flag:", file_)
-        path = os.path.join(IMAGE_DIR, file_) + IMAGE_EXT
+    uniqueTiles = set()  # in all images
 
+    # should find 107 tiles or so
+    print("Gathering unique tiles from all images...")
+    for filename in sorted(get_filenames()):
+        print(filename)
+        path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
         try:
             with open(path, "rb") as handle:
                 handle.seek(0)
                 image = Image.open(handle)
-                process_flag(image)
+                uniqueTiles.update(process_flag(image, 0))
         except OSError:
             sys.exit("Error reading file.")
+    # sort tiles by number of colors
+    uniqueTiles = sorted(uniqueTiles)
+    uniqueTiles.sort(key = lambda t: len(set(t)))
+    print(f"Unique tiles ({len(uniqueTiles)}):")
+    print_pt_data(uniqueTiles)
+    print()
 
+    print("Generating NES graphics data for all images...")
+    print()
+    for filename in sorted(get_filenames()):
+        print(filename + ":")
+        path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
+        try:
+            with open(path, "rb") as handle:
+                handle.seek(0)
+                image = Image.open(handle)
+                process_flag(image, 1, uniqueTiles)
+        except OSError:
+            sys.exit("Error reading file.")
         print()
 
 main()
