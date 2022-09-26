@@ -168,8 +168,6 @@ def process_flag(image):
         (i[1], closest_nes_color(palette[i[1]*3:(i[1]+1)*3]))
         for i in image.getcolors()
     )
-    print("Palette (PNG index/NES color):")
-    print(" ", ", ".join(f"{i}=${palette[i]:02x}" for i in sorted(palette)))
     if len(set(palette.values())) < len(palette):
         sys.exit("Oops! More than one PNG color maps to same NES color.")
 
@@ -178,23 +176,18 @@ def process_flag(image):
         bgIndex = [i for i in palette if palette[i] == NES_BG_COLOR][0]
     except IndexError:
         bgIndex = -1
-    print(f"PNG index of NES BG color (${NES_BG_COLOR:02x}): {bgIndex}")
 
     # get unique sets of color indexes in attr. blocks, e.g. {{1, 2}, {1, 3}}
     colorSets = {frozenset(s - {bgIndex}) for s in get_color_sets(image)}
-    print("Unique sets of indexes for attribute blocks (excl. BG color):")
-    print(16 * " " + ", ".join(str(sorted(s)) for s in colorSets))
 
     # split sets of color indexes into subpalettes
     subpals = create_subpalettes(colorSets)
-    print("Subpalettes as PNG indexes (excl. BG color):")
-    print(16 * " " + ", ".join(str(sorted(s)) for s in subpals))
     subpalsNes = [
         [NES_BG_COLOR]
         + sorted(palette[c] for c in sp) + (3 - len(sp)) * [NES_BG_COLOR]
         for sp in subpals
     ]
-    print("Subpalettes as NES colors (padded):")
+    print("Subpalettes:")
     print(
         16 * " " + "hex",
         " ".join("".join(f"{c:02x}" for c in sp) for sp in subpalsNes)
@@ -202,9 +195,6 @@ def process_flag(image):
 
     attrData = list(get_attr_data(image, subpals, bgIndex))
     print("Attribute table data:")
-    for i in range(0, len(attrData), 16):
-        print(16 * " " + " ".join(str(v) for v in attrData[i:i+16]))
-    print("Attribute table data in NES format:")
     atBytes = bytearray()
     for y in range(7):
         for x in range(8):
@@ -230,8 +220,7 @@ def process_flag(image):
         if tile not in uniqueTiles:
             uniqueTiles.append(tile)
         ntData.append(uniqueTiles.index(tile))
-    print("Unique tiles:", len(uniqueTiles))
-    print("Name table data in NES format:")
+    print("Name table data:")
     for i in range(0, len(ntData), 32):
         print(16 * " " + "hex", bytes(ntData[i:i+32]).hex())
 

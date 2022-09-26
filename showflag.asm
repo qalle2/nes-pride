@@ -207,7 +207,7 @@ set_ppu_addr    sty ppu_addr            ; set PPU address from Y and A
 
 set_ppu_regs    lda #0                  ; set scroll value
                 sta ppu_scroll
-                lda #0 ;#248
+                lda #248
                 sta ppu_scroll
                 lda #%10000000          ; enable NMI
                 sta ppu_ctrl
