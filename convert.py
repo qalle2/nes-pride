@@ -69,12 +69,13 @@ def get_filenames():
     with os.scandir(IMAGE_DIR) as dirIter:
         yield from (
             os.path.splitext(e.name)[0] for e in dirIter
-            if not e.is_dir() and os.path.splitext(e.name)[1] == IMAGE_EXT
+            if e.is_file() and os.path.splitext(e.name)[1] == IMAGE_EXT
         )
 
 def color_diff(rgb1, rgb2):
     # get difference of two colors (0-768)
-    return abs(rgb1[0] - rgb2[0]) + abs(rgb1[1] - rgb2[1]) + abs(rgb1[2] - rgb2[2])
+    return abs(rgb1[0] - rgb2[0]) + abs(rgb1[1] - rgb2[1]) \
+    + abs(rgb1[2] - rgb2[2])
 
 def closest_nes_color(rgb):
     # get best match (NES color number) for color (red, green, blue)
@@ -88,7 +89,8 @@ def closest_nes_color(rgb):
     return bestColor
 
 def get_color_sets(image):
-    # for each attribute block (16*16 px), generate set of PNG color indexes, e.g. {0, 2}
+    # for each attribute block (16*16 px), generate set of PNG color indexes,
+    # e.g. {0, 2}
 
     for ay in range(14):
         for ax in range(16):
@@ -99,15 +101,17 @@ def get_color_sets(image):
             yield indexes
 
 def get_tiles(image):
-    # for each tile (8*8 px), generate PNG indexes of all pixels, e.g. [0, 2, ...]
+    # for each tile (8*8 px), generate PNG indexes of all pixels,
+    # e.g. [0, 2, ...]
 
+    tile = []
     for ty in range(28):
         for tx in range(32):
-            indexes = []
+            tile.clear()
             for py in range(8):
                 for px in range(8):
-                    indexes.append(image.getpixel((tx * 8 + px, ty * 8 + py)))
-            yield indexes
+                    tile.append(image.getpixel((tx * 8 + px, ty * 8 + py)))
+            yield tile
 
 def create_subpalettes(colorSets):
     # colorSets: set of sets of color indexes in attribute blocks
@@ -116,12 +120,17 @@ def create_subpalettes(colorSets):
     subpals = [set(), set(), set(), set()]
 
     for colorSet in colorSets:
-        # get maximum number of common colors with a subpalette in which the new colors fit
-        maxCnt = max(len(subpal & colorSet) for subpal in subpals if len(subpal | colorSet) <= 3)
+        # get maximum number of common colors with a subpalette in which
+        # the new colors fit
+        maxCnt = max(
+            len(subpal & colorSet) for subpal in subpals
+            if len(subpal | colorSet) <= 3
+        )
         # which subpalette was it (first one if several)
         bestSubpal = [
             i for i in range(4)
-            if len(subpals[i] & colorSet) == maxCnt and len(subpals[i] | colorSet) <= 3
+            if len(subpals[i] & colorSet) == maxCnt
+            and len(subpals[i] | colorSet) <= 3
         ][0]
         # add colors there
         subpals[bestSubpal].update(colorSet)
@@ -131,7 +140,7 @@ def create_subpalettes(colorSets):
 def get_attr_data(image, subpals, bgIndex):
     # generate attribute table data (int 0-3 for each attribute block)
 
-    subpals = [set(sp) | {bgIndex} for sp in subpals]
+    subpals = [sp | {bgIndex} for sp in subpals]
     yield from (
         [i for i in range(4) if subpals[i].issuperset(colorSet)][0]
         for colorSet in get_color_sets(image)
@@ -152,7 +161,8 @@ def process_flag(image):
     if image.width != 256 or image.height != 224 or image.mode != "P":
         sys.exit("Image must be 256*224 pixels and have a palette.")
 
-    # get used color indexes and best NES equivalents: {pngIndex: nesColor, ...}
+    # get used color indexes and best NES equivalents:
+    # {pngIndex: nesColor, ...}
     palette = image.getpalette()  # [R, G, B, ...]
     palette = dict(
         (i[1], closest_nes_color(palette[i[1]*3:(i[1]+1)*3]))
@@ -168,47 +178,62 @@ def process_flag(image):
         bgIndex = [i for i in palette if palette[i] == NES_BG_COLOR][0]
     except IndexError:
         bgIndex = -1
-    print(f"PNG index of NES background color (${NES_BG_COLOR:02x}): {bgIndex}")
+    print(f"PNG index of NES BG color (${NES_BG_COLOR:02x}): {bgIndex}")
 
-    # get unique sets of color indexes in attribute blocks, e.g. {{1, 2}, {1, 3}}
+    # get unique sets of color indexes in attr. blocks, e.g. {{1, 2}, {1, 3}}
     colorSets = {frozenset(s - {bgIndex}) for s in get_color_sets(image)}
-    print("Unique sets of indexes for attribute blocks (excl. bg color):")
-    print(" ", "; ".join(str(tuple(sorted(s))) for s in colorSets))
+    print("Unique sets of indexes for attribute blocks (excl. BG color):")
+    print(16 * " " + ", ".join(str(sorted(s)) for s in colorSets))
 
     # split sets of color indexes into subpalettes
     subpals = create_subpalettes(colorSets)
-    subpals = [sorted(sp) for sp in subpals]
-    print("Subpalettes as PNG indexes (excl. bg color):")
-    print(" ", subpals)
+    print("Subpalettes as PNG indexes (excl. BG color):")
+    print(16 * " " + ", ".join(str(sorted(s)) for s in subpals))
     subpalsNes = [
-        [NES_BG_COLOR] + sorted(palette[c] for c in sp) + (3 - len(sp)) * [NES_BG_COLOR]
+        [NES_BG_COLOR]
+        + sorted(palette[c] for c in sp) + (3 - len(sp)) * [NES_BG_COLOR]
         for sp in subpals
     ]
     print("Subpalettes as NES colors (padded):")
-    print(" ", " ".join("".join(f"{c:02x}" for c in sp) for sp in subpalsNes))
+    print(
+        16 * " " + "hex",
+        " ".join("".join(f"{c:02x}" for c in sp) for sp in subpalsNes)
+    )
 
     attrData = list(get_attr_data(image, subpals, bgIndex))
+    print("Attribute table data:")
+    for i in range(0, len(attrData), 16):
+        print(16 * " " + " ".join(str(v) for v in attrData[i:i+16]))
     print("Attribute table data in NES format:")
-    print(bytes(
-        attrData[i*4]  # TODO: fix
-        for i in range(8 * 7)
-    ).hex())
+    atBytes = bytearray()
+    for y in range(7):
+        for x in range(8):
+            s = y * 32 + x * 2  # source index
+            atBytes.append(
+                attrData[s]
+                | (attrData[s+1] << 2)
+                | (attrData[s+16] << 4)
+                | (attrData[s+17] << 6)
+            )
+    for i in range(0, len(atBytes), 8):
+        print(16 * " " + "hex", atBytes[i:i+8].hex())
 
     # get pattern & name table data
     uniqueTiles = []  # each tile is 64 subpalette indexes
     ntData      = []  # name table data
     for (i, tile) in enumerate(get_tiles(image)):
-        # get subpalette for this tile (bits: tile = YYYYyXXXXx, attr = YYYYXXXX)
-        subpal = attrData[i >> 2 & 0xf0 | i >> 1 & 0x0f]
+        # get subpalette for this tile (bits: tile YYYYyXXXXx, attr YYYYXXXX)
+        subpal = attrData[(i >> 2) & 0b11110000 | (i >> 1) & 0b1111]
         # convert PNG indexes to subpalette indexes
-        tile = [(0 if i == bgIndex else subpals[subpal].index(i) + 1) for i in tile]
+        tile = [subpalsNes[subpal].index(palette[i]) for i in tile]
         # add to pattern & name table data
         if tile not in uniqueTiles:
             uniqueTiles.append(tile)
         ntData.append(uniqueTiles.index(tile))
     print("Unique tiles:", len(uniqueTiles))
     print("Name table data in NES format:")
-    print(bytes(ntData).hex())
+    for i in range(0, len(ntData), 32):
+        print(16 * " " + "hex", bytes(ntData[i:i+32]).hex())
 
     # convert pattern table data into NES format
     ptData = bytearray(len(uniqueTiles) * 16)
@@ -218,10 +243,15 @@ def process_flag(image):
             = tile_slice_encode(tile[y*8+x] for x in range(8))
     ptData = bytes(ptData)
     print("Pattern table data:")
-    print(ptData.hex())
+    for i in range(0, len(ptData), 16):
+        print(
+            16 * " " + "hex",
+            bytes(ptData[i:i+8]).hex(), bytes(ptData[i+8:i+16]).hex()
+        )
 
 def main():
-    for file_ in sorted(get_filenames()):
+    #for file_ in sorted(get_filenames()):
+    for file_ in ("rainbow2",):
         print("Flag:", file_)
         path = os.path.join(IMAGE_DIR, file_) + IMAGE_EXT
 
