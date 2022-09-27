@@ -7,6 +7,7 @@ from PIL import Image  # Pillow, https://python-pillow.org
 IMAGE_DIR = "img"
 IMAGE_EXT = ".png"
 NES_BG_COLOR = 0x0f  # NES background color (black)
+NES_UNUSED_COLOR = 0x00  # NES unused color (non-background; gray)
 
 # NES master palette
 # key=index, value=(red, green, blue); source: FCEUX (fceux.pal)
@@ -146,6 +147,16 @@ def get_attr_data(image, subpals, bgIndex):
         for colorSet in get_color_sets(image)
     )
 
+def convert_tiles(image, attrData, palette, subpalsNes):
+    # generate tiles as tuples of 64 2-bit ints
+    for (i, tile) in enumerate(get_tiles(image)):
+        # get subpalette for this tile
+        # (bits: tile YYYYyXXXXx, attr YYYYXXXX)
+        subpal = attrData[(i >> 2) & 0b11110000 | (i >> 1) & 0b1111]
+        # convert PNG indexes to subpalette indexes
+        tile = [subpalsNes[subpal].index(palette[i]) for i in tile]
+        yield tuple(tile)
+
 def tile_slice_encode(pixels):
     # encode 8*1 pixels of one tile of CHR data
     # pixels: eight 2-bit ints
@@ -157,9 +168,10 @@ def tile_slice_encode(pixels):
         hiByte = (hiByte << 1) | (pixel >> 1)
     return (loByte, hiByte)
 
-def process_flag(image, mode=0, uniqueTiles=None):
-    # If mode=0: just gather set of unique tiles (ignore uniqueTiles arg).
-    # If mode=1: use predetermined list uniqueTiles.
+def process_image(image, mode=0, uniqueTiles=None):
+    # If mode=0: return NES palette for image (ignore uniqueTiles arg).
+    # If mode=1: return set of unique tiles   (ignore uniqueTiles arg).
+    # If mode=2: return name & attribute table data using uniqueTiles arg.
 
     if image.width != 256 or image.height != 224 or image.mode != "P":
         sys.exit("Image must be 256*224 pixels and have a palette.")
@@ -187,60 +199,40 @@ def process_flag(image, mode=0, uniqueTiles=None):
     subpals = create_subpalettes(colorSets)
     subpalsNes = [
         [NES_BG_COLOR]
-        + sorted(palette[c] for c in sp) + (3 - len(sp)) * [NES_BG_COLOR]
+        + sorted(palette[c] for c in sp) + (3 - len(sp)) * [NES_UNUSED_COLOR]
         for sp in subpals
     ]
-    if mode == 1:
-        print("Subpalettes:")
-        print(
-            16 * " " + "hex",
-            " ".join("".join(f"{c:02x}" for c in sp) for sp in subpalsNes)
-        )
-
-    attrData = list(get_attr_data(image, subpals, bgIndex))
-    if mode == 1:
-        print("Attribute table data:")
-        atBytes = bytearray()
-        for y in range(7):
-            for x in range(8):
-                s = y * 32 + x * 2  # source index
-                atBytes.append(
-                    attrData[s]
-                    | (attrData[s+1] << 2)
-                    | (attrData[s+16] << 4)
-                    | (attrData[s+17] << 6)
-                )
-        for i in range(0, len(atBytes), 8):
-            print(16 * " " + "hex", atBytes[i:i+8].hex())
-
     if mode == 0:
-        # gather set of unique tiles needed and exit
-        uniqueTiles = set()  # each tile is 64 subpalette indexes
-        for (i, tile) in enumerate(get_tiles(image)):
-            # get subpalette for this tile
-            # (bits: tile YYYYyXXXXx, attr YYYYXXXX)
-            subpal = attrData[(i >> 2) & 0b11110000 | (i >> 1) & 0b1111]
-            # convert PNG indexes to subpalette indexes
-            tile = [subpalsNes[subpal].index(palette[i]) for i in tile]
-            # add to set
-            uniqueTiles.add(tuple(tile))
-        return uniqueTiles
-    else:
-        # get pattern & name table data using predetermined list of unique
-        # tiles
-        ntData = []
-        for (i, tile) in enumerate(get_tiles(image)):
-            # get subpalette for this tile
-            # (bits: tile YYYYyXXXXx, attr YYYYXXXX)
-            subpal = attrData[(i >> 2) & 0b11110000 | (i >> 1) & 0b1111]
-            # convert PNG indexes to subpalette indexes
-            tile = tuple(subpalsNes[subpal].index(palette[i]) for i in tile)
-            # add to name table data
-            ntData.append(uniqueTiles.index(tile))
+        return subpalsNes
 
-    print("Name table data:")
-    for i in range(0, len(ntData), 32):
-        print(16 * " " + "hex", bytes(ntData[i:i+32]).hex())
+    # generate AT data using subpalettes
+    attrData = list(get_attr_data(image, subpals, bgIndex))
+
+    if mode == 1:
+        # return set of unique tiles
+        return set(convert_tiles(image, attrData, palette, subpalsNes))
+
+    # get name table data using predetermined list of unique tiles
+    ntData = list(
+        uniqueTiles.index(tile) for tile in
+        convert_tiles(image, attrData, palette, subpalsNes)
+    )
+    ntData.extend(2 * 32 * [0])  # pad to 30 rows
+
+    # encode AT data
+    atBytes = bytearray()
+    for y in range(7):
+        for x in range(8):
+            s = y * 32 + x * 2  # source index
+            atBytes.append(
+                attrData[s]
+                | (attrData[s+1] << 2)
+                | (attrData[s+16] << 4)
+                | (attrData[s+17] << 6)
+            )
+    atBytes.extend(8 * b"\x00")  # pad to 64 bytes
+
+    return bytes(ntData) + atBytes
 
 def print_pt_data(tiles):
     # convert unique tiles into NES format; each tile is 64 ints
@@ -254,38 +246,69 @@ def print_pt_data(tiles):
 
 def main():
     uniqueTiles = set()  # in all images
+    filenames = sorted(get_filenames())
 
-    # should find 107 tiles or so
-    print("Gathering unique tiles from all images...")
-    for filename in sorted(get_filenames()):
-        print(filename)
+    print(f"{'image_count':15s} equ {len(filenames)}")
+    print()
+
+    # get palettes for images
+    print(f"{'bg_pal_data':15s} ; background palettes for each image")
+    for filename in filenames:
         path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
         try:
             with open(path, "rb") as handle:
                 handle.seek(0)
                 image = Image.open(handle)
-                uniqueTiles.update(process_flag(image, 0))
+                palettes = process_image(image, 0)
         except OSError:
             sys.exit("Error reading file.")
+        # print in NES/ASM6 format
+        print(
+            16 * " " + "hex "
+            + " ".join("".join(f"{c:02x}" for c in sp) for sp in palettes)
+            + f"  ; {filename}"
+        )
+    print()
+
+    # gather unique tiles from all images (should find 107 tiles or so)
+    for filename in filenames:
+        path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
+        try:
+            with open(path, "rb") as handle:
+                handle.seek(0)
+                image = Image.open(handle)
+                uniqueTiles.update(process_image(image, 1))
+        except OSError:
+            sys.exit("Error reading file.")
+
+    # make sure we have a blank tile (for nonsafe screen area)
+    uniqueTiles.add(tuple(64 * [0]))
     # sort tiles by number of colors
     uniqueTiles = sorted(uniqueTiles)
     uniqueTiles.sort(key = lambda t: len(set(t)))
-    print(f"Unique tiles ({len(uniqueTiles)}):")
+    print(16 * " " + "; background pattern table data for all images")
     print_pt_data(uniqueTiles)
     print()
 
-    print("Generating NES graphics data for all images...")
+    # generate NT/AT data for each image
+    print(f"{'nt_at_data':15s} ; name/attribute table data for each image")
     print()
-    for filename in sorted(get_filenames()):
-        print(filename + ":")
+    for filename in filenames:
         path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
         try:
             with open(path, "rb") as handle:
                 handle.seek(0)
                 image = Image.open(handle)
-                process_flag(image, 1, uniqueTiles)
+                ntAtData = process_image(image, 2, uniqueTiles)
         except OSError:
             sys.exit("Error reading file.")
+
+        print(16 * " " + "; name table data for", filename)
+        for i in range(0, 30 * 32, 32):
+            print(16 * " " + "hex", bytes(ntAtData[i:i+32]).hex())
+        print(16 * " " + "; attribute table data for", filename)
+        for i in range(30 * 32, len(ntAtData), 8):
+            print(16 * " " + "hex", ntAtData[i:i+8].hex())
         print()
 
 main()
