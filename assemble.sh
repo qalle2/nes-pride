@@ -1,1 +1,2 @@
-asm6 showflag.asm showflag.nes
+asm6 pride.asm pride.nes
+gzip -9fk pride.nes
