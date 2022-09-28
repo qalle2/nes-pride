@@ -67,13 +67,7 @@ NES_PALETTE = {
     0x3c: (0x9c, 0xfc, 0xf0),
 }
 
-def get_filenames():
-    # generate names of PNG files without extensions
-    with os.scandir(IMAGE_DIR) as dirIter:
-        yield from (
-            os.path.splitext(e.name)[0] for e in dirIter
-            if e.is_file() and os.path.splitext(e.name)[1] == IMAGE_EXT
-        )
+# --- process_image() and functions used by it --------------------------------
 
 def color_diff(rgb1, rgb2):
     # get difference of two colors (0-768)
@@ -235,6 +229,16 @@ def process_image(image, mode=0, uniqueTiles=None):
     atBytes.extend(8 * b"\x00")  # pad to 64 bytes
 
     return bytes(ntData) + atBytes
+
+# --- Functions not used by process_image() -----------------------------------
+
+def get_filenames():
+    # generate names of PNG files without extensions
+    with os.scandir(IMAGE_DIR) as dirIter:
+        yield from (
+            os.path.splitext(e.name)[0] for e in dirIter
+            if e.is_file() and os.path.splitext(e.name)[1] == IMAGE_EXT
+        )
 
 def generate_palette_data(filenames):
     # generate palette data for each image in ASM6 format as bytes
