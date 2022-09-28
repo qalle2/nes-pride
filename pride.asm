@@ -279,6 +279,6 @@ set_ppu_regs    lda #0                  ; set scroll value
 ; --- CHR ROM -------------------------------------------------------------------------------------
 
                 base $0000
-                include "pt-data.asm"
+                incbin "chr-bg.bin"
                 pad $1000, $ff          ; make sure <= 256 tiles
                 pad $2000, $ff

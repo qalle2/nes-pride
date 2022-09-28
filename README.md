@@ -5,6 +5,7 @@ Files:
 * `convert.py`: a Python program that converts the flags into [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System) graphics data
 * `pride.asm`: an NES program that shows the flags; press left/right to browse flags; assembles with assembles with [ASM6](https://www.romhacking.net/utilities/674/)
 * `pride.nes.gz`: the assembled NES program (gzip compressed)
+* `chr-bg.bin.gz`: background pattern table data for the NES program (gzip compressed)
 
 Sources of flags:
 * [Wikipedia &ndash; Pride flag](https://en.wikipedia.org/wiki/Pride_flag)

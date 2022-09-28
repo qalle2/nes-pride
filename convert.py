@@ -6,7 +6,7 @@ from PIL import Image  # Pillow, https://python-pillow.org
 IMAGE_DIR        = "img"
 IMAGE_EXT        = ".png"
 NT_AT_PAL_FILE   = "nt-at-pal-data.asm"  # write NT/AT/palette data here
-PT_FILE          = "pt-data.asm"         # write pattern table data here
+PT_FILE          = "chr-bg.bin"          # write pattern table data here
 NES_BG_COLOR     = 0x0f                  # NES background color (black)
 NES_UNUSED_COLOR = 0x00                  # NES unused color (gray)
 
@@ -279,22 +279,17 @@ def generate_palette_data(filenames):
             + f"  ; {filename}"
         )
 
-def generate_pt_data(tiles):
-    # generate PT data for all images in ASM6 format; each tile is 64 ints
-
-    yield f"{'':16}; background pattern table data for all images"
+def encode_pt_data(tiles):
+    # return PT data for all images as bytes; each tile is 64 ints
 
     ptData = bytearray(len(tiles) * 16)
     for (i, tile) in enumerate(tiles):
         for y in range(8):
             (ptData[i*16+y%8], ptData[i*16+y%8+8]) \
             = tile_slice_encode(tile[y*8+x] for x in range(8))
-    for i in range(0, len(ptData), 16):
-        yield (
-            f"{'':16}hex "
-            + ptData[i:i+8].hex() + " "
-            + ptData[i+8:i+16].hex()
-        )
+    # pad to a multiple of 16 tiles
+    ptData.extend((256 - len(ptData) % 256) * b"\xff")
+    return ptData
 
 def generate_nt_at_data(filenames, uniqueTiles):
     # generate NT/AT data for each image in ASM6 format
@@ -338,10 +333,9 @@ def main():
     uniqueTiles = sorted(uniqueTiles)
     uniqueTiles.sort(key = lambda t: len(set(t)))
     # write tiles
-    with open(PT_FILE, "wt", encoding="ascii") as target:
-        target.seek(0)
-        for line in generate_pt_data(uniqueTiles):
-            print(line, file=target)
+    with open(PT_FILE, "wb") as handle:
+        handle.seek(0)
+        handle.write(encode_pt_data(uniqueTiles))
     print(f"Wrote {len(uniqueTiles)} tiles to {PT_FILE}.")
 
     print("Generating name table, attribute table & palette data...")
