@@ -1,16 +1,22 @@
-; Show a pride flag on the NES
-; under construction
+; NES/ASM6: pride flag show
+
+; TODO (decreasing order of importance):
+; - update PPU memory more economically (almost out of VBlank time)
+; - sprites in lower right corner should show flag name
+; - should be able to hide flag name
+; - make transitions look better
 
 ; --- Constants ---------------------------------------------------------------
 
 ; RAM
-vram_buffer     equ $00  ; NT/AT data to upload on next VBlank ($80 bytes)
-pointer         equ $80  ; memory pointer (2 bytes)
-run_main_loop   equ $82  ; main loop allowed to run? (MSB: 0=no, 1=yes)
-pad_status      equ $83  ; joypad status
-prev_pad_status equ $84  ; previous joypad status
-which_flag      equ $85  ; which flag is being shown
-frame_counter   equ $86  ; increments every frame
+vram_buffer     equ $00    ; NT/AT data to upload on next VBlank ($80 bytes)
+pointer         equ $80    ; memory pointer (2 bytes)
+run_main_loop   equ $82    ; main loop allowed to run? (MSB: 0=no, 1=yes)
+pad_status      equ $83    ; joypad status
+prev_pad_status equ $84    ; previous joypad status
+which_flag      equ $85    ; which flag is being shown
+frame_counter   equ $86    ; increments every frame
+sprite_data     equ $0200  ; OAM page ($100 bytes)
 
 ; memory-mapped registers
 ppu_ctrl        equ $2000
@@ -27,7 +33,7 @@ joypad1         equ $4016
 joypad2         equ $4017
 
 ; misc
-image_count     equ 12
+image_count     equ 13
 
 ; --- iNES header -------------------------------------------------------------
 
@@ -43,9 +49,15 @@ image_count     equ 12
 
                 base $c000              ; last 16 KiB of CPU address space
 
-                ; data for each image (here to simplify address calculations)
-nt_at_data      incbin "nt-at.bin"      ; name & attribute table
-bg_pal_data     incbin "pal.bin"        ; BG palettes
+                ; name & attribute table data for each image
+                ; (here to simplify address calculations)
+nt_at_data      incbin "nt-at.bin"
+
+                ; background palette data for each image (16 bytes/image)
+bg_pal_data     incbin "pal.bin"
+
+                ; name of each image (8 bytes/image)
+flag_name_data  incbin "names.bin"
 
 ; --- Initialization ----------------------------------------------------------
 
@@ -72,8 +84,50 @@ reset           ; initialize the NES;
                 inx
                 bne -
 
-                lda #0
-                sta which_flag
+                lda #$ff                ; fill sprite page with $ff to
+                ldx #0                  ; hide all sprites
+-               sta sprite_data,x
+                inx
+                bne -
+
+                ; set Y position, tile & attribute of sprites 0-7
+                ldx #0
+-               lda #$c0
+                sta sprite_data+0,x
+                lda #$41                ; "A"
+                sta sprite_data+1,x
+                lda #%00000000          ; subpalette 0
+                sta sprite_data+2,x
+                inx
+                inx
+                inx
+                inx
+                cpx #(8*4)
+                bne -
+
+                ; set X positions of sprites 0-7
+                ldx #0
+                lda #$b0
+-               sta sprite_data+3,x
+                clc
+                adc #8
+                inx
+                inx
+                inx
+                inx
+                cpx #(8*4)
+                bne -
+
+                jsr wait_vbl_start      ; wait until next VBlank starts
+
+                ; set sprite palette
+                ldy #$3f
+                lda #$11
+                jsr set_ppu_addr
+                lda #$0f                ; black
+                sta ppu_data
+                lda #$30                ; white
+                sta ppu_data
 
                 jsr wait_vbl_start      ; wait until next VBlank starts
                 jsr set_ppu_regs        ; set ppu_scroll/ppu_ctrl/ppu_mask
@@ -191,6 +245,11 @@ nmi             pha                     ; push A, X, Y
 
                 bit ppu_status          ; reset ppu_scroll/ppu_addr latch
 
+                lda #$00                ; do sprite DMA
+                sta oam_addr
+                lda #>sprite_data
+                sta oam_dma
+
                 jsr copy_palette
                 jsr copy_nt_at
                 jsr set_ppu_regs        ; set ppu_scroll/ppu_ctrl/ppu_mask
@@ -247,16 +306,35 @@ copy_nt_at      ; copy one eighth of NT/AT data ($80 bytes) from VRAM buffer
                 sta $f1
 
                 ; copy
+                ; NOTE: almost out of VBlank time; optimize elsewhere
                 ldx #0
--               lda vram_buffer,x
+-               lda vram_buffer+0,x
                 sta ppu_data
-                inx
+                lda vram_buffer+1,x
+                sta ppu_data
+                lda vram_buffer+2,x
+                sta ppu_data
+                lda vram_buffer+3,x
+                sta ppu_data
+                lda vram_buffer+4,x
+                sta ppu_data
+                lda vram_buffer+5,x
+                sta ppu_data
+                lda vram_buffer+6,x
+                sta ppu_data
+                lda vram_buffer+7,x
+                sta ppu_data
+                ;
+                txa
+                clc
+                adc #8
+                tax
                 cpx #$80
                 bne -
 
                 rts
 
-; --- Subs used in many places --------------------------------------------------------------------
+; --- Subs used in many places ------------------------------------------------
 
 set_ppu_addr    sty ppu_addr            ; Y*$100 + A -> address
                 sta ppu_addr
@@ -266,20 +344,22 @@ set_ppu_regs    lda #0                  ; set scroll value
                 sta ppu_scroll
                 lda #232
                 sta ppu_scroll
-                lda #%10000000          ; enable NMI
+                lda #%10001000          ; enable NMI, use PT1 for sprites
                 sta ppu_ctrl
-                lda #%00001010          ; show background
+                lda #%00011110          ; show background & sprites
                 sta ppu_mask
                 rts
 
-; --- Interrupt vectors ---------------------------------------------------------------------------
+; --- Interrupt vectors -------------------------------------------------------
 
                 pad $fffa, $ff
                 dw nmi, reset, irq      ; IRQ unused
 
-; --- CHR ROM -------------------------------------------------------------------------------------
+; --- CHR ROM -----------------------------------------------------------------
 
                 base $0000
-                incbin "chr-bg.bin"
-                pad $1000, $ff          ; make sure <= 256 tiles
+                incbin "chr-bg.bin"     ; background
+
+                pad $1000, $ff
+                incbin "chr-spr.bin"    ; sprites
                 pad $2000, $ff
