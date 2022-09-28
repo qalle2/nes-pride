@@ -5,10 +5,11 @@ from PIL import Image  # Pillow, https://python-pillow.org
 
 IMAGE_DIR        = "img"
 IMAGE_EXT        = ".png"
-NT_AT_PAL_FILE   = "nt-at-pal-data.asm"  # write NT/AT/palette data here
-PT_FILE          = "chr-bg.bin"          # write pattern table data here
-NES_BG_COLOR     = 0x0f                  # NES background color (black)
-NES_UNUSED_COLOR = 0x00                  # NES unused color (gray)
+NT_AT_FILE       = "nt-at.bin"   # write name & attribute table data here
+PAL_FILE         = "pal.bin"     # write palette data here
+PT_FILE          = "chr-bg.bin"  # write pattern table data here
+NES_BG_COLOR     = 0x0f          # NES background color (black)
+NES_UNUSED_COLOR = 0x00          # NES unused color (gray)
 
 # NES master palette
 # key=index, value=(red, green, blue); source: FCEUX (fceux.pal)
@@ -215,7 +216,7 @@ def process_image(image, mode=0, uniqueTiles=None):
         for sp in subpals
     ]
     if mode == 0:
-        return subpalsNes
+        return itertools.chain.from_iterable(subpalsNes)
 
     # generate AT data using subpalettes
     attrData = list(get_attr_data(image, subpals, bgIndex))
@@ -261,23 +262,17 @@ def generate_image_tiles(filenames):
             sys.exit("Error reading file.")
 
 def generate_palette_data(filenames):
-    # generate palette data for each image in ASM6 format
+    # generate palette data for each image in ASM6 format as bytes
 
-    yield f"{'bg_pal_data':16s}; background palettes for each image"
     for filename in filenames:
         path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
         try:
             with open(path, "rb") as handle:
                 handle.seek(0)
                 image = Image.open(handle)
-                palettes = process_image(image, 0)
+                yield bytes(process_image(image, 0))
         except OSError:
             sys.exit("Error reading file.")
-        yield (
-            f"{'':16}hex "
-            + " ".join("".join(f"{c:02x}" for c in sp) for sp in palettes)
-            + f"  ; {filename}"
-        )
 
 def encode_pt_data(tiles):
     # return PT data for all images as bytes; each tile is 64 ints
@@ -292,10 +287,7 @@ def encode_pt_data(tiles):
     return ptData
 
 def generate_nt_at_data(filenames, uniqueTiles):
-    # generate NT/AT data for each image in ASM6 format
-
-    yield f"{'nt_at_data':15} ; name/attribute table data for each image"
-    yield ""
+    # generate name & attribute table data for each image as bytes
 
     for filename in filenames:
         path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
@@ -303,16 +295,9 @@ def generate_nt_at_data(filenames, uniqueTiles):
             with open(path, "rb") as source:
                 source.seek(0)
                 image = Image.open(source)
-                ntAtData = process_image(image, 2, uniqueTiles)
+                yield process_image(image, 2, uniqueTiles)
         except OSError:
             sys.exit("Error reading file.")
-
-        yield f"{'':16}; name table data for {filename}"
-        for i in range(0, 30 * 32, 32):
-            yield f"{'':16}hex " + bytes(ntAtData[i:i+32]).hex()
-        yield f"{'':16}; attribute table data for {filename}"
-        for i in range(30 * 32, len(ntAtData), 8):
-            yield f"{'':16}hex " + ntAtData[i:i+8].hex()
 
 def main():
     filenames = sorted(get_filenames())
@@ -338,15 +323,18 @@ def main():
         handle.write(encode_pt_data(uniqueTiles))
     print(f"Wrote {len(uniqueTiles)} tiles to {PT_FILE}.")
 
-    print("Generating name table, attribute table & palette data...")
-    # generate NT/AT/palette data for each image
-    with open(NT_AT_PAL_FILE, "wt", encoding="ascii") as target:
-        target.seek(0)
-        for line in generate_nt_at_data(filenames, uniqueTiles):
-            print(line, file=target)
-        print("", file=target)
-        for line in generate_palette_data(filenames):
-            print(line, file=target)
-    print(f"Wrote NT/AT/palette data to {NT_AT_PAL_FILE}.")
+    print("Generating name & attribute table data...")
+    with open(NT_AT_FILE, "wb") as handle:
+        handle.seek(0)
+        for chunk in generate_nt_at_data(filenames, uniqueTiles):
+            handle.write(chunk)
+    print(f"Wrote NT/AT data to {NT_AT_FILE}.")
+
+    print("Generating palette data...")
+    with open(PAL_FILE, "wb") as handle:
+        handle.seek(0)
+        for chunk in generate_palette_data(filenames):
+            handle.write(chunk)
+    print(f"Wrote palette data to {PAL_FILE}.")
 
 main()

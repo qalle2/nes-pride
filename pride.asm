@@ -43,8 +43,9 @@ image_count     equ 12
 
                 base $c000              ; last 16 KiB of CPU address space
 
-                ; here to simplify address calculations
-                include "nt-at-pal-data.asm"
+                ; data for each image (here to simplify address calculations)
+nt_at_data      incbin "nt-at.bin"      ; name & attribute table
+bg_pal_data     incbin "pal.bin"        ; BG palettes
 
 ; --- Initialization ----------------------------------------------------------
 
