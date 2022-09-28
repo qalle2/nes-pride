@@ -105,19 +105,6 @@ def get_color_sets(image):
                     indexes.add(image.getpixel((ax * 16 + px, ay * 16 + py)))
             yield indexes
 
-def get_tiles(image):
-    # for each tile (8*8 px), generate PNG indexes of all pixels,
-    # e.g. [0, 2, ...]
-
-    tile = []
-    for ty in range(28):
-        for tx in range(32):
-            tile.clear()
-            for py in range(8):
-                for px in range(8):
-                    tile.append(image.getpixel((tx * 8 + px, ty * 8 + py)))
-            yield tile
-
 def create_subpalettes(colorSets):
     # colorSets: set of sets of color indexes in attribute blocks
     # return: 4 subpalettes (sets) with up to 3 color indexes each
@@ -158,6 +145,19 @@ def get_attr_data(image, subpals, bgIndex):
         for colorSet in get_color_sets(image)
     )
 
+def get_tiles(image):
+    # for each tile (8*8 px), generate PNG indexes of all pixels,
+    # e.g. [0, 2, ...]
+
+    tile = []
+    for ty in range(28):
+        for tx in range(32):
+            tile.clear()
+            for py in range(8):
+                for px in range(8):
+                    tile.append(image.getpixel((tx * 8 + px, ty * 8 + py)))
+            yield tile
+
 def convert_tiles(image, attrData, palette, subpalsNes):
     # generate tiles as tuples of 64 2-bit ints
     for (i, tile) in enumerate(get_tiles(image)):
@@ -167,17 +167,6 @@ def convert_tiles(image, attrData, palette, subpalsNes):
         # convert PNG indexes to subpalette indexes
         tile = [subpalsNes[subpal].index(palette[i]) for i in tile]
         yield tuple(tile)
-
-def tile_slice_encode(pixels):
-    # encode 8*1 pixels of one tile of CHR data
-    # pixels: eight 2-bit ints
-    # return: (low_bitplane, high_bitplane); both 0x00-0xff
-
-    loByte = hiByte = 0
-    for pixel in pixels:
-        loByte = (loByte << 1) | (pixel &  1)
-        hiByte = (hiByte << 1) | (pixel >> 1)
-    return (loByte, hiByte)
 
 def process_image(image, mode=0, uniqueTiles=None):
     # If mode=0: return NES palette for image (ignore uniqueTiles arg).
@@ -247,6 +236,19 @@ def process_image(image, mode=0, uniqueTiles=None):
 
     return bytes(ntData) + atBytes
 
+def generate_palette_data(filenames):
+    # generate palette data for each image in ASM6 format as bytes
+
+    for filename in filenames:
+        path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
+        try:
+            with open(path, "rb") as handle:
+                handle.seek(0)
+                image = Image.open(handle)
+                yield bytes(process_image(image, 0))
+        except OSError:
+            sys.exit("Error reading file.")
+
 def generate_image_tiles(filenames):
     # generate unique tiles in image (tuples of 64 2-bit ints)
     for filename in filenames:
@@ -261,18 +263,16 @@ def generate_image_tiles(filenames):
         except OSError:
             sys.exit("Error reading file.")
 
-def generate_palette_data(filenames):
-    # generate palette data for each image in ASM6 format as bytes
+def tile_slice_encode(pixels):
+    # encode 8*1 pixels of one tile of CHR data
+    # pixels: eight 2-bit ints
+    # return: (low_bitplane, high_bitplane); both 0x00-0xff
 
-    for filename in filenames:
-        path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
-        try:
-            with open(path, "rb") as handle:
-                handle.seek(0)
-                image = Image.open(handle)
-                yield bytes(process_image(image, 0))
-        except OSError:
-            sys.exit("Error reading file.")
+    loByte = hiByte = 0
+    for pixel in pixels:
+        loByte = (loByte << 1) | (pixel &  1)
+        hiByte = (hiByte << 1) | (pixel >> 1)
+    return (loByte, hiByte)
 
 def encode_pt_data(tiles):
     # return PT data for all images as bytes; each tile is 64 ints
@@ -305,6 +305,13 @@ def main():
     print("Copy this constant manually to showflag.asm:")
     print(f"{'image_count':15s} equ {len(filenames)}")
 
+    print("Generating palette data...")
+    with open(PAL_FILE, "wb") as handle:
+        handle.seek(0)
+        for chunk in generate_palette_data(filenames):
+            handle.write(chunk)
+    print(f"Wrote palette data to {PAL_FILE}.")
+
     print("Generating pattern table data...")
     # gather unique tiles from all images
     uniqueTiles = set()
@@ -329,12 +336,5 @@ def main():
         for chunk in generate_nt_at_data(filenames, uniqueTiles):
             handle.write(chunk)
     print(f"Wrote NT/AT data to {NT_AT_FILE}.")
-
-    print("Generating palette data...")
-    with open(PAL_FILE, "wb") as handle:
-        handle.seek(0)
-        for chunk in generate_palette_data(filenames):
-            handle.write(chunk)
-    print(f"Wrote palette data to {PAL_FILE}.")
 
 main()
