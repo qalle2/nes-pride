@@ -99,9 +99,6 @@ def create_subpalettes(colorSets):
     # split sets of color indexes into subpalettes
     # colorSets: set of sets of color indexes in attribute blocks
     # return: list of 4 subpalettes (sets) with up to 3 color indexes each
-    # note: I tried to limit the number of colors per subpalette to reduce the
-    # number of unique tiles, but the savings (4 tiles) were not worth the
-    # additional complexity
 
     # sort sets by decreasing length
     colorSets = sorted(colorSets)
