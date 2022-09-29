@@ -107,8 +107,26 @@ def create_subpalettes(colorSets):
     colorSets = sorted(colorSets)
     colorSets.sort(key=lambda s: len(s), reverse=True)
 
+    # try algorithm 1 (less colors per subpalette and thus less unique tiles)
     subpals = [set() for i in range(4)]
+    for colorSet in colorSets:
+        # get minimum number of colors when adding these colors to a subpalette
+        minCnt = min(len(s | colorSet) for s in subpals)
+        if minCnt > 3:
+            # failed; try algorithm 2
+            subpals = None
+            break
+        # which subpalette was it (first one if several)
+        bestSubpal = [
+            i for (i, s) in enumerate(subpals) if len(s | colorSet) == minCnt
+        ][0]
+        # add colors there
+        subpals[bestSubpal].update(colorSet)
+    if subpals is not None:
+        return subpals
 
+    # try algorithm 2 (if 1 failed)
+    subpals = [set() for i in range(4)]
     for colorSet in colorSets:
         # get maximum number of common colors with a subpalette in which
         # the new colors fit
@@ -128,7 +146,6 @@ def create_subpalettes(colorSets):
         ][0]
         # add colors there
         subpals[bestSubpal].update(colorSet)
-
     return subpals
 
 def get_attr_data(image, subpals, bgIndex):
@@ -297,12 +314,13 @@ def main():
             with open(path, "rb") as source:
                 source.seek(0)
                 image = Image.open(source)
-                palette = process_image(image, 0)
+                palette = bytes(process_image(image, 0))
                 print(
                     f"{filename:8}: {len(set(palette)):2} colors including "
-                    f"${NES_BG_COLOR:02x}"
+                    f"${NES_BG_COLOR:02x}: "
+                    + " ".join(palette[i:i+4].hex() for i in range(0, 16, 4))
                 )
-                target.write(bytes(palette))
+                target.write(palette)
 
     print(f"Writing pattern table data to {PT_FILE}...")
     # make sure we have a blank tile (for nonsafe screen area)
@@ -312,8 +330,12 @@ def main():
         path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
         with open(path, "rb") as source:
             source.seek(0)
-            uniqueTiles.update(process_image(Image.open(source), 1))
-            print(f"{filename:8}: {len(uniqueTiles):3} unique tiles so far")
+            tiles = process_image(Image.open(source), 1)
+            uniqueTiles.update(tiles)
+            print(
+                f"{filename:8}: {len(tiles):3} unique tiles, "
+                f"{len(uniqueTiles):3} total so far"
+            )
             if len(uniqueTiles) > 256:
                 sys.exit("Error: more than 256 unique tiles.")
     # sort tiles by number of colors
