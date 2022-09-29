@@ -1,21 +1,31 @@
 ; NES/ASM6: pride flag show
 
 ; TODO (decreasing order of importance):
-; - update PPU memory more economically (almost out of VBlank time)
-; - sprites in lower right corner should show flag name
-; - should be able to hide flag name
+; - sprites in lower right corner should show image description
+; - should be able to hide image description
 ; - make transitions look better
 
 ; --- Constants ---------------------------------------------------------------
 
+; Notes:
+; - addresses are little-endian (low byte first)
+; - boolean variables: $00-$7f = false, $80-$ff = true
+; - ppu_buffer: what to copy *backwards* to PPU memory on next VBlank
+; - ppu_upd_phase: what to update in PPU memory on next VBlank:
+;     0-7: one eighth of name & attribute table from buffer ($80 bytes)
+;     8  : background palettes from buffer (16 bytes) & sprite DMA
+;     9  : nothing
+
 ; RAM
-vram_buffer     equ $00    ; NT/AT data to upload on next VBlank ($80 bytes)
-pointer         equ $80    ; memory pointer (2 bytes)
-run_main_loop   equ $82    ; main loop allowed to run? (MSB: 0=no, 1=yes)
-pad_status      equ $83    ; joypad status
-prev_pad_status equ $84    ; previous joypad status
-which_flag      equ $85    ; which flag is being shown
-frame_counter   equ $86    ; increments every frame
+ppu_buffer      equ $00    ; see above ($80 bytes)
+nt_at_addr      equ $80    ; source      address in NT/AT data (2 bytes)
+ppu_upd_addr    equ $82    ; destination address in PPU memory (2 bytes)
+run_main_loop   equ $84    ; main loop allowed to run? (boolean)
+pad_status      equ $85    ; joypad status
+prev_pad_status equ $86    ; previous joypad status
+which_image     equ $87    ; which image is being shown
+ppu_upd_phase   equ $88    ; see above
+ppu_upd_length  equ $89    ; how many bytes to copy from buffer to PPU
 sprite_data     equ $0200  ; OAM page ($100 bytes)
 
 ; memory-mapped registers
@@ -57,7 +67,7 @@ nt_at_data      incbin "nt-at.bin"
 bg_pal_data     incbin "pal.bin"
 
                 ; name of each image (8 bytes/image)
-flag_name_data  incbin "names.bin"
+img_name_data   incbin "names.bin"
 
 ; --- Initialization ----------------------------------------------------------
 
@@ -149,8 +159,7 @@ main_loop       bit run_main_loop       ; wait until NMI routine has set flag
                 sta prev_pad_status
                 jsr read_joypad
                 jsr button_logic
-                inc frame_counter       ; before write_buffer!
-                jsr write_buffer
+                jsr prep_ppu_upd
 
                 jmp main_loop
 
@@ -171,64 +180,139 @@ read_joypad     ; read 1st joypad or Famicom expansion port controller
                 bcc -
                 rts
 
-button_logic    lda prev_pad_status
-                beq +
-                rts
+button_logic    ; exit if anything pressed on previous frame
+                lda prev_pad_status
+                bne +
 
-+               lda pad_status
+                lda pad_status
                 lsr a
-                bcs +                   ; right
+                bcs next_image          ; right
                 lsr a
-                bcs ++                  ; left
-                rts
+                bcs prev_image          ; left
++               rts
 
-+               ; next flag
-                inc which_flag
-                lda which_flag
+next_image      inc which_image
+                lda which_image
                 cmp #image_count
                 bne +
                 lda #0
-                sta which_flag
-+               rts
+                sta which_image
++               lda #0
+                sta ppu_upd_phase       ; PPU mem must be updated
+                rts
 
-++              ; previous flag
-                dec which_flag
+prev_image      dec which_image
                 bpl +
                 lda #(image_count-1)
-                sta which_flag
-+               rts
+                sta which_image
++               lda #0
+                sta ppu_upd_phase       ; PPU mem must be updated
+                rts
 
-write_buffer    ; copy one eighth of NT/AT data ($80 bytes) to vram_buffer
-                ; according to frame counter
+prep_ppu_upd    ; prepare a PPU memory update according to ppu_upd_phase
 
-                ; pointer:
-                ; nt_at_data + which_flag*$400 + (frame_counter & 7) * $80
+                lda ppu_upd_phase
+                cmp #8
+                beq +                   ; 8
+                bpl ++                  ; 9
+                jsr nt_at_to_buffer     ; 0-7
+                rts
++               jsr pal_to_buffer
+++              rts
 
-                ; high byte: #>nt_at_data + which_flag*4 + (frame_counter/2)&3
-                lda which_flag
+nt_at_to_buffer ; copy one eighth of name/attribute table data of current
+                ; image ($80 bytes) to ppu_buffer according to ppu_upd_phase
+                ; (must be 0-7)
+
+                ; nt_at_addr:
+                ; nt_at_data + which_image*$400 + ppu_upd_phase * $80
+
+                ; high byte: #>nt_at_data + which_image*4 + ppu_upd_phase/2
+                lda which_image
                 asl a
                 asl a
-                sta pointer+1
-                lda frame_counter
+                sta nt_at_addr+1
+                lda ppu_upd_phase
                 lsr a
-                and #%00000011
                 ora #>nt_at_data
-                ora pointer+1
-                sta pointer+1
+                ora nt_at_addr+1
+                sta nt_at_addr+1
 
-                ; low byte: (frame_counter & 1) * $80
-                lda frame_counter
+                ; low byte: (ppu_upd_phase&1) * $80
+                lda ppu_upd_phase
                 lsr a
                 lda #0
                 ror a
-                sta pointer+0
+                sta nt_at_addr+0
 
                 ; copy
-                ldy #0
--               lda (pointer),y
-                sta vram_buffer,y
+                ldy #0                  ; source index
+                ldx #($80-1)            ; destination index
+-               lda (nt_at_addr),y
+                sta ppu_buffer,x
                 iny
-                cpy #$80
+                dex
+                bpl -
+
+                ; PPU address: $2000 + ppu_upd_phase * $80
+                ;
+                lda ppu_upd_phase       ; high byte
+                lsr a
+                ora #$20
+                sta ppu_upd_addr+1
+                ;
+                lda ppu_upd_phase       ; low byte
+                lsr a
+                lda #0
+                ror a
+                sta ppu_upd_addr+0
+
+                lda #$80
+                sta ppu_upd_length
+
+                rts
+
+pal_to_buffer   ; copy background palettes of current image (16 bytes) to
+                ; ppu_buffer
+
+                lda which_image         ; X = source offset
+                asl a
+                asl a
+                asl a
+                asl a
+                tax
+                ldy #(16-1)             ; Y = destination offset
+                ;
+-               lda bg_pal_data,x
+                sta ppu_buffer,y
+                inx
+                dey
+                bpl -
+
+                lda #$3f
+                sta ppu_upd_addr+1
+                lda #$00
+                sta ppu_upd_addr+0
+
+                lda #16
+                sta ppu_upd_length
+
+                ; also update image description sprites
+                lda which_image
+                asl a
+                asl a
+                asl a
+                tax
+                ldy #0
+                ;
+-               lda img_name_data,x
+                sta sprite_data+1,y
+                inx
+                iny
+                iny
+                iny
+                iny
+                cpy #(8*4)
                 bne -
 
                 rts
@@ -245,16 +329,30 @@ nmi             pha                     ; push A, X, Y
 
                 bit ppu_status          ; reset ppu_scroll/ppu_addr latch
 
-                lda #$00                ; do sprite DMA
+                lda ppu_upd_phase       ; do sprite DMA on correct phase
+                cmp #8
+                bne +
+                ;
+                lda #$00
                 sta oam_addr
                 lda #>sprite_data
                 sta oam_dma
 
-                jsr copy_palette
-                jsr copy_nt_at
-                jsr set_ppu_regs        ; set ppu_scroll/ppu_ctrl/ppu_mask
++               ; update PPU memory if image not completely drawn
+                lda ppu_upd_phase
+                cmp #9
+                beq +
+                jsr upd_ppu_mem
 
-                sec                     ; set flag to let main loop run once
++               jsr set_ppu_regs        ; set ppu_scroll/ppu_ctrl/ppu_mask
+
+                ; increment phase if flag not completely drawn
+                lda ppu_upd_phase
+                cmp #9
+                beq +
+                inc ppu_upd_phase
+
++               sec                     ; set flag to let main loop run once
                 ror run_main_loop
 
                 pla                     ; pull Y, X, A
@@ -265,72 +363,18 @@ nmi             pha                     ; push A, X, Y
 
 irq             rti                     ; IRQ unused
 
-copy_palette    ; copy background palette
+upd_ppu_mem     ; copy data from ppu_buffer to PPU memory
 
-                ldy #$3f
-                lda #$00
+                ldy ppu_upd_addr+1
+                lda ppu_upd_addr+0
                 jsr set_ppu_addr        ; Y*$100 + A -> address
 
-                lda which_flag
-                asl a
-                asl a
-                asl a
-                asl a
-                tax
-                ldy #16
--               lda bg_pal_data,x
+                ldx ppu_upd_length
+                dex
+-               lda ppu_buffer,x
                 sta ppu_data
-                inx
-                dey
-                bne -
-                ;
-                rts
-
-copy_nt_at      ; copy one eighth of NT/AT data ($80 bytes) from VRAM buffer
-                ; to PPU
-
-                ; PPU address: $2000 + (frame_counter & 7) * $80
-                ;
-                lda frame_counter       ; high byte
-                lsr a
-                and #%00000011
-                ora #$20
-                sta ppu_addr
-                sta $f0
-                ;
-                lda frame_counter       ; low byte
-                lsr a
-                lda #0
-                ror a
-                sta ppu_addr
-                sta $f1
-
-                ; copy
-                ; NOTE: almost out of VBlank time; optimize elsewhere
-                ldx #0
--               lda vram_buffer+0,x
-                sta ppu_data
-                lda vram_buffer+1,x
-                sta ppu_data
-                lda vram_buffer+2,x
-                sta ppu_data
-                lda vram_buffer+3,x
-                sta ppu_data
-                lda vram_buffer+4,x
-                sta ppu_data
-                lda vram_buffer+5,x
-                sta ppu_data
-                lda vram_buffer+6,x
-                sta ppu_data
-                lda vram_buffer+7,x
-                sta ppu_data
-                ;
-                txa
-                clc
-                adc #8
-                tax
-                cpx #$80
-                bne -
+                dex
+                bpl -
 
                 rts
 
@@ -342,7 +386,7 @@ set_ppu_addr    sty ppu_addr            ; Y*$100 + A -> address
 
 set_ppu_regs    lda #0                  ; set scroll value
                 sta ppu_scroll
-                lda #232
+                lda #8
                 sta ppu_scroll
                 lda #%10001000          ; enable NMI, use PT1 for sprites
                 sta ppu_ctrl
