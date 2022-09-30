@@ -238,36 +238,26 @@ nt_at_to_buffer ; copy one eighth of name & attribute table data of current
                 ; image ($80 bytes) backwards to ppu_buffer according to
                 ; ppu_upd_phase (must be 0-7)
 
-                ; nt_at_addr:
-                ; nt_at_data + which_image * $400 + ppu_upd_phase * $80
-                ;
-                ; low byte: (ppu_upd_phase&1) * $80 + (<nt_at_data)
-                lda ppu_upd_phase
-                lsr a
-                lda #0
-                ror a
-                clc
-                adc #<nt_at_data
-                sta nt_at_addr+0
-                ;
-                ; high byte:
-                ; carry + (>nt_at_data) + which_image*4 + ppu_upd_phase/2
-                lda #>nt_at_data
-                adc #0
-                sta nt_at_addr+1
+                ; get offset to nt_at_data:
+                ; X = nt_at_offsets + which_image*16 + ppu_upd_phase*2
                 lda which_image
                 asl a
                 asl a
+                asl a
+                ora ppu_upd_phase
+                asl a
+                tax
+
+                ; get address within nt_at_data
                 clc
-                adc nt_at_addr+1
-                sta nt_at_addr+1
-                lda ppu_upd_phase
-                lsr a
-                clc
-                adc nt_at_addr+1
+                lda #<nt_at_data
+                adc nt_at_offsets+0,x
+                sta nt_at_addr+0
+                lda #>nt_at_data
+                adc nt_at_offsets+1,x
                 sta nt_at_addr+1
 
-                ; copy backwards
+                ; copy backwards from nt_at_data to buffer
                 ldy #0                  ; source index
                 ldx #($80-1)            ; destination index
 -               lda (nt_at_addr),y
@@ -357,11 +347,15 @@ update_sprites  ; update tiles of image description sprites
 
 ; --- Data for each image -----------------------------------------------------
 
-                ; name & attribute table data ($400 bytes/image)
-nt_at_data      incbin "nt-at.bin"
+nt_at_offsets   ; offsets to start of name & attribute table data
+                ; (8 offsets/image or 16 bytes/image, little endian)
+                incbin "offs.bin"
 
-                ; background palette data (16 bytes/image)
-bg_pal_data     incbin "pal.bin"
+nt_at_data      ; name & attribute table data ($400 bytes/image)
+                incbin "nt-at.bin"
+
+bg_pal_data     ; background palette data (16 bytes/image)
+                incbin "pal.bin"
 
                 ; descriptions (8 bytes/image)
 img_name_data   incbin "names.bin"
