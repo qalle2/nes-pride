@@ -1,40 +1,71 @@
 # convert images of pride flags into NES-compatible format
 
-import itertools, os, struct, sys
+import itertools, os, sys
 from PIL import Image  # Pillow, https://python-pillow.org
 
 IMAGE_DIR  = "img"          # read images from here
 IMAGE_EXT  = ".png"         # read images with this extension
-NAME_FILE  = "names.bin"    # write names of images here
-PAL_FILE   = "pal.bin"      # write palette data here
 PT_FILE    = "chr-bg.bin"   # write pattern table data here
-OFFS_FILE  = "offs.bin"     # write offsets to NT & AT data here
-NT_AT_FILE = "nt-at.bin"    # write name & attribute table data here
+OUT_FILE   = "autogen.asm"  # write data in ASM6 format here
 
 # NES color number for background and unused colors (black)
 NES_BG_COLOR = 0x0f
 
 # NES master palette
 # key=index, value=(red, green, blue); source: FCEUX (fceux.pal)
+# colors omitted (hexadecimal): 0d-0e, 10, 1d-20, 2d-2f, 3d-3f
 NES_PALETTE = {
-    0x00: (0x74, 0x74, 0x74),  # gray
-    0x08: (0x40, 0x2c, 0x00),  # dark olive
-    0x0f: (0x00, 0x00, 0x00),  # black
-
-    0x12: (0x20, 0x38, 0xec),  # blue
-    0x13: (0x80, 0x00, 0xf0),  # purple
-    0x14: (0xbc, 0x00, 0xbc),  # pink
-    0x15: (0xe4, 0x00, 0x58),  # pink/red
-    0x16: (0xd8, 0x28, 0x00),  # red/orange
-    0x19: (0x00, 0x94, 0x00),  # green
-
-    0x21: (0x3c, 0xbc, 0xfc),  # light blue
-    0x25: (0xfc, 0x74, 0xb4),  # light pink
-    0x27: (0xfc, 0x98, 0x38),  # orange/yellow
-    0x28: (0xf0, 0xbc, 0x3c),  # yellow
-    0x2b: (0x58, 0xf8, 0x98),  # light green
-
-    0x30: (0xfc, 0xfc, 0xfc),  # white
+    0x00: (0x74, 0x74, 0x74),
+    0x01: (0x24, 0x18, 0x8c),
+    0x02: (0x00, 0x00, 0xa8),
+    0x03: (0x44, 0x00, 0x9c),
+    0x04: (0x8c, 0x00, 0x74),
+    0x05: (0xa8, 0x00, 0x10),
+    0x06: (0xa4, 0x00, 0x00),
+    0x07: (0x7c, 0x08, 0x00),
+    0x08: (0x40, 0x2c, 0x00),
+    0x09: (0x00, 0x44, 0x00),
+    0x0a: (0x00, 0x50, 0x00),
+    0x0b: (0x00, 0x3c, 0x14),
+    0x0c: (0x18, 0x3c, 0x5c),
+    0x0f: (0x00, 0x00, 0x00),
+    0x11: (0x00, 0x70, 0xec),
+    0x12: (0x20, 0x38, 0xec),
+    0x13: (0x80, 0x00, 0xf0),
+    0x14: (0xbc, 0x00, 0xbc),
+    0x15: (0xe4, 0x00, 0x58),
+    0x16: (0xd8, 0x28, 0x00),
+    0x17: (0xc8, 0x4c, 0x0c),
+    0x18: (0x88, 0x70, 0x00),
+    0x19: (0x00, 0x94, 0x00),
+    0x1a: (0x00, 0xa8, 0x00),
+    0x1b: (0x00, 0x90, 0x38),
+    0x1c: (0x00, 0x80, 0x88),
+    0x21: (0x3c, 0xbc, 0xfc),
+    0x22: (0x5c, 0x94, 0xfc),
+    0x23: (0xcc, 0x88, 0xfc),
+    0x24: (0xf4, 0x78, 0xfc),
+    0x25: (0xfc, 0x74, 0xb4),
+    0x26: (0xfc, 0x74, 0x60),
+    0x27: (0xfc, 0x98, 0x38),
+    0x28: (0xf0, 0xbc, 0x3c),
+    0x29: (0x80, 0xd0, 0x10),
+    0x2a: (0x4c, 0xdc, 0x48),
+    0x2b: (0x58, 0xf8, 0x98),
+    0x2c: (0x00, 0xe8, 0xd8),
+    0x30: (0xfc, 0xfc, 0xfc),
+    0x31: (0xa8, 0xe4, 0xfc),
+    0x32: (0xc4, 0xd4, 0xfc),
+    0x33: (0xd4, 0xc8, 0xfc),
+    0x34: (0xfc, 0xc4, 0xfc),
+    0x35: (0xfc, 0xc4, 0xd8),
+    0x36: (0xfc, 0xbc, 0xb0),
+    0x37: (0xfc, 0xd8, 0xa8),
+    0x38: (0xfc, 0xe4, 0xa0),
+    0x39: (0xe0, 0xfc, 0xa0),
+    0x3a: (0xa8, 0xf0, 0xbc),
+    0x3b: (0xb0, 0xfc, 0xcc),
+    0x3c: (0x9c, 0xfc, 0xf0),
 }
 
 # --- process_image() and functions used by it --------------------------------
@@ -263,38 +294,6 @@ def rle_encode(data):
 def main():
     filenames = sorted(get_filenames())
 
-    print("Copy this constant manually to pride.asm:")
-    print(f"{'image_count':15s} equ {len(filenames)}")
-
-    print(f"Writing names of images to {NAME_FILE}...")
-    with open(NAME_FILE, "wb") as target:
-        target.seek(0)
-        for filename in filenames:
-            filename = filename.lower()
-            # NES can't show more than 8 sprites per scanline
-            if len(filename) > 8 or not filename.isascii():
-                sys.exit(
-                    "image filenames must be 8 ASCII characters or less "
-                    "(excluding extension)."
-                )
-            target.write(filename.rjust(8).encode("ascii"))
-
-    print(f"Writing palette data to {PAL_FILE}...")
-    with open(PAL_FILE, "wb") as target:
-        target.seek(0)
-        for filename in filenames:
-            path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
-            with open(path, "rb") as source:
-                source.seek(0)
-                image = Image.open(source)
-                palette = bytes(process_image(image, 0))
-                print(
-                    f"{filename:8}: {len(set(palette)):2} colors including "
-                    f"${NES_BG_COLOR:02x}: "
-                    + " ".join(palette[i:i+4].hex() for i in range(0, 16, 4))
-                )
-                target.write(palette)
-
     print(f"Writing pattern table data to {PT_FILE}...")
     # make sure we have a blank tile (for nonsafe screen area)
     uniqueTiles = {tuple(64 * [0])}
@@ -319,25 +318,87 @@ def main():
         handle.seek(0)
         handle.write(encode_pt_data(uniqueTiles))
 
-    print(
-        f"Writing RLE encoded name & attribute table data to {NT_AT_FILE} and "
-        f"offsets to {OFFS_FILE}..."
-    )
-    with open(OFFS_FILE, "wb") as offsHnd, open(NT_AT_FILE, "wb") as ntAtHnd:
-        offset = 0
-        offsHnd.seek(0)
-        ntAtHnd.seek(0)
+    print(f"Writing other data to {OUT_FILE}...")
+    with open(OUT_FILE, "wt", encoding="ascii") as target:
+        target.seek(0)
+
+        print(
+            "; This file was generated automatically by convert.py.",
+            file=target
+        )
+        print("", file=target)
+
+        print(
+            f"{'image_count':15} equ {len(filenames)}  ; number of images",
+            file=target
+        )
+        print("", file=target)
+
+        # descriptions
+        print(
+            f"{'img_name_data':15} ; descriptions (exactly 8 bytes/image)",
+            file=target
+        )
+        for filename in filenames:
+            filename = filename.lower()
+            # NES can't show more than 8 sprites per scanline
+            if len(filename) > 8 or not filename.isascii():
+                sys.exit(
+                    "image filenames must be 8 ASCII characters or less "
+                    "(excluding extension)."
+                )
+            print(f"{'':15} db \"{filename:>8}\"", file=target)
+        print("", file=target)
+
+        # palettes
+        print(
+            f"{'bg_pal_data':15} ; background palette data (16 bytes/image)",
+            file=target
+        )
         for filename in filenames:
             path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
-            imgStartOffset = offset
+            with open(path, "rb") as source:
+                source.seek(0)
+                image = Image.open(source)
+                palette = bytes(process_image(image, 0))
+                print(
+                    f"{'':15} hex "
+                    + " ".join(palette[i:i+4].hex() for i in range(0, 16, 4)),
+                    file=target
+                )
+        print("", file=target)
+
+        # addresses in RLE encoded name & attribute table data
+        print(
+            f"{'nt_at_offsets':15} ; addresses in RLE compressed name & "
+            "attribute table data", file=target
+        )
+        for fi in range(len(filenames)):
+            for si in range(8):
+                print(f"{'':15} dw img{fi}_slice{si}", file=target)
+        print("", file=target)
+
+        # RLE encoded name & attribute table data
+        print(
+            f"{'':15} ; RLE compressed name & attribute table data",
+            file=target
+        )
+        print(
+            f"{'':15} ; (each slice decompresses into exactly $80 bytes)",
+            file=target
+        )
+        for (fi, filename) in enumerate(filenames):
+            path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
             with open(path, "rb") as source:
                 source.seek(0)
                 ntAtData = process_image(Image.open(source), 2, uniqueTiles)
-                for i in range(0, len(ntAtData), 0x80):
-                    rleData = bytes(rle_encode(ntAtData[i:i+0x80]))
-                    offsHnd.write(struct.pack("<H", offset))
-                    ntAtHnd.write(rleData)
-                    offset += len(rleData)
-            print(f"{filename:8}: {offset-imgStartOffset:4} bytes")
+                for si in range(8):
+                    print(f"img{fi}_slice{si}", file=target)
+                    rleData = bytes(rle_encode(ntAtData[si*0x80:(si+1)*0x80]))
+                    for i in range(0, len(rleData), 32):
+                        print(
+                            f"{'':15} hex " + rleData[i:i+32].hex(),
+                            file=target
+                        )
 
 main()
