@@ -77,8 +77,6 @@ def color_diff(rgb1, rgb2):
 def closest_nes_color(rgb):
     # get best match (NES color number) for color (red, green, blue)
     minDiff = min(color_diff(NES_PALETTE[i], rgb) for i in NES_PALETTE)
-    if minDiff > 10:
-        print("Warning: closest NES color is far away.", file=sys.stderr)
     return [
         i for i in sorted(NES_PALETTE)
         if color_diff(NES_PALETTE[i], rgb) == minDiff
