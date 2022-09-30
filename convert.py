@@ -5,7 +5,7 @@ from PIL import Image  # Pillow, https://python-pillow.org
 
 IMAGE_DIR  = "img"         # read images from here
 IMAGE_EXT  = ".png"        # read images with this extension
-NAME_FILE  = "names.bin"   # write names of flags here
+NAME_FILE  = "names.bin"   # write names of images here
 PAL_FILE   = "pal.bin"     # write palette data here
 PT_FILE    = "chr-bg.bin"  # write pattern table data here
 NT_AT_FILE = "nt-at.bin"   # write name & attribute table data here
@@ -104,26 +104,8 @@ def create_subpalettes(colorSets):
     colorSets = sorted(colorSets)
     colorSets.sort(key=lambda s: len(s), reverse=True)
 
-    # try algorithm 1 (less colors per subpalette and thus less unique tiles)
     subpals = [set() for i in range(4)]
-    for colorSet in colorSets:
-        # get minimum number of colors when adding these colors to a subpalette
-        minCnt = min(len(s | colorSet) for s in subpals)
-        if minCnt > 3:
-            # failed; try algorithm 2
-            subpals = None
-            break
-        # which subpalette was it (first one if several)
-        bestSubpal = [
-            i for (i, s) in enumerate(subpals) if len(s | colorSet) == minCnt
-        ][0]
-        # add colors there
-        subpals[bestSubpal].update(colorSet)
-    if subpals is not None:
-        return subpals
 
-    # try algorithm 2 (if 1 failed)
-    subpals = [set() for i in range(4)]
     for colorSet in colorSets:
         # get maximum number of common colors with a subpalette in which
         # the new colors fit
@@ -143,6 +125,7 @@ def create_subpalettes(colorSets):
         ][0]
         # add colors there
         subpals[bestSubpal].update(colorSet)
+
     return subpals
 
 def get_attr_data(image, subpals, bgIndex):
@@ -290,18 +273,18 @@ def main():
     print("Copy this constant manually to pride.asm:")
     print(f"{'image_count':15s} equ {len(filenames)}")
 
-    print(f"Writing names of flags to {NAME_FILE}...")
+    print(f"Writing names of images to {NAME_FILE}...")
     with open(NAME_FILE, "wb") as target:
         target.seek(0)
         for filename in filenames:
-            filename = filename.upper()
+            filename = filename.lower()
             # NES can't show more than 8 sprites per scanline
             if len(filename) > 8 or not filename.isascii():
                 sys.exit(
-                    "Flag filenames must be 8 ASCII characters or less "
+                    "image filenames must be 8 ASCII characters or less "
                     "(excluding extension)."
                 )
-            target.write(f"{filename:8s}".encode("ascii"))
+            target.write(filename.rjust(8).encode("ascii"))
 
     print(f"Writing palette data to {PAL_FILE}...")
     with open(PAL_FILE, "wb") as target:

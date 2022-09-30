@@ -38,3 +38,6 @@ Table of contents:
 * [Wikipedia &ndash; Rainbow flag (LGBT)](https://en.wikipedia.org/wiki/Rainbow_flag_%28LGBT%29)
 
 The license of this project does not apply to the flag images (I guess).
+
+## To do
+* compress name &amp; attribute table data
