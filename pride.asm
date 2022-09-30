@@ -14,13 +14,13 @@
 ; RAM
 ppu_buffer      equ $00    ; see above ($80 bytes)
 nt_at_addr      equ $80    ; source      address in NT/AT data (2 bytes)
-ppu_upd_addr    equ $82    ; destination address in PPU memory (2 bytes)
+ppu_dst_addr    equ $82    ; destination address in PPU memory (2 bytes)
 run_main_loop   equ $84    ; main loop allowed to run? (boolean)
 pad_status      equ $85    ; joypad status
 prev_pad_status equ $86    ; previous joypad status
 which_image     equ $87    ; which image is being shown
-ppu_upd_phase   equ $88    ; see above
-ppu_upd_length  equ $89    ; how many bytes to copy from buffer to PPU
+ppu_upd_phase   equ $88    ; PPU update phase; see above
+ppu_buffer_len  equ $89    ; length of PPU buffer
 text_visible    equ $8a    ; flag description visible? (boolean)
 sprite_data     equ $0200  ; OAM page ($100 bytes)
 
@@ -51,21 +51,9 @@ image_count     equ 13
                 db %00000001, %00000000  ; NROM mapper, vertical mirroring
                 pad $0010, $00           ; unused
 
-; --- NT/AT/palette data ------------------------------------------------------
+; --- Start of PRG ROM --------------------------------------------------------
 
                 base $c000              ; last 16 KiB of CPU address space
-
-                ; name & attribute table data for each image
-                ; (here to simplify address calculations)
-nt_at_data      incbin "nt-at.bin"
-
-                ; background palette data for each image (16 bytes/image)
-bg_pal_data     incbin "pal.bin"
-
-                ; name of each image (8 bytes/image)
-img_name_data   incbin "names.bin"
-
-; --- Initialization ----------------------------------------------------------
 
 reset           ; initialize the NES;
                 ; see https://wiki.nesdev.org/w/index.php/Init_code
@@ -83,6 +71,20 @@ reset           ; initialize the NES;
                 stx snd_chn             ; disable sound channels
 
                 jsr wait_vbl_start      ; wait until next VBlank starts
+                jsr init_main_ram       ; initialize main RAM
+                jsr prep_ppu_upd        ; prepare for first NMI
+
+                jsr wait_vbl_start      ; wait until next VBlank starts
+                jsr init_palettes       ; initialize palettes
+                jsr set_ppu_regs        ; set PPU registers
+                jmp main_loop           ; start main loop
+
+wait_vbl_start  bit ppu_status          ; wait until next VBlank starts
+-               lda ppu_status
+                bpl -
+                rts
+
+init_main_ram   ; initialize main RAM
 
                 lda #$00                ; fill zero page with $00
                 tax
@@ -90,13 +92,13 @@ reset           ; initialize the NES;
                 inx
                 bne -
 
-                lda #$ff                ; fill sprite page with $ff to
-                ldx #0                  ; hide all sprites
+                lda #$ff                ; fill sprite page with $ff to hide
+                ldx #0                  ; all sprites
 -               sta sprite_data,x
                 inx
                 bne -
 
-                ; set attributes of sprites 0-7
+                ; set attributes of image description sprites (0-7)
                 ldx #0
 -               lda #%00000000          ; subpalette 0, no mirroring
                 sta sprite_data+2,x
@@ -107,7 +109,7 @@ reset           ; initialize the NES;
                 cpx #(8*4)
                 bne -
 
-                ; set X positions of sprites 0-7
+                ; set X positions of image description sprites (0-7)
                 ldx #0
                 lda #(22*8)
 -               sta sprite_data+3,x
@@ -120,30 +122,19 @@ reset           ; initialize the NES;
                 cpx #(8*4)
                 bne -
 
-                lda #255
+                lda #255                ; start drawing first image
                 sta ppu_upd_phase
 
-                ; prepare PPU update (must be done before NMI routine runs the
-                ; first time)
-                jsr prep_ppu_upd
+                rts
 
-                jsr wait_vbl_start      ; wait until next VBlank starts
-
-                ; set sprite palette
+init_palettes   ; set colors 1 and 2 of sprite palette 0
                 ldy #$3f
                 lda #$11
-                jsr set_ppu_addr
+                jsr set_ppu_addr        ; Y*$100 + A -> address
                 lda #$0f                ; black
                 sta ppu_data
                 lda #$30                ; white
                 sta ppu_data
-
-                jsr set_ppu_regs        ; set ppu_scroll/ppu_ctrl/ppu_mask
-                jmp main_loop
-
-wait_vbl_start  bit ppu_status          ; wait until next VBlank starts
--               lda ppu_status
-                bpl -
                 rts
 
 ; --- Main loop ---------------------------------------------------------------
@@ -250,21 +241,31 @@ nt_at_to_buffer ; copy one eighth of name & attribute table data of current
                 ; nt_at_addr:
                 ; nt_at_data + which_image * $400 + ppu_upd_phase * $80
                 ;
-                lda which_image         ; high byte
-                asl a
-                asl a
-                sta nt_at_addr+1
+                ; low byte: (ppu_upd_phase&1) * $80 + (<nt_at_data)
                 lda ppu_upd_phase
-                lsr a
-                ora #>nt_at_data
-                ora nt_at_addr+1
-                sta nt_at_addr+1
-                ;
-                lda ppu_upd_phase       ; low byte
                 lsr a
                 lda #0
                 ror a
+                clc
+                adc #<nt_at_data
                 sta nt_at_addr+0
+                ;
+                ; high byte:
+                ; carry + (>nt_at_data) + which_image*4 + ppu_upd_phase/2
+                lda #>nt_at_data
+                adc #0
+                sta nt_at_addr+1
+                lda which_image
+                asl a
+                asl a
+                clc
+                adc nt_at_addr+1
+                sta nt_at_addr+1
+                lda ppu_upd_phase
+                lsr a
+                clc
+                adc nt_at_addr+1
+                sta nt_at_addr+1
 
                 ; copy backwards
                 ldy #0                  ; source index
@@ -280,16 +281,16 @@ nt_at_to_buffer ; copy one eighth of name & attribute table data of current
                 lda ppu_upd_phase       ; high byte
                 lsr a
                 ora #$20
-                sta ppu_upd_addr+1
+                sta ppu_dst_addr+1
                 ;
                 lda ppu_upd_phase       ; low byte
                 lsr a
                 lda #0
                 ror a
-                sta ppu_upd_addr+0
+                sta ppu_dst_addr+0
 
                 lda #$80                ; length
-                sta ppu_upd_length
+                sta ppu_buffer_len
 
                 rts
 
@@ -300,13 +301,11 @@ pal_to_buffer   ; copy background palettes (16 bytes) to ppu_buffer according
                 bpl +
 
                 ; phase 255: copy gray only
-                ;
                 lda #$00
                 ldx #(16-1)
 -               sta ppu_buffer,x
                 dex
                 bpl -
-                ;
                 jmp ++
 
 +               ; phase 8: copy background palettes of current image backwards
@@ -326,12 +325,12 @@ pal_to_buffer   ; copy background palettes (16 bytes) to ppu_buffer according
                 bpl -
 
 ++              lda #$3f                ; PPU address
-                sta ppu_upd_addr+1
+                sta ppu_dst_addr+1
                 lda #$00
-                sta ppu_upd_addr+0
+                sta ppu_dst_addr+0
 
                 lda #16                 ; length
-                sta ppu_upd_length
+                sta ppu_buffer_len
 
                 rts
 
@@ -356,6 +355,17 @@ update_sprites  ; update tiles of image description sprites
 
                 rts
 
+; --- Data for each image -----------------------------------------------------
+
+                ; name & attribute table data ($400 bytes/image)
+nt_at_data      incbin "nt-at.bin"
+
+                ; background palette data (16 bytes/image)
+bg_pal_data     incbin "pal.bin"
+
+                ; descriptions (8 bytes/image)
+img_name_data   incbin "names.bin"
+
 ; --- Interrupt routines ------------------------------------------------------
 
                 align $100, $ff
@@ -371,14 +381,9 @@ nmi             pha                     ; push A, X, Y
                 lda ppu_upd_phase       ; do OAM DMA on phases 255 and 8
                 cmp #8
                 bcc +
-                ;
-                lda #$00
-                sta oam_addr
-                lda #>sprite_data
-                sta oam_dma
-
-+               jsr upd_ppu_mem         ; update PPU memory (on every phase)
-                jsr set_ppu_regs        ; set ppu_scroll/ppu_ctrl/ppu_mask
+                jsr do_oam_dma
++               jsr buffer_to_ppu       ; copy PPU buffer
+                jsr set_ppu_regs        ; set PPU registers
 
                 lda ppu_upd_phase       ; increment phase up to 8
                 cmp #8
@@ -396,19 +401,26 @@ nmi             pha                     ; push A, X, Y
 
 irq             rti                     ; IRQ unused
 
-upd_ppu_mem     ; copy data backwards from ppu_buffer to PPU memory
+do_oam_dma      lda #$00
+                sta oam_addr
+                lda #>sprite_data
+                sta oam_dma
+                rts
 
-                ldy ppu_upd_addr+1
-                lda ppu_upd_addr+0
-                jsr set_ppu_addr        ; Y*$100 + A -> address
-
-                ldx ppu_upd_length
+buffer_to_ppu   ; copy PPU buffer backwards to PPU memory
+                ;
+                lda ppu_dst_addr+1
+                sta ppu_addr
+                lda ppu_dst_addr+0
+                sta ppu_addr
+                ;
+                ldx ppu_buffer_len
                 dex
 -               lda ppu_buffer,x
                 sta ppu_data
                 dex
                 bpl -
-
+                ;
                 rts
 
 ; --- Subs used in many places ------------------------------------------------
