@@ -5,7 +5,7 @@
 ; Notes:
 ; - addresses are little-endian (low byte first)
 ; - boolean variables: $00-$7f = false, $80-$ff = true
-; - ppu_buffer: what to copy *backwards* to PPU memory on next VBlank
+; - ppu_buffer: what to copy to PPU memory on next VBlank
 ; - ppu_upd_phase: what to update in PPU memory on next VBlank:
 ;     255: copy blank background palettes from buffer (16 bytes) & do OAM DMA
 ;     0-7: copy one eighth of name & attribute table from buffer ($80 bytes)
@@ -22,6 +22,8 @@ which_image     equ $87    ; which image is being shown
 ppu_upd_phase   equ $88    ; PPU update phase; see above
 ppu_buffer_len  equ $89    ; length of PPU buffer
 text_visible    equ $8a    ; flag description visible? (boolean)
+src_ind_temp    equ $8b    ; temporary - source index
+dst_ind_temp    equ $8c    ; temporary - destination index
 sprite_data     equ $0200  ; OAM page ($100 bytes)
 
 ; memory-mapped registers
@@ -235,8 +237,8 @@ prep_ppu_upd    ; prepare a PPU memory update according to ppu_upd_phase
                 rts
 
 nt_at_to_buffer ; copy one eighth of name & attribute table data of current
-                ; image ($80 bytes) backwards to ppu_buffer according to
-                ; ppu_upd_phase (must be 0-7)
+                ; image ($80 bytes) to ppu_buffer according to ppu_upd_phase
+                ; (must be 0-7)
 
                 ; get offset to nt_at_data:
                 ; X = nt_at_offsets + which_image*16 + ppu_upd_phase*2
@@ -257,16 +259,35 @@ nt_at_to_buffer ; copy one eighth of name & attribute table data of current
                 adc nt_at_offsets+1,x
                 sta nt_at_addr+1
 
-                ; copy backwards from nt_at_data to buffer
-                ldy #0                  ; source index
-                ldx #($80-1)            ; destination index
--               lda (nt_at_addr),y
-                sta ppu_buffer,x
+                ; decode RLE data from nt_at_data to PPU buffer
+                ; (always decodes into $80 bytes)
+                ; - repeat counter: X
+                ; - source index: src_ind_temp, Y
+                ; - destination index: dst_ind_temp, Y
+                ;
+                ldy #0
+                sty src_ind_temp
+                sty dst_ind_temp
+                ;
+--              ldy src_ind_temp        ; source index -> Y
+                lda (nt_at_addr),y
+                beq +                   ; terminator
+                tax                     ; repeat count -> X
+                iny
+                lda (nt_at_addr),y      ; value to repeat -> A
+                iny
+                sty src_ind_temp
+                ldy dst_ind_temp        ; destination index -> Y
+                ;
+-               sta ppu_buffer,y        ; copy value
                 iny
                 dex
-                bpl -
+                bne -
+                sty dst_ind_temp
+                ;
+                jmp --
 
-                ; PPU address: $2000 + ppu_upd_phase * $80
++               ; PPU address: $2000 + ppu_upd_phase * $80
                 ;
                 lda ppu_upd_phase       ; high byte
                 lsr a
@@ -298,7 +319,7 @@ pal_to_buffer   ; copy background palettes (16 bytes) to ppu_buffer according
                 bpl -
                 jmp ++
 
-+               ; phase 8: copy background palettes of current image backwards
++               ; phase 8: copy background palettes of current image
                 ;
                 lda which_image         ; X = source index
                 asl a
@@ -306,13 +327,14 @@ pal_to_buffer   ; copy background palettes (16 bytes) to ppu_buffer according
                 asl a
                 asl a
                 tax
-                ldy #(16-1)             ; Y = destination index
+                ldy #0                  ; Y = destination index
                 ;
 -               lda bg_pal_data,x
                 sta ppu_buffer,y
                 inx
-                dey
-                bpl -
+                iny
+                cpy #16
+                bne -
 
 ++              lda #$3f                ; PPU address
                 sta ppu_dst_addr+1
@@ -347,11 +369,12 @@ update_sprites  ; update tiles of image description sprites
 
 ; --- Data for each image -----------------------------------------------------
 
-nt_at_offsets   ; offsets to start of name & attribute table data
-                ; (8 offsets/image or 16 bytes/image, little endian)
+nt_at_offsets   ; offsets to RLE encoded name & attribute table data
+                ; (1 offset/stream, 2 bytes/offset, little endian)
                 incbin "offs.bin"
 
-nt_at_data      ; name & attribute table data ($400 bytes/image)
+nt_at_data      ; RLE encoded name & attribute table data
+                ; (8 streams/image, $80 decoded bytes/stream)
                 incbin "nt-at.bin"
 
 bg_pal_data     ; background palette data (16 bytes/image)
@@ -401,19 +424,19 @@ do_oam_dma      lda #$00
                 sta oam_dma
                 rts
 
-buffer_to_ppu   ; copy PPU buffer backwards to PPU memory
+buffer_to_ppu   ; copy PPU buffer to PPU memory
                 ;
                 lda ppu_dst_addr+1
                 sta ppu_addr
                 lda ppu_dst_addr+0
                 sta ppu_addr
                 ;
-                ldx ppu_buffer_len
-                dex
+                ldx #0
 -               lda ppu_buffer,x
                 sta ppu_data
-                dex
-                bpl -
+                inx
+                cpx ppu_buffer_len
+                bne -
                 ;
                 rts
 

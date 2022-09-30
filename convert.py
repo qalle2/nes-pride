@@ -3,13 +3,13 @@
 import itertools, os, struct, sys
 from PIL import Image  # Pillow, https://python-pillow.org
 
-IMAGE_DIR  = "img"         # read images from here
-IMAGE_EXT  = ".png"        # read images with this extension
-NAME_FILE  = "names.bin"   # write names of images here
-PAL_FILE   = "pal.bin"     # write palette data here
-PT_FILE    = "chr-bg.bin"  # write pattern table data here
-OFFS_FILE  = "offs.bin"    # write offsets to NT & AT data here
-NT_AT_FILE = "nt-at.bin"   # write name & attribute table data here
+IMAGE_DIR  = "img"          # read images from here
+IMAGE_EXT  = ".png"         # read images with this extension
+NAME_FILE  = "names.bin"    # write names of images here
+PAL_FILE   = "pal.bin"      # write palette data here
+PT_FILE    = "chr-bg.bin"   # write pattern table data here
+OFFS_FILE  = "offs.bin"     # write offsets to NT & AT data here
+NT_AT_FILE = "nt-at.bin"    # write name & attribute table data here
 
 # NES color number for background and unused colors (black)
 NES_BG_COLOR = 0x0f
@@ -239,6 +239,27 @@ def encode_pt_data(tiles):
     ptData.extend((256 - len(ptData) % 256) * b"\xff")
     return ptData
 
+def rle_encode(data):
+    # generate bytes: length, value, length, value, ...; length 0 = end of data
+    start = None  # start position of current run
+    prev = None   # previous byte
+    for (i, byte) in enumerate(data):
+        if start is None:
+            # start first run
+            start = i
+        elif prev != byte or i - start == 255:
+            # restart run
+            yield i - start
+            yield prev
+            start = i
+        prev = byte
+    if start is not None:
+        # end last run
+        yield len(data) - start
+        yield byte
+    # end of data
+    yield 0
+
 def main():
     filenames = sorted(get_filenames())
 
@@ -298,22 +319,25 @@ def main():
         handle.seek(0)
         handle.write(encode_pt_data(uniqueTiles))
 
-    # prepare for variable-length NT & AT data (compression)
-    print(f"Writing offsets to name & attribute table data to {OFFS_FILE}...")
-    with open(OFFS_FILE, "wb") as target:
-        target.seek(0)
-        target.write(b"".join(
-            struct.pack("<H", i * 0x80) for i in range(len(filenames) * 8)
-        ))
-
-    print(f"Writing name & attribute table data to {NT_AT_FILE}...")
-    with open(NT_AT_FILE, "wb") as target:
-        target.seek(0)
+    print(
+        f"Writing RLE encoded name & attribute table data to {NT_AT_FILE} and "
+        f"offsets to {OFFS_FILE}..."
+    )
+    with open(OFFS_FILE, "wb") as offsHnd, open(NT_AT_FILE, "wb") as ntAtHnd:
+        offset = 0
+        offsHnd.seek(0)
+        ntAtHnd.seek(0)
         for filename in filenames:
-            print(filename)
             path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
+            imgStartOffset = offset
             with open(path, "rb") as source:
                 source.seek(0)
-                target.write(process_image(Image.open(source), 2, uniqueTiles))
+                ntAtData = process_image(Image.open(source), 2, uniqueTiles)
+                for i in range(0, len(ntAtData), 0x80):
+                    rleData = bytes(rle_encode(ntAtData[i:i+0x80]))
+                    offsHnd.write(struct.pack("<H", offset))
+                    ntAtHnd.write(rleData)
+                    offset += len(rleData)
+            print(f"{filename:8}: {offset-imgStartOffset:4} bytes")
 
 main()
