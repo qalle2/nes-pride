@@ -1,9 +1,13 @@
 # nes-pride
 Shows pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
 
+![screenshot](snap1.png)
+![screenshot](snap2.png)
+
 Table of contents:
 * [List of files](#list-of-files)
 * [How to assemble](#how-to-assemble)
+* [How to use the NES program](#how-to-use-the-nes-program)
 * [Technical info of the NES program](#technical-info-of-the-nes-program)
 * [Sources of flags](#sources-of-flags)
 
@@ -11,6 +15,7 @@ Table of contents:
 Images:
 * `img/*.png`: pride flags (256&times;224 pixels)
 * `chr-spr.png`: sprite pattern table data; can be encoded using `nes_chr_encode.py` from [my NES utilities](https://github.com/qalle2/nes-util/)
+* `snap*.png`: screenshots
 
 Text:
 * `convert.py`: a Python program that converts images of pride flags into NES graphics data; writes `autogen.asm` and `chr-bg.bin`
