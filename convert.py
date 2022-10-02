@@ -6,7 +6,7 @@ from PIL import Image  # Pillow, https://python-pillow.org
 IMAGE_DIR  = "img"          # read images from here
 IMAGE_EXT  = ".png"         # read images with this extension
 PT_FILE    = "chr-bg.bin"   # write pattern table data here
-OUT_FILE   = "autogen.asm"  # write data in ASM6 format here
+ASM_FILE   = "autogen.asm"  # write data in ASM6 format here
 
 # NES color number for background and unused colors (black)
 NES_BG_COLOR = 0x0f
@@ -68,7 +68,7 @@ NES_PALETTE = {
     0x3c: (0x9c, 0xfc, 0xf0),
 }
 
-# --- process_image() and stuff -----------------------------------------------
+# --- process_image() and functions called by it ------------------------------
 
 def color_diff(rgb1, rgb2):
     # get difference (0-768) of two colors (red, green, blue)
@@ -85,14 +85,9 @@ def closest_nes_color(rgb):
 def get_color_sets(image):
     # for each attribute block (16*16 px), generate set of PNG color indexes,
     # e.g. {0, 2}
-    indexes = set()
-    for ay in range(14):
-        for ax in range(16):
-            indexes.clear()
-            for py in range(16):
-                for px in range(16):
-                    indexes.add(image.getpixel((ax * 16 + px, ay * 16 + py)))
-            yield indexes
+    for ay in range(0, 14 * 16, 16):
+        for ax in range(0, 16 * 16, 16):
+            yield set(image.crop((ax, ay, ax + 16, ay + 16)).getdata())
 
 def create_subpalettes(colorSets):
     # split sets of color indexes into subpalettes
@@ -137,15 +132,10 @@ def get_attr_data(image, subpals, bgIndex):
 
 def get_tiles(image):
     # for each tile (8*8 px), generate PNG indexes of all pixels,
-    # e.g. [0, 2, ...]
-    tile = []
-    for ty in range(28):
-        for tx in range(32):
-            tile.clear()
-            for py in range(8):
-                for px in range(8):
-                    tile.append(image.getpixel((tx * 8 + px, ty * 8 + py)))
-            yield tile
+    # e.g. (0, 2, ...)
+    for ty in range(0, 28 * 8, 8):
+        for tx in range(0, 32 * 8, 8):
+            yield tuple(image.crop((tx, ty, tx + 8, ty + 8)).getdata())
 
 def convert_tiles(image, attrData, palette, subpalsNes):
     # generate tiles as tuples of 64 2-bit ints
@@ -154,8 +144,7 @@ def convert_tiles(image, attrData, palette, subpalsNes):
         # (bits: tile YYYYyXXXXx, attr YYYYXXXX)
         subpal = attrData[(i >> 2) & 0b11110000 | (i >> 1) & 0b1111]
         # convert PNG indexes to subpalette indexes
-        tile = [subpalsNes[subpal].index(palette[i]) for i in tile]
-        yield tuple(tile)
+        yield tuple(subpalsNes[subpal].index(palette[i]) for i in tile)
 
 def process_image(image, mode=0, uniqueTiles=None):
     # If mode=0: return NES palette for image (ignore uniqueTiles arg).
@@ -235,27 +224,18 @@ def process_image(image, mode=0, uniqueTiles=None):
 
     return bytes(ntData) + atBytes
 
-# --- get_unique_tiles() and stuff --------------------------------------------
-
-def tile_slice_encode(pixels):
-    # encode 8*1 pixels of one tile of CHR data
-    # pixels: eight 2-bit ints
-    # return: (low_bitplane, high_bitplane); both 0x00-0xff
-
-    loByte = hiByte = 0
-    for pixel in pixels:
-        loByte = (loByte << 1) | (pixel &  1)
-        hiByte = (hiByte << 1) | (pixel >> 1)
-    return (loByte, hiByte)
+# --- get_unique_tiles() and functions called by it ---------------------------
 
 def encode_pt_data(tiles):
     # return pattern table data for all images as bytes; each tile is 64 ints
 
-    ptData = bytearray(len(tiles) * 16)
-    for (i, tile) in enumerate(tiles):
-        for y in range(8):
-            (ptData[i*16+y%8], ptData[i*16+y%8+8]) \
-            = tile_slice_encode(tile[y*8+x] for x in range(8))
+    ptData = bytearray()
+    for tile in tiles:
+        for bp in range(2):  # bitplane
+            for py in range(8):  # pixel Y
+                ptData.append(sum(
+                    ((tile[py*8+i] >> bp) & 1) << (7 - i) for i in range(8)
+                ))
     # pad to a multiple of 16 tiles
     ptData.extend((256 - len(ptData) % 256) * b"\xff")
     return ptData
@@ -273,7 +253,7 @@ def get_unique_tiles(filenames):
             tiles = process_image(Image.open(source), 1)
             uniqueTiles.update(tiles)
             print(
-                f"{filename:8}: {len(tiles):3} unique tiles, "
+                f"  {filename:8}: {len(tiles):3} unique tiles, "
                 f"{len(uniqueTiles):3} total so far"
             )
             if len(uniqueTiles) > 256:
@@ -283,7 +263,7 @@ def get_unique_tiles(filenames):
     uniqueTiles.sort(key = lambda t: len(set(t)))
     return uniqueTiles
 
-# --- generate_asm_file() and stuff -------------------------------------------
+# --- generate_asm_file() and functions called by it --------------------------
 
 def asmcomment(comment):
     # return an ASM6 line with a comment
@@ -297,14 +277,6 @@ def asmlabel(label, comment=""):
 def asminstr(instruction):
     # return an ASM6 line with an instruction (no label/comment)
     return f"{'':16}{instruction}"
-
-def asmhex(data, groupSize=0):
-    # return an ASM6 line with hexadecimal data
-    groupSize = groupSize if groupSize else len(data)
-    instruction = "hex " + " ".join(
-        data[i:i+groupSize].hex() for i in range(0, len(data), groupSize)
-    )
-    return asminstr(instruction)
 
 def rle_encode_raw(data):
     # generate runs: (length, byte)
@@ -362,6 +334,7 @@ def generate_asm_file(filenames, uniqueTiles):
     yield ""
 
     # descriptions
+    print("  Descriptions...")
     yield asmlabel("image_names", "descriptions (8 bytes/image)")
     for (i, filename) in enumerate(filenames):
         filename = filename.lower()
@@ -375,6 +348,7 @@ def generate_asm_file(filenames, uniqueTiles):
     yield ""
 
     # palettes
+    print("  Palettes...")
     yield asmlabel("bg_palettes", "background palette data (16 bytes/image)")
     for (i, filename) in enumerate(filenames):
         path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
@@ -382,10 +356,11 @@ def generate_asm_file(filenames, uniqueTiles):
             source.seek(0)
             image = Image.open(source)
             palette = bytes(process_image(image, 0))
-            yield asmhex(palette, 4)
+            yield asminstr("hex " + palette.hex())
     yield ""
 
     # addresses in RLE encoded name & attribute table data
+    print("  Name & attribute table data...")
     yield asmcomment("addresses in RLE compressed name & attribute table data")
     yield asmlabel("nt_at_addrs_lo", "low bytes")
     for fi in range(len(filenames)):
@@ -410,11 +385,9 @@ def generate_asm_file(filenames, uniqueTiles):
                 rleData = bytes(rle_encode(ntAtData[si*0x80:(si+1)*0x80]))
                 totalRleLen += len(rleData)
                 yield asmlabel(f"img{fi}_slice{si}")
-                yield asmhex(rleData[:1])
-                for i in range(0, len(rleData) - 2, 16):
-                    yield asmhex(rleData[1:-1][i:i+16])
-                yield asmhex(rleData[-1:])
-    print("Total NT/AT RLE data length:", totalRleLen)
+                for i in range(0, len(rleData), 16):
+                    yield asminstr("hex " + rleData[i:i+16].hex())
+    print("  Total NT/AT RLE data length:", totalRleLen)
 
 # -----------------------------------------------------------------------------
 
@@ -435,8 +408,8 @@ def main():
         handle.seek(0)
         handle.write(encode_pt_data(uniqueTiles))
 
-    print(f"Writing other data to {OUT_FILE}...")
-    with open(OUT_FILE, "wt", encoding="ascii") as handle:
+    print(f"Writing other data to {ASM_FILE}...")
+    with open(ASM_FILE, "wt", encoding="ascii") as handle:
         handle.seek(0)
         for line in generate_asm_file(filenames, uniqueTiles):
             print(line, file=handle)
