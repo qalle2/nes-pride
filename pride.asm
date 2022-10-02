@@ -22,8 +22,9 @@ which_image     equ $87    ; which image is being shown
 ppu_upd_phase   equ $88    ; PPU update phase; see above
 ppu_buffer_len  equ $89    ; length of PPU buffer
 text_visible    equ $8a    ; flag description visible? (boolean)
-src_ind_temp    equ $8b    ; temporary - source index
-dst_ind_temp    equ $8c    ; temporary - destination index
+rle_src_ind     equ $8b    ; RLE decoder - source index
+rle_dst_ind     equ $8c    ; RLE decoder - destination index
+rle_direct      equ $8d    ; RLE direct (implied byte)
 sprite_data     equ $0200  ; OAM page ($100 bytes)
 
 ; memory-mapped registers
@@ -240,7 +241,7 @@ nt_at_to_buffer ; copy one eighth of name & attribute table data of current
                 ; image ($80 bytes) to ppu_buffer according to ppu_upd_phase
                 ; (must be 0-7)
 
-                ; get index to nt_at_offsets:
+                ; get index to nt_at_addrses:
                 ; X = ((which_image * 8) + ppu_upd_phase) * 2
                 lda which_image
                 asl a
@@ -251,40 +252,52 @@ nt_at_to_buffer ; copy one eighth of name & attribute table data of current
                 tax
 
                 ; get address within nt_at_data
-                lda nt_at_offsets+0,x
+                lda nt_at_addrses+0,x
                 sta nt_at_addr+0
-                lda nt_at_offsets+1,x
+                lda nt_at_addrses+1,x
                 sta nt_at_addr+1
 
                 ; decode RLE data from nt_at_data to PPU buffer
                 ; (always decodes into $80 bytes)
-                ; - repeat counter: X
-                ; - source index: src_ind_temp, Y
-                ; - destination index: dst_ind_temp, Y
+                ; 1st byte of data is the direct (implied) byte; other bytes
+                ; are runs of 1/2 bytes:
+                ; 0bLLLLLLL1     : output direct_byte 0bLLLLLLL+1 times (1-128)
+                ; 0bLLLLLLL0 0xBB: output byte 0xBB   0bLLLLLLL   times (1-127)
+                ; 0b00000000     : terminator (end of data)
+                ; 0b00000001     : (forbidden)
                 ;
                 ldy #0
-                sty src_ind_temp
-                sty dst_ind_temp
-                ;
---              ldy src_ind_temp        ; source index -> Y
+                sty rle_dst_ind         ; destination index
                 lda (nt_at_addr),y
-                beq +                   ; terminator
-                tax                     ; repeat count -> X
+                sta rle_direct          ; direct (implied) byte
                 iny
-                lda (nt_at_addr),y      ; value to repeat -> A
-                iny
-                sty src_ind_temp
-                ldy dst_ind_temp        ; destination index -> Y
+                sty rle_src_ind         ; source index
                 ;
--               sta ppu_buffer,y        ; copy value
+--              ldy rle_src_ind
+                lda (nt_at_addr),y      ; type & repeat count of run
+                beq rle_end             ; terminator?
+                lsr a                   ; type -> carry
+                tax                     ; repeat count
+                iny
+                ;
+                bcc +
+                lda rle_direct          ; value to repeat: direct byte
+                inx
+                jmp ++
++               lda (nt_at_addr),y      ; value to repeat: following byte
+                iny
+++              sty rle_src_ind
+                ;
+                ldy rle_dst_ind         ; repeat value
+-               sta ppu_buffer,y
                 iny
                 dex
                 bne -
-                sty dst_ind_temp
+                sty rle_dst_ind
                 ;
                 jmp --
 
-+               ; PPU address: $2000 + ppu_upd_phase * $80
+rle_end         ; PPU address: $2000 + ppu_upd_phase * $80
                 ;
                 lda ppu_upd_phase       ; high byte
                 lsr a
@@ -326,7 +339,7 @@ pal_to_buffer   ; copy background palettes (16 bytes) to ppu_buffer according
                 tax
                 ldy #0                  ; Y = destination index
                 ;
--               lda bg_pal_data,x
+-               lda bg_palettes,x
                 sta ppu_buffer,y
                 inx
                 iny
@@ -352,7 +365,7 @@ update_sprites  ; update tiles of image description sprites
                 tax
                 ldy #0
                 ;
--               lda img_name_data,x
+-               lda image_names,x
                 sta sprite_data+1,y
                 inx
                 iny

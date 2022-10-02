@@ -268,26 +268,53 @@ def encode_pt_data(tiles):
     ptData.extend((256 - len(ptData) % 256) * b"\xff")
     return ptData
 
-def rle_encode(data):
-    # generate bytes: length, value, length, value, ...; length 0 = end of data
+def rle_encode_raw(data):
+    # generate runs: (length, byte)
     start = None  # start position of current run
     prev = None   # previous byte
     for (i, byte) in enumerate(data):
         if start is None:
             # start first run
             start = i
-        elif prev != byte or i - start == 255:
+        elif prev != byte:
             # restart run
-            yield i - start
-            yield prev
+            yield (i - start, prev)
             start = i
         prev = byte
     if start is not None:
         # end last run
-        yield len(data) - start
-        yield byte
-    # end of data
-    yield 0
+        yield (len(data) - start, prev)
+
+def rle_encode(data):
+    # generate bytes: direct_byte, run, run, ..., 0
+    # 1st byte of data is the direct (implied) byte; other bytes are runs of
+    # 1/2 bytes:
+    # 0bLLLLLLL1     : output direct_byte 0bLLLLLLL+1 times (1-128)
+    # 0bLLLLLLL0 0xBB: output byte 0xBB   0bLLLLLLL   times (1-127)
+    # 0b00000000     : terminator (end of data)
+    # 0b00000001     : (forbidden)
+    # note: the ability to output 128-byte runs is important because there
+    # are lots of exactly 128-byte runs
+
+    # maximum length of direct/non-direct byte runs: 128/127
+    assert len(data) <= 128
+
+    # the direct byte (the most common byte that begins a run)
+    runStartBytes = [r[1] for r in rle_encode_raw(data)]
+    mostCommonBytes = sorted(set(runStartBytes))
+    directByte = sorted(
+        mostCommonBytes, key=lambda b: runStartBytes.count(b), reverse=True
+    )[0]
+    yield directByte
+    # RLE data itself
+    for (length, byte) in rle_encode_raw(data):
+        if byte == directByte:
+            yield ((length - 1) << 1) | 0b1
+        else:
+            yield length << 1
+            yield byte
+    # terminator
+    yield 0x00
 
 def main():
     filenames = sorted(get_filenames())
@@ -334,7 +361,7 @@ def main():
 
         # descriptions
         print(
-            f"{'img_name_data':15} ; descriptions (exactly 8 bytes/image)",
+            f"{'image_names':15} ; descriptions (exactly 8 bytes/image)",
             file=target
         )
         for filename in filenames:
@@ -350,7 +377,7 @@ def main():
 
         # palettes
         print(
-            f"{'bg_pal_data':15} ; background palette data (16 bytes/image)",
+            f"{'bg_palettes':15} ; background palette data (16 bytes/image)",
             file=target
         )
         for filename in filenames:
@@ -368,7 +395,7 @@ def main():
 
         # addresses in RLE encoded name & attribute table data
         print(
-            f"{'nt_at_offsets':15} ; addresses in RLE compressed name & "
+            f"{'nt_at_addrses':15} ; addresses in RLE compressed name & "
             "attribute table data", file=target
         )
         for fi in range(len(filenames)):
@@ -385,18 +412,21 @@ def main():
             f"{'':15} ; (each slice decompresses into exactly $80 bytes)",
             file=target
         )
+        totalRleLen = 0
         for (fi, filename) in enumerate(filenames):
             path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
             with open(path, "rb") as source:
                 source.seek(0)
                 ntAtData = process_image(Image.open(source), 2, uniqueTiles)
                 for si in range(8):
-                    print(f"img{fi}_slice{si}", file=target)
                     rleData = bytes(rle_encode(ntAtData[si*0x80:(si+1)*0x80]))
+                    totalRleLen += len(rleData)
+                    print(f"img{fi}_slice{si}", file=target)
                     for i in range(0, len(rleData), 32):
                         print(
                             f"{'':15} hex " + rleData[i:i+32].hex(),
                             file=target
                         )
+        print("Total NT/AT RLE data length:", totalRleLen)
 
 main()
