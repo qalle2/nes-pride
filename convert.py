@@ -85,7 +85,7 @@ def closest_nes_color(rgb):
 def get_color_sets(image):
     # for each attribute block (16*16 px), generate set of PNG color indexes,
     # e.g. {0, 2}
-    for ay in range(0, 14 * 16, 16):
+    for ay in range(0, 13 * 16, 16):
         for ax in range(0, 16 * 16, 16):
             yield set(image.crop((ax, ay, ax + 16, ay + 16)).getdata())
 
@@ -108,6 +108,11 @@ def create_subpalettes(colorSets):
                 len(s & colorSet) for s in subpals if len(s | colorSet) <= 3
             )
         except ValueError:
+            # an ugly hack for rainbow3.png (will stop working if palette order
+            # changes)
+            subpals = [{1, 5, 9}, {2, 6, 7}, {3, 4, 8}, {6, 9, 10}]
+            if all(any(c.issubset(s) for s in subpals) for c in colorSets):
+                return subpals
             sys.exit(
                 "Couldn't arrange colors into 4 subpalettes with 3 unique "
                 f"colors plus ${NES_BG_COLOR:02x} each."
@@ -133,7 +138,7 @@ def get_attr_data(image, subpals, bgIndex):
 def get_tiles(image):
     # for each tile (8*8 px), generate PNG indexes of all pixels,
     # e.g. (0, 2, ...)
-    for ty in range(0, 28 * 8, 8):
+    for ty in range(0, 26 * 8, 8):
         for tx in range(0, 32 * 8, 8):
             yield tuple(image.crop((tx, ty, tx + 8, ty + 8)).getdata())
 
@@ -151,8 +156,8 @@ def process_image(image, mode=0, uniqueTiles=None):
     # If mode=1: return set of unique tiles   (ignore uniqueTiles arg).
     # If mode=2: return name & attribute table data using uniqueTiles arg.
 
-    if image.width != 256 or image.height != 224 or image.mode != "P":
-        sys.exit("Image must be 256*224 pixels and have a palette.")
+    if image.width != 256 or image.height != 208 or image.mode != "P":
+        sys.exit("Image must be 256*208 pixels and have a palette.")
 
     # get used color indexes and best NES equivalents:
     # {pngIndex: nesColor, ...}
@@ -207,10 +212,10 @@ def process_image(image, mode=0, uniqueTiles=None):
         uniqueTiles.index(tile) for tile in
         convert_tiles(image, attrData, palette, subpalsNes)
     )
-    ntData.extend(2 * 32 * [0])  # pad to 30 rows
 
     # encode AT data
-    atBytes = bytearray()
+    atBytes = bytearray(8 * b"\x00")  # first 2 rows of blocks
+    attrData.extend(16 * [0])  # pad to 14 rows of blocks
     for y in range(7):
         for x in range(8):
             s = y * 32 + x * 2  # source index
@@ -220,7 +225,6 @@ def process_image(image, mode=0, uniqueTiles=None):
                 | (attrData[s+16] << 4)
                 | (attrData[s+17] << 6)
             )
-    atBytes.extend(8 * b"\x00")  # pad to 64 bytes
 
     return bytes(ntData) + atBytes
 
@@ -364,11 +368,11 @@ def generate_asm_file(filenames, uniqueTiles):
     yield asmcomment("addresses in RLE compressed name & attribute table data")
     yield asmlabel("nt_at_addrs_lo", "low bytes")
     for fi in range(len(filenames)):
-        for si in range(8):
+        for si in range(7):
             yield asminstr(f"dl img{fi}_slice{si}")
     yield asmlabel("nt_at_addrs_hi", "high bytes")
     for fi in range(len(filenames)):
-        for si in range(8):
+        for si in range(7):
             yield asminstr(f"dh img{fi}_slice{si}")
     yield ""
 
@@ -381,7 +385,7 @@ def generate_asm_file(filenames, uniqueTiles):
         with open(path, "rb") as source:
             source.seek(0)
             ntAtData = process_image(Image.open(source), 2, uniqueTiles)
-            for si in range(8):
+            for si in range(7):
                 rleData = bytes(rle_encode(ntAtData[si*0x80:(si+1)*0x80]))
                 totalRleLen += len(rleData)
                 yield asmlabel(f"img{fi}_slice{si}")

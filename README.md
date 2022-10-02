@@ -13,7 +13,7 @@ Table of contents:
 
 ## List of files
 Images:
-* `img/*.png`: pride flags (256&times;224 pixels)
+* `img/*.png`: pride flags (256&times;208 pixels)
 * `chr-spr.png`: sprite pattern table data; can be encoded using `nes_chr_encode.py` from [my NES utilities](https://github.com/qalle2/nes-util/)
 * `snap*.png`: screenshots
 
