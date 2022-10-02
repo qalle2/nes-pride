@@ -241,20 +241,19 @@ nt_at_to_buffer ; copy one eighth of name & attribute table data of current
                 ; image ($80 bytes) to ppu_buffer according to ppu_upd_phase
                 ; (must be 0-7)
 
-                ; get index to nt_at_addrses:
-                ; X = ((which_image * 8) + ppu_upd_phase) * 2
+                ; get index to nt_at_addrs_lo/nt_at_addrs_hi:
+                ; X = which_image * 8 + ppu_upd_phase
                 lda which_image
                 asl a
                 asl a
                 asl a
                 ora ppu_upd_phase
-                asl a
                 tax
 
                 ; get address within nt_at_data
-                lda nt_at_addrses+0,x
+                lda nt_at_addrs_lo,x
                 sta nt_at_addr+0
-                lda nt_at_addrses+1,x
+                lda nt_at_addrs_hi,x
                 sta nt_at_addr+1
 
                 ; decode RLE data from nt_at_data to PPU buffer

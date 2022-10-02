@@ -68,7 +68,7 @@ NES_PALETTE = {
     0x3c: (0x9c, 0xfc, 0xf0),
 }
 
-# --- process_image() and functions used by it --------------------------------
+# --- process_image() and stuff -----------------------------------------------
 
 def color_diff(rgb1, rgb2):
     # get difference (0-768) of two colors (red, green, blue)
@@ -235,15 +235,7 @@ def process_image(image, mode=0, uniqueTiles=None):
 
     return bytes(ntData) + atBytes
 
-# --- Functions not used by process_image() -----------------------------------
-
-def get_filenames():
-    # generate names of PNG files without extensions
-    with os.scandir(IMAGE_DIR) as dirIter:
-        yield from (
-            os.path.splitext(e.name)[0] for e in dirIter
-            if e.is_file() and os.path.splitext(e.name)[1] == IMAGE_EXT
-        )
+# --- get_unique_tiles() and stuff --------------------------------------------
 
 def tile_slice_encode(pixels):
     # encode 8*1 pixels of one tile of CHR data
@@ -267,6 +259,52 @@ def encode_pt_data(tiles):
     # pad to a multiple of 16 tiles
     ptData.extend((256 - len(ptData) % 256) * b"\xff")
     return ptData
+
+def get_unique_tiles(filenames):
+    # return a list of unique tiles in all images
+    # (each tile is a tuple of 64 2-bit ints)
+
+    # make sure we have a blank tile (for nonsafe screen area)
+    uniqueTiles = {tuple(64 * [0])}
+    for filename in filenames:
+        path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
+        with open(path, "rb") as source:
+            source.seek(0)
+            tiles = process_image(Image.open(source), 1)
+            uniqueTiles.update(tiles)
+            print(
+                f"{filename:8}: {len(tiles):3} unique tiles, "
+                f"{len(uniqueTiles):3} total so far"
+            )
+            if len(uniqueTiles) > 256:
+                sys.exit("Error: more than 256 unique tiles.")
+    # sort by number of colors
+    uniqueTiles = sorted(uniqueTiles)
+    uniqueTiles.sort(key = lambda t: len(set(t)))
+    return uniqueTiles
+
+# --- generate_asm_file() and stuff -------------------------------------------
+
+def asmcomment(comment):
+    # return an ASM6 line with a comment
+    return f"{'':16}; {comment}"
+
+def asmlabel(label, comment=""):
+    # return an ASM6 line with an optional label and an optional comment
+    delim = (16 - len(label)) * " " + "; " if comment else ""
+    return f"{label}{delim}{comment}"
+
+def asminstr(instruction):
+    # return an ASM6 line with an instruction (no label/comment)
+    return f"{'':16}{instruction}"
+
+def asmhex(data, groupSize=0):
+    # return an ASM6 line with hexadecimal data
+    groupSize = groupSize if groupSize else len(data)
+    instruction = "hex " + " ".join(
+        data[i:i+groupSize].hex() for i in range(0, len(data), groupSize)
+    )
+    return asminstr(instruction)
 
 def rle_encode_raw(data):
     # generate runs: (length, byte)
@@ -316,117 +354,91 @@ def rle_encode(data):
     # terminator
     yield 0x00
 
+def generate_asm_file(filenames, uniqueTiles):
+    yield "; Image data excluding pattern tables."
+    yield "; This file was generated automatically by convert.py."
+    yield ""
+    yield f"{'image_count':15} equ {len(filenames)}  ; number of images"
+    yield ""
+
+    # descriptions
+    yield asmlabel("image_names", "descriptions (8 bytes/image)")
+    for (i, filename) in enumerate(filenames):
+        filename = filename.lower()
+        # NES can't show more than 8 sprites per scanline
+        if len(filename) > 8 or not filename.isascii():
+            sys.exit(
+                "image filenames must be 8 ASCII characters or less "
+                "(excluding extension)."
+            )
+        yield asminstr(f'db "{filename:>8}"')
+    yield ""
+
+    # palettes
+    yield asmlabel("bg_palettes", "background palette data (16 bytes/image)")
+    for (i, filename) in enumerate(filenames):
+        path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
+        with open(path, "rb") as source:
+            source.seek(0)
+            image = Image.open(source)
+            palette = bytes(process_image(image, 0))
+            yield asmhex(palette, 4)
+    yield ""
+
+    # addresses in RLE encoded name & attribute table data
+    yield asmcomment("addresses in RLE compressed name & attribute table data")
+    yield asmlabel("nt_at_addrs_lo", "low bytes")
+    for fi in range(len(filenames)):
+        for si in range(8):
+            yield asminstr(f"dl img{fi}_slice{si}")
+    yield asmlabel("nt_at_addrs_hi", "high bytes")
+    for fi in range(len(filenames)):
+        for si in range(8):
+            yield asminstr(f"dh img{fi}_slice{si}")
+    yield ""
+
+    # RLE encoded name & attribute table data
+    yield asmcomment("RLE compressed name & attribute table data")
+    yield asmcomment("(each slice decompresses into exactly $80 bytes)")
+    totalRleLen = 0
+    for (fi, filename) in enumerate(filenames):
+        path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
+        with open(path, "rb") as source:
+            source.seek(0)
+            ntAtData = process_image(Image.open(source), 2, uniqueTiles)
+            for si in range(8):
+                rleData = bytes(rle_encode(ntAtData[si*0x80:(si+1)*0x80]))
+                totalRleLen += len(rleData)
+                yield asmlabel(f"img{fi}_slice{si}")
+                yield asmhex(rleData[:1])
+                for i in range(0, len(rleData) - 2, 16):
+                    yield asmhex(rleData[1:-1][i:i+16])
+                yield asmhex(rleData[-1:])
+    print("Total NT/AT RLE data length:", totalRleLen)
+
+# -----------------------------------------------------------------------------
+
+def get_filenames():
+    # generate names of PNG files without extensions
+    with os.scandir(IMAGE_DIR) as dirIter:
+        yield from (
+            os.path.splitext(e.name)[0] for e in dirIter
+            if e.is_file() and os.path.splitext(e.name)[1] == IMAGE_EXT
+        )
+
 def main():
     filenames = sorted(get_filenames())
 
     print(f"Writing pattern table data to {PT_FILE}...")
-    # make sure we have a blank tile (for nonsafe screen area)
-    uniqueTiles = {tuple(64 * [0])}
-    # gather unique tiles from all images
-    for filename in filenames:
-        path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
-        with open(path, "rb") as source:
-            source.seek(0)
-            tiles = process_image(Image.open(source), 1)
-            uniqueTiles.update(tiles)
-            print(
-                f"{filename:8}: {len(tiles):3} unique tiles, "
-                f"{len(uniqueTiles):3} total so far"
-            )
-            if len(uniqueTiles) > 256:
-                sys.exit("Error: more than 256 unique tiles.")
-    # sort tiles by number of colors
-    uniqueTiles = sorted(uniqueTiles)
-    uniqueTiles.sort(key = lambda t: len(set(t)))
-    # write tiles
+    uniqueTiles = get_unique_tiles(filenames)
     with open(PT_FILE, "wb") as handle:
         handle.seek(0)
         handle.write(encode_pt_data(uniqueTiles))
 
     print(f"Writing other data to {OUT_FILE}...")
-    with open(OUT_FILE, "wt", encoding="ascii") as target:
-        target.seek(0)
-
-        print(
-            "; This file was generated automatically by convert.py.",
-            file=target
-        )
-        print("", file=target)
-
-        print(
-            f"{'image_count':15} equ {len(filenames)}  ; number of images",
-            file=target
-        )
-        print("", file=target)
-
-        # descriptions
-        print(
-            f"{'image_names':15} ; descriptions (exactly 8 bytes/image)",
-            file=target
-        )
-        for filename in filenames:
-            filename = filename.lower()
-            # NES can't show more than 8 sprites per scanline
-            if len(filename) > 8 or not filename.isascii():
-                sys.exit(
-                    "image filenames must be 8 ASCII characters or less "
-                    "(excluding extension)."
-                )
-            print(f"{'':15} db \"{filename:>8}\"", file=target)
-        print("", file=target)
-
-        # palettes
-        print(
-            f"{'bg_palettes':15} ; background palette data (16 bytes/image)",
-            file=target
-        )
-        for filename in filenames:
-            path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
-            with open(path, "rb") as source:
-                source.seek(0)
-                image = Image.open(source)
-                palette = bytes(process_image(image, 0))
-                print(
-                    f"{'':15} hex "
-                    + " ".join(palette[i:i+4].hex() for i in range(0, 16, 4)),
-                    file=target
-                )
-        print("", file=target)
-
-        # addresses in RLE encoded name & attribute table data
-        print(
-            f"{'nt_at_addrses':15} ; addresses in RLE compressed name & "
-            "attribute table data", file=target
-        )
-        for fi in range(len(filenames)):
-            for si in range(8):
-                print(f"{'':15} dw img{fi}_slice{si}", file=target)
-        print("", file=target)
-
-        # RLE encoded name & attribute table data
-        print(
-            f"{'':15} ; RLE compressed name & attribute table data",
-            file=target
-        )
-        print(
-            f"{'':15} ; (each slice decompresses into exactly $80 bytes)",
-            file=target
-        )
-        totalRleLen = 0
-        for (fi, filename) in enumerate(filenames):
-            path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
-            with open(path, "rb") as source:
-                source.seek(0)
-                ntAtData = process_image(Image.open(source), 2, uniqueTiles)
-                for si in range(8):
-                    rleData = bytes(rle_encode(ntAtData[si*0x80:(si+1)*0x80]))
-                    totalRleLen += len(rleData)
-                    print(f"img{fi}_slice{si}", file=target)
-                    for i in range(0, len(rleData), 32):
-                        print(
-                            f"{'':15} hex " + rleData[i:i+32].hex(),
-                            file=target
-                        )
-        print("Total NT/AT RLE data length:", totalRleLen)
+    with open(OUT_FILE, "wt", encoding="ascii") as handle:
+        handle.seek(0)
+        for line in generate_asm_file(filenames, uniqueTiles):
+            print(line, file=handle)
 
 main()
