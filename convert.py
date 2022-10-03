@@ -351,47 +351,47 @@ def generate_asm_file(filenames, uniqueTiles):
         yield asminstr(f'db "{filename:>8}"')
     yield ""
 
-    # palettes
-    print("  Palettes...")
-    yield asmlabel("bg_palettes", "background palette data (16 bytes/image)")
-    for (i, filename) in enumerate(filenames):
-        path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
-        with open(path, "rb") as source:
-            source.seek(0)
-            image = Image.open(source)
-            palette = bytes(process_image(image, 0))
-            yield asminstr("hex " + palette.hex())
-    yield ""
-
-    # addresses in RLE encoded name & attribute table data
-    print("  Name & attribute table data...")
+    # addresses in NT/AT/palette data
+    print("  Name table, attribute table & palette data...")
     yield asmcomment("addresses in RLE compressed name & attribute table data")
-    yield asmlabel("nt_at_addrs_lo", "low bytes")
+    yield asmcomment("and uncompressed background palette data")
+    #
+    yield asmlabel("grafix_ptrs_lo", "low bytes")
     for fi in range(len(filenames)):
         for si in range(7):
             yield asminstr(f"dl img{fi}_slice{si}")
-    yield asmlabel("nt_at_addrs_hi", "high bytes")
+        yield asminstr(f"dl img{fi}_palette")
+    #
+    yield asmlabel("grafix_ptrs_hi", "high bytes")
     for fi in range(len(filenames)):
         for si in range(7):
             yield asminstr(f"dh img{fi}_slice{si}")
+        yield asminstr(f"dh img{fi}_palette")
     yield ""
 
     # RLE encoded name & attribute table data
     yield asmcomment("RLE compressed name & attribute table data")
     yield asmcomment("(each slice decompresses into exactly $80 bytes)")
-    totalRleLen = 0
+    yield asmcomment("and uncompressed background palette data")
+    totalDataLen = 0
     for (fi, filename) in enumerate(filenames):
         path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
         with open(path, "rb") as source:
             source.seek(0)
-            ntAtData = process_image(Image.open(source), 2, uniqueTiles)
+            image = Image.open(source)
+            # NT & AT data
+            ntAtData = process_image(image, 2, uniqueTiles)
             for si in range(7):
                 rleData = bytes(rle_encode(ntAtData[si*0x80:(si+1)*0x80]))
-                totalRleLen += len(rleData)
+                totalDataLen += len(rleData)
                 yield asmlabel(f"img{fi}_slice{si}")
                 for i in range(0, len(rleData), 16):
                     yield asminstr("hex " + rleData[i:i+16].hex())
-    print("  Total NT/AT RLE data length:", totalRleLen)
+            # palette
+            palette = bytes(process_image(image, 0))
+            yield asmlabel(f"img{fi}_palette")
+            yield asminstr("hex " + palette.hex())
+    print("  Total NT/AT/palette data length:", totalDataLen)
 
 # -----------------------------------------------------------------------------
 

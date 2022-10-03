@@ -12,11 +12,11 @@
 ;          buffer to non-visible name table
 ;     7: do OAM DMA, copy background palettes (16 bytes) via PPU buffer to PPU
 ;        and flip visible name table
-;     8: like phase 7 but don't flip name table
+;     8: do OAM DMA (previous PPU buffer also copied to PPU)
 
 ; RAM
 ppu_buffer      equ $00    ; see above ($80 bytes)
-nt_at_addr      equ $80    ; source      address in NT/AT data (2 bytes)
+grafix_ptr      equ $80    ; source      address in NT/AT/pal. data (2 bytes)
 ppu_dst_addr    equ $82    ; destination address in PPU memory (2 bytes)
 run_main_loop   equ $84    ; main loop allowed to run? (boolean)
 pad_status      equ $85    ; joypad status
@@ -258,36 +258,35 @@ toggle_text     ; show or hide image description (sprites 0-7)
 
 prep_ppu_upd    ; prepare a PPU memory update according to ppu_upd_phase
 
+                ; get index to grafix_ptrs_lo/grafix_ptrs_hi:
+                ; X = which_image * 8 + ppu_upd_phase
+                lda which_image
+                asl a
+                asl a
+                asl a
+                clc
+                adc ppu_upd_phase
+                tax
+
+                ; get address within graphics data
+                lda grafix_ptrs_lo,x
+                sta grafix_ptr+0
+                lda grafix_ptrs_hi,x
+                sta grafix_ptr+1
+
                 lda ppu_upd_phase
                 cmp #7
-                bpl +
+                beq +
+                bpl ++                  ; phase 8
                 jsr nt_at_to_buffer     ; phases 0-6
                 rts
-+               jsr pal_to_buffer       ; phases 7-8
-                jsr update_sprites
++               jsr pal_to_buffer       ; phase 7
+++              jsr update_sprites
                 rts
 
 nt_at_to_buffer ; copy one seventh of name & attribute table data of current
                 ; image ($80 bytes) to backwards to ppu_buffer according to
                 ; ppu_upd_phase (must be 0-6)
-
-                ; get index to nt_at_addrs_lo/nt_at_addrs_hi:
-                ; X = which_image * 7 + ppu_upd_phase
-                lda which_image
-                asl a
-                asl a
-                asl a
-                sec
-                sbc which_image
-                clc
-                adc ppu_upd_phase
-                tax
-
-                ; get address within nt_at_data
-                lda nt_at_addrs_lo,x
-                sta nt_at_addr+0
-                lda nt_at_addrs_hi,x
-                sta nt_at_addr+1
 
                 ; decode RLE data from nt_at_data backwards into PPU buffer
                 ; (always decodes into $80 bytes)
@@ -301,13 +300,13 @@ nt_at_to_buffer ; copy one seventh of name & attribute table data of current
                 lda #$7f
                 sta rle_dst_ind         ; destination index
                 ldy #0
-                lda (nt_at_addr),y
+                lda (grafix_ptr),y
                 sta rle_direct          ; direct (implied) byte
                 iny
                 sty rle_src_ind         ; source index
                 ;
 --              ldy rle_src_ind
-                lda (nt_at_addr),y      ; type & repeat count of run
+                lda (grafix_ptr),y      ; type & repeat count of run
                 beq rle_end             ; terminator?
                 lsr a                   ; type -> carry
                 tax                     ; repeat count
@@ -317,7 +316,7 @@ nt_at_to_buffer ; copy one seventh of name & attribute table data of current
                 lda rle_direct          ; value to repeat: direct byte
                 inx
                 jmp ++
-+               lda (nt_at_addr),y      ; value to repeat: following byte
++               lda (grafix_ptr),y      ; value to repeat: following byte
                 iny
 ++              sty rle_src_ind
                 ;
@@ -356,22 +355,15 @@ rle_end         ; PPU address: $2000 + (~visible_nt) * $400
 ppu_dst_highs   ; high bytes of PPU destination addresses
                 hex 24 20
 
-pal_to_buffer   ; copy background palettes (16 bytes) backwards to ppu_buffer
+pal_to_buffer   ; copy background palettes (16 bytes) of current image from
+                ; nt_at_data backwards to ppu_buffer
 
-                ; copy background palettes of current image
-                ;
-                lda which_image         ; X = source index
-                asl a
-                asl a
-                asl a
-                asl a
-                tax
-                ldy #(16-1)             ; Y = destination index
-                ;
--               lda bg_palettes,x
-                sta ppu_buffer,y
-                inx
-                dey
+                ldy #0                  ; source index
+                ldx #(16-1)             ; destination index
+-               lda (grafix_ptr),y
+                sta ppu_buffer,x
+                iny
+                dex
                 bpl -
 
                 lda #$3f                ; PPU address
