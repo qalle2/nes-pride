@@ -7,9 +7,11 @@
 ; - boolean variables: $00-$7f = false, $80-$ff = true
 ; - ppu_buffer: what to copy to PPU memory on next VBlank
 ; - ppu_upd_phase: what to update in PPU memory on next VBlank:
-;     0  : copy blank background palettes from buffer (16 bytes) & do OAM DMA
-;     1-7: copy one seventh of name & attribute table from buffer ($80 bytes)
-;     8  : copy correct background palettes from buffer (16 bytes) & do OAM DMA
+;     0-6: copy one seventh of name & attribute table from buffer ($80 bytes)
+;          to non-visible name table
+;     7: copy correct background palettes from buffer (16 bytes), do OAM DMA
+;        and flip visible name table
+;     8: like phase 7 but don't flip name table
 
 ; RAM
 ppu_buffer      equ $00    ; see above ($80 bytes)
@@ -25,6 +27,7 @@ text_visible    equ $8a    ; flag description visible? (boolean)
 rle_src_ind     equ $8b    ; RLE decoder - source index
 rle_dst_ind     equ $8c    ; RLE decoder - destination index
 rle_direct      equ $8d    ; RLE direct (implied byte)
+visible_nt      equ $8e    ; which name table to show (0/1)
 sprite_data     equ $0200  ; OAM page ($100 bytes)
 
 ; memory-mapped registers
@@ -132,20 +135,26 @@ init_main_ram   ; initialize main RAM
 
 init_ppu_mem    ; initialize PPU memory
 
-                ; set colors 1 and 2 of sprite palette 0
+                ; fill background palettes and colors 0-1 of sprite palette 0
+                ; with black (while still in VBlank)
                 ldy #$3f
-                lda #$11
+                lda #$00
                 jsr set_ppu_addr        ; Y*$100 + A -> address
                 lda #$0f                ; black
-                sta ppu_data
-                lda #$30                ; white
+                ldx #18
+-               sta ppu_data
+                dex
+                bne -
+
+                ; set color 2 of sprite palette 0 white
+                lda #$30
                 sta ppu_data
 
-                ; fill NT0 & AT0 with tile $00
+                ; fill NTs and ATs ($800 bytes) with tile $00
                 ldy #$20
                 lda #$00
                 jsr set_ppu_addr        ; Y*$100 + A -> address
-                ldy #4
+                ldy #8
                 tax
 -               sta ppu_data
                 inx
@@ -168,7 +177,15 @@ main_loop       bit run_main_loop       ; wait until NMI routine has set flag
                 jsr button_logic
                 jsr prep_ppu_upd
 
-                jmp main_loop
+                ; flip visible name table on phase 7
+                lda ppu_upd_phase
+                cmp #7
+                bne +
+                lda visible_nt
+                eor #%00000001
+                sta visible_nt
+
++               jmp main_loop
 
 read_joypad     ; read 1st joypad or Famicom expansion port controller
                 ; see https://www.nesdev.org/wiki/Controller_reading_code
@@ -243,20 +260,20 @@ toggle_text     ; show or hide image description (sprites 0-7)
 prep_ppu_upd    ; prepare a PPU memory update according to ppu_upd_phase
 
                 lda ppu_upd_phase
-                and #%00000111
-                beq +
-                jsr nt_at_to_buffer     ; phases 1-7
+                cmp #7
+                bpl +
+                jsr nt_at_to_buffer     ; phases 0-6
                 rts
-+               jsr pal_to_buffer       ; phases 0 and 8
++               jsr pal_to_buffer       ; phases 7-8
                 jsr update_sprites
                 rts
 
 nt_at_to_buffer ; copy one seventh of name & attribute table data of current
                 ; image ($80 bytes) to ppu_buffer according to ppu_upd_phase
-                ; (must be 1-7)
+                ; (must be 0-6)
 
                 ; get index to nt_at_addrs_lo/nt_at_addrs_hi:
-                ; X = which_image * 7 + ppu_upd_phase - 1
+                ; X = which_image * 7 + ppu_upd_phase
                 lda which_image
                 asl a
                 asl a
@@ -266,7 +283,6 @@ nt_at_to_buffer ; copy one seventh of name & attribute table data of current
                 clc
                 adc ppu_upd_phase
                 tax
-                dex
 
                 ; get address within nt_at_data
                 lda nt_at_addrs_lo,x
@@ -314,16 +330,20 @@ nt_at_to_buffer ; copy one seventh of name & attribute table data of current
                 ;
                 jmp --
 
-rle_end         ; PPU address: $2000 + ppu_upd_phase * $80
-                ; (bottom of NT0 and entire AT0)
+rle_end         ; PPU address: $2000 + (~visible_nt) * $400
+                ; + (ppu_upd_phase + 1) * $80
+                ; (bottom of non-visible name table and entire non-visible AT0)
                 ;
-                lda ppu_upd_phase       ; high byte
-                lsr a
-                ora #$20
+                ; high byte: $20 + (~visible_nt) * 4 + (ppu_upd_phase + 1) / 2
+                ldx ppu_upd_phase
+                inx
+                txa
+                lsr a                   ; LSB -> carry
+                ldx visible_nt
+                ora ppu_dst_highs,x
                 sta ppu_dst_addr+1
                 ;
-                lda ppu_upd_phase       ; low byte
-                lsr a
+                ; low byte: (ppu_upd_phase & 1) * $80
                 lda #0
                 ror a
                 sta ppu_dst_addr+0
@@ -333,21 +353,12 @@ rle_end         ; PPU address: $2000 + ppu_upd_phase * $80
 
                 rts
 
-pal_to_buffer   ; copy background palettes (16 bytes) to ppu_buffer according
-                ; to ppu_upd_phase (must be 0 or 8)
+ppu_dst_highs   ; high bytes of PPU destination addresses
+                hex 24 20
 
-                lda ppu_upd_phase
-                bne +
+pal_to_buffer   ; copy background palettes (16 bytes) to ppu_buffer
 
-                ; phase 0: copy gray only
-                lda #$00
-                ldx #(16-1)
--               sta ppu_buffer,x
-                dex
-                bpl -
-                jmp ++
-
-+               ; phase 8: copy background palettes of current image
+                ; copy background palettes of current image
                 ;
                 lda which_image         ; X = source index
                 asl a
@@ -364,7 +375,7 @@ pal_to_buffer   ; copy background palettes (16 bytes) to ppu_buffer according
                 cpy #16
                 bne -
 
-++              lda #$3f                ; PPU address
+                lda #$3f                ; PPU address
                 sta ppu_dst_addr+1
                 lda #$00
                 sta ppu_dst_addr+0
@@ -407,14 +418,15 @@ nmi             pha                     ; push A, X, Y
 
                 bit ppu_status          ; reset ppu_scroll/ppu_addr latch
 
-                lda ppu_upd_phase       ; do OAM DMA on phases 0 and 8
-                and #%00000111
-                bne +
+                lda ppu_upd_phase       ; do OAM DMA on phases 7-8
+                cmp #7
+                bmi +
                 jsr do_oam_dma
+
 +               jsr buffer_to_ppu       ; copy PPU buffer
                 jsr set_ppu_regs        ; set PPU registers
 
-                lda ppu_upd_phase       ; increment phase up to 8
+                lda ppu_upd_phase       ; increment phase on phases 0-7
                 cmp #8
                 beq +
                 inc ppu_upd_phase
@@ -463,6 +475,7 @@ set_ppu_regs    lda #0                  ; set scroll value
                 lda #16
                 sta ppu_scroll
                 lda #%10001000          ; enable NMI, use PT1 for sprites
+                ora visible_nt
                 sta ppu_ctrl
                 lda #%00011110          ; show background & sprites
                 sta ppu_mask
