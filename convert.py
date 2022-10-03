@@ -13,7 +13,7 @@ NES_BG_COLOR = 0x0f
 
 # NES master palette
 # key=index, value=(red, green, blue); source: FCEUX (fceux.pal)
-# colors omitted (hexadecimal): 0d-0e, 10, 1d-20, 2d-2f, 3d-3f
+# colors omitted (hexadecimal): 0d-0e, 1d-20, 2d-2f, 3d-3f
 NES_PALETTE = {
     0x00: (0x74, 0x74, 0x74),
     0x01: (0x24, 0x18, 0x8c),
@@ -29,6 +29,7 @@ NES_PALETTE = {
     0x0b: (0x00, 0x3c, 0x14),
     0x0c: (0x18, 0x3c, 0x5c),
     0x0f: (0x00, 0x00, 0x00),
+    0x10: (0xbc, 0xbc, 0xbc),
     0x11: (0x00, 0x70, 0xec),
     0x12: (0x20, 0x38, 0xec),
     0x13: (0x80, 0x00, 0xf0),
@@ -255,10 +256,12 @@ def get_unique_tiles(filenames):
         with open(path, "rb") as source:
             source.seek(0)
             tiles = process_image(Image.open(source), 1)
+            if any(any(t.count(c) == 1 for c in range(4)) for t in tiles):
+                print(f"{filename}: has tile with only 1 px of some color.")
             uniqueTiles.update(tiles)
             print(
-                f"  {filename:8}: {len(tiles):3} unique tiles, "
-                f"{len(uniqueTiles):3} total so far"
+                f"{'':4}{filename:8}: {len(tiles):3} unique tiles, "
+                + f"{len(uniqueTiles):3} total so far"
             )
             if len(uniqueTiles) > 256:
                 sys.exit("Error: more than 256 unique tiles.")
@@ -338,7 +341,6 @@ def generate_asm_file(filenames, uniqueTiles):
     yield ""
 
     # descriptions
-    print("  Descriptions...")
     yield asmlabel("image_names", "descriptions (8 bytes/image)")
     for (i, filename) in enumerate(filenames):
         filename = filename.lower()
@@ -352,7 +354,6 @@ def generate_asm_file(filenames, uniqueTiles):
     yield ""
 
     # addresses in NT/AT/palette data
-    print("  Name table, attribute table & palette data...")
     yield asmcomment("addresses in RLE compressed name & attribute table data")
     yield asmcomment("and uncompressed background palette data")
     #
@@ -369,7 +370,7 @@ def generate_asm_file(filenames, uniqueTiles):
         yield asminstr(f"dh img{fi}_palette")
     yield ""
 
-    # RLE encoded name & attribute table data
+    # NT/AT/palette data
     yield asmcomment("RLE compressed name & attribute table data")
     yield asmcomment("(each slice decompresses into exactly $80 bytes)")
     yield asmcomment("and uncompressed background palette data")
@@ -391,7 +392,7 @@ def generate_asm_file(filenames, uniqueTiles):
             palette = bytes(process_image(image, 0))
             yield asmlabel(f"img{fi}_palette")
             yield asminstr("hex " + palette.hex())
-    print("  Total NT/AT/palette data length:", totalDataLen)
+    print(f"{'':4}total NT/AT/palette data length: {totalDataLen}")
 
 # -----------------------------------------------------------------------------
 
