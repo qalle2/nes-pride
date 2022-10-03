@@ -3,6 +3,7 @@ Shows pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainm
 
 ![screenshot](snap1.png)
 ![screenshot](snap2.png)
+![screenshot](snap3.png)
 
 Table of contents:
 * [List of files](#list-of-files)
