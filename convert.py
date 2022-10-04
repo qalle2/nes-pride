@@ -252,6 +252,7 @@ def get_unique_tiles(filenames):
 
     # make sure we have a blank tile (for nonsafe screen area)
     uniqueTiles = {tuple(64 * [0])}
+    print("Unique tiles / total unique tiles so far:")
     for filename in filenames:
         path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
         with open(path, "rb") as handle:
@@ -261,8 +262,7 @@ def get_unique_tiles(filenames):
                 print(f"{filename}: has tile with only 1 px of some color.")
             uniqueTiles.update(tiles)
             print(
-                f"{'':4}{filename:16}: {len(tiles):3} unique tiles, "
-                + f"{len(uniqueTiles):3} total so far"
+                f"{'':4}{filename:26}: {len(tiles):2} ({len(uniqueTiles):3})"
             )
             if len(uniqueTiles) > 256:
                 sys.exit("Error: more than 256 unique tiles.")
@@ -273,18 +273,9 @@ def get_unique_tiles(filenames):
 
 # --- generate_asm_file() and functions called by it --------------------------
 
-def asmcomment(comment):
-    # return an ASM6 line with a comment
-    return f"{'':16}; {comment}"
-
-def asmlabel(label, comment=""):
-    # return an ASM6 line with an optional label and an optional comment
-    delim = (16 - len(label)) * " " + "; " if comment else ""
-    return f"{label}{delim}{comment}"
-
 def asminstr(instruction):
-    # return an ASM6 line with an instruction (no label/comment)
-    return f"{'':16}{instruction}"
+    # return an ASM6 line with an instruction
+    return f"{'':4}{instruction}"
 
 def filename_to_description(filename):
     # format a string (filename without extension) into three eight-character
@@ -356,29 +347,30 @@ def generate_asm_file(filenames, uniqueTiles):
     yield "; Image data excluding pattern tables."
     yield "; This file was generated automatically by convert.py."
     yield ""
-    yield f"{'image_count':15} equ {len(filenames)}  ; number of images"
+    yield "; number of images"
+    yield f"image_count equ {len(filenames)}"
     yield ""
 
-    yield asmcomment("pointers to the following array")
-    yield asmlabel("image_ptrs")
+    yield "; pointers to the following array"
+    yield "image_ptrs"
     for i in range(len(filenames)):
         yield asminstr(f"dw image{i}_ptrs")
     yield ""
 
-    yield asmcomment("for each image:")
-    yield asmcomment("- description (8 bytes)")
-    yield asmcomment("- background palette data (16 bytes)")
-    yield asmcomment("- compressed name & attribute table data in 7 slices")
+    yield "; for each image:"
+    yield "; - description (24 bytes)"
+    yield "; - background palette data (16 bytes)"
+    yield "; - compressed name & attribute table data in 7 slices"
     totalDataLen = 0
     for (fi, filename) in enumerate(filenames):
         # pointers
-        yield asmlabel(f"image{fi}_ptrs")
+        yield f"image{fi}_ptrs"
         yield asminstr(f"dw img{fi}_descr")
         yield asminstr(f"dw img{fi}_palette")
         for si in range(7):
             yield asminstr(f"dw img{fi}_slice{si}")
         # description
-        yield asmlabel(f"img{fi}_descr")
+        yield f"img{fi}_descr"
         yield asminstr(f'db "{filename_to_description(filename)}"')
         # open file
         path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
@@ -387,17 +379,17 @@ def generate_asm_file(filenames, uniqueTiles):
             image = Image.open(handle)
             # palette
             palette = bytes(process_image(image, 0))
-            yield asmlabel(f"img{fi}_palette")
+            yield f"img{fi}_palette"
             yield asminstr(f"hex {palette.hex()}")
             # NT & AT data
             ntAtData = process_image(image, 2, uniqueTiles)
             for si in range(7):
                 rleData = bytes(rle_encode(ntAtData[si*0x80:(si+1)*0x80]))
                 totalDataLen += len(rleData)
-                yield asmlabel(f"img{fi}_slice{si}")
-                for i in range(0, len(rleData), 16):
-                    yield asminstr("hex " + rleData[i:i+16].hex())
-    print(f"{'':4}total data length: {totalDataLen}")
+                yield f"img{fi}_slice{si}"
+                for i in range(0, len(rleData), 32):
+                    yield asminstr("hex " + rleData[i:i+32].hex())
+    print(f"Total length of other data: {totalDataLen}")
 
 # -----------------------------------------------------------------------------
 

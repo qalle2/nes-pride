@@ -261,7 +261,7 @@ toggle_text     ; show or hide image description (sprites 0-23)
 
                 rts
 
-spr_y_pos       ; Y positions of 1st/2nd sprite row
+spr_y_pos       ; Y positions of 1st/2nd/3rd sprite row
                 db $ff, $ff, $ff            ; hidden
                 db 24*8-1, 25*8-1, 26*8-1   ; visible
 
