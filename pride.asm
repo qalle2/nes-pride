@@ -16,7 +16,7 @@
 
 ; RAM
 ppu_buffer      equ $00    ; see above ($80 bytes)
-grafix_ptr      equ $80    ; source      address in NT/AT/pal. data (2 bytes)
+grafix_ptr      equ $80    ; pointer to imgdata.asm (2 bytes)
 ppu_dst_addr    equ $82    ; destination address in PPU memory (2 bytes)
 run_main_loop   equ $84    ; main loop allowed to run? (boolean)
 pad_status      equ $85    ; joypad status
@@ -59,7 +59,8 @@ joypad2         equ $4017
 
                 base $c000              ; last 16 KiB of CPU address space
 
-                include "autogen.asm"   ; automatically generated
+                ; image data excluding pattern tables; automatically generated
+                include "imgdata.asm"
 
 reset           ; initialize the NES;
                 ; see https://wiki.nesdev.org/w/index.php/Init_code
@@ -258,22 +259,6 @@ toggle_text     ; show or hide image description (sprites 0-7)
 
 prep_ppu_upd    ; prepare a PPU memory update according to ppu_upd_phase
 
-                ; get index to grafix_ptrs_lo/grafix_ptrs_hi:
-                ; X = which_image * 8 + ppu_upd_phase
-                lda which_image
-                asl a
-                asl a
-                asl a
-                clc
-                adc ppu_upd_phase
-                tax
-
-                ; get address within graphics data
-                lda grafix_ptrs_lo,x
-                sta grafix_ptr+0
-                lda grafix_ptrs_hi,x
-                sta grafix_ptr+1
-
                 lda ppu_upd_phase
                 cmp #7
                 beq +
@@ -287,6 +272,11 @@ prep_ppu_upd    ; prepare a PPU memory update according to ppu_upd_phase
 nt_at_to_buffer ; copy one seventh of name & attribute table data of current
                 ; image ($80 bytes) to backwards to ppu_buffer according to
                 ; ppu_upd_phase (must be 0-6)
+
+                ldy ppu_upd_phase
+                iny
+                iny
+                jsr get_slice_addr
 
                 ; decode RLE data from nt_at_data backwards into PPU buffer
                 ; (always decodes into $80 bytes)
@@ -358,6 +348,9 @@ ppu_dst_highs   ; high bytes of PPU destination addresses
 pal_to_buffer   ; copy background palettes (16 bytes) of current image from
                 ; nt_at_data backwards to ppu_buffer
 
+                ldy #1
+                jsr get_slice_addr
+
                 ldy #0                  ; source index
                 ldx #(16-1)             ; destination index
 -               lda (grafix_ptr),y
@@ -378,22 +371,46 @@ pal_to_buffer   ; copy background palettes (16 bytes) of current image from
 
 update_sprites  ; update tiles of image description sprites
 
+                ldy #0
+                jsr get_slice_addr
+
+                ldy #7                  ; source index
+                ldx #(7*4)              ; destination index
+                ;
+-               lda (grafix_ptr),y
+                sta sprite_data+1,x
+                dex
+                dex
+                dex
+                dex
+                dey
+                bpl -
+
+                rts
+
+get_slice_addr  ; in:  which_image = which image, Y = which slice
+                ; out: grafix_ptr = pointer
+
+                ; image address in graphics data -> grafix_ptr
                 lda which_image
                 asl a
+                tax
+                lda image_ptrs+0,x
+                sta grafix_ptr+0
+                lda image_ptrs+1,x
+                sta grafix_ptr+1
+
+                ; slice address in this image's data -> grafix_ptr
+                tya
                 asl a
-                asl a
-                tax                     ; source index
-                ldy #0                  ; destination index
-                ;
--               lda image_names,x
-                sta sprite_data+1,y
-                inx
+                tay
+                lda (grafix_ptr),y
+                pha
                 iny
-                iny
-                iny
-                iny
-                cpy #(8*4)
-                bne -
+                lda (grafix_ptr),y
+                sta grafix_ptr+1
+                pla
+                sta grafix_ptr+0
 
                 rts
 

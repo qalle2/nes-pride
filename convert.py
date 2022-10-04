@@ -6,7 +6,7 @@ from PIL import Image  # Pillow, https://python-pillow.org
 IMAGE_DIR  = "img"          # read images from here
 IMAGE_EXT  = ".png"         # read images with this extension
 PT_FILE    = "chr-bg.bin"   # write pattern table data here
-ASM_FILE   = "autogen.asm"  # write data in ASM6 format here
+ASM_FILE   = "imgdata.asm"  # write all other data in ASM6 format here
 
 # NES color number for background and unused colors (black)
 NES_BG_COLOR = 0x0f
@@ -253,9 +253,9 @@ def get_unique_tiles(filenames):
     uniqueTiles = {tuple(64 * [0])}
     for filename in filenames:
         path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
-        with open(path, "rb") as source:
-            source.seek(0)
-            tiles = process_image(Image.open(source), 1)
+        with open(path, "rb") as handle:
+            handle.seek(0)
+            tiles = process_image(Image.open(handle), 1)
             if any(any(t.count(c) == 1 for c in range(4)) for t in tiles):
                 print(f"{filename}: has tile with only 1 px of some color.")
             uniqueTiles.update(tiles)
@@ -340,46 +340,39 @@ def generate_asm_file(filenames, uniqueTiles):
     yield f"{'image_count':15} equ {len(filenames)}  ; number of images"
     yield ""
 
-    # descriptions
-    yield asmlabel("image_names", "descriptions (8 bytes/image)")
-    for (i, filename) in enumerate(filenames):
-        filename = filename.lower()
-        # NES can't show more than 8 sprites per scanline
-        if len(filename) > 8 or not filename.isascii():
-            sys.exit(
-                "image filenames must be 8 ASCII characters or less "
-                "(excluding extension)."
-            )
-        yield asminstr(f'db "{filename:>8}"')
+    yield asmcomment("pointers to the following array")
+    yield asmlabel("image_ptrs")
+    for i in range(len(filenames)):
+        yield asminstr(f"dw image{i}_ptrs")
     yield ""
 
-    # addresses in NT/AT/palette data
-    yield asmcomment("addresses in RLE compressed name & attribute table data")
-    yield asmcomment("and uncompressed background palette data")
-    #
-    yield asmlabel("grafix_ptrs_lo", "low bytes")
-    for fi in range(len(filenames)):
-        for si in range(7):
-            yield asminstr(f"dl img{fi}_slice{si}")
-        yield asminstr(f"dl img{fi}_palette")
-    #
-    yield asmlabel("grafix_ptrs_hi", "high bytes")
-    for fi in range(len(filenames)):
-        for si in range(7):
-            yield asminstr(f"dh img{fi}_slice{si}")
-        yield asminstr(f"dh img{fi}_palette")
-    yield ""
-
-    # NT/AT/palette data
-    yield asmcomment("RLE compressed name & attribute table data")
-    yield asmcomment("(each slice decompresses into exactly $80 bytes)")
-    yield asmcomment("and uncompressed background palette data")
+    yield asmcomment("for each image:")
+    yield asmcomment("- description (8 bytes)")
+    yield asmcomment("- background palette data (16 bytes)")
+    yield asmcomment("- compressed name & attribute table data in 7 slices")
     totalDataLen = 0
     for (fi, filename) in enumerate(filenames):
+        # pointers
+        yield asmlabel(f"image{fi}_ptrs")
+        yield asminstr(f"dw img{fi}_descr")
+        yield asminstr(f"dw img{fi}_palette")
+        for si in range(7):
+            yield asminstr(f"dw img{fi}_slice{si}")
+        # description (can't show more than 8 sprites per scanline)
+        filename = filename.lower()
+        if len(filename) > 8 or not filename.isascii():
+            sys.exit("Files must be 8 ASCII chars or less (excl. extens.).")
+        yield asmlabel(f"img{fi}_descr")
+        yield asminstr(f'db "{filename:>8}"')
+        # open file
         path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
-        with open(path, "rb") as source:
-            source.seek(0)
-            image = Image.open(source)
+        with open(path, "rb") as handle:
+            handle.seek(0)
+            image = Image.open(handle)
+            # palette
+            palette = bytes(process_image(image, 0))
+            yield asmlabel(f"img{fi}_palette")
+            yield asminstr(f"hex {palette.hex()}")
             # NT & AT data
             ntAtData = process_image(image, 2, uniqueTiles)
             for si in range(7):
@@ -388,11 +381,7 @@ def generate_asm_file(filenames, uniqueTiles):
                 yield asmlabel(f"img{fi}_slice{si}")
                 for i in range(0, len(rleData), 16):
                     yield asminstr("hex " + rleData[i:i+16].hex())
-            # palette
-            palette = bytes(process_image(image, 0))
-            yield asmlabel(f"img{fi}_palette")
-            yield asminstr("hex " + palette.hex())
-    print(f"{'':4}total NT/AT/palette data length: {totalDataLen}")
+    print(f"{'':4}total data length: {totalDataLen}")
 
 # -----------------------------------------------------------------------------
 
