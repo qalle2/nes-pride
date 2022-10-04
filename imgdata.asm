@@ -46,7 +46,7 @@ image0_ptrs
                 dw img0_slice5
                 dw img0_slice6
 img0_descr
-                db "aaatitle"
+                db "           title  screen"
 img0_palette
                 hex 0f1925300f1215250f13210f0f25280f
 img0_slice0
@@ -93,7 +93,7 @@ image1_ptrs
                 dw img1_slice5
                 dw img1_slice6
 img1_descr
-                db " agender"
+                db "              a-  gender"
 img1_palette
                 hex 0f0029300f0f0f0f0f0f0f0f0f0f0f0f
 img1_slice0
@@ -121,7 +121,7 @@ image2_ptrs
                 dw img2_slice5
                 dw img2_slice6
 img2_descr
-                db "aromanti"
+                db "              a-romantic"
 img2_palette
                 hex 0f0029300f1a290f0f0f0f0f0f0f0f0f
 img2_slice0
@@ -149,7 +149,7 @@ image3_ptrs
                 dw img3_slice5
                 dw img3_slice6
 img3_descr
-                db "    asex"
+                db "              a-  sexual"
 img3_palette
                 hex 0f0014300f0f0f0f0f0f0f0f0f0f0f0f
 img3_slice0
@@ -177,7 +177,7 @@ image4_ptrs
                 dw img4_slice5
                 dw img4_slice6
 img4_descr
-                db "    bear"
+                db "                    bear"
 img4_palette
                 hex 0f0717270f2730370f00300f0f0f0f0f
 img4_slice0
@@ -211,7 +211,7 @@ image5_ptrs
                 dw img5_slice5
                 dw img5_slice6
 img5_descr
-                db "bigender"
+                db "             bi-  gender"
 img5_palette
                 hex 0f2130330f1424330f11210f0f0f0f0f
 img5_slice0
@@ -239,7 +239,7 @@ image6_ptrs
                 dw img6_slice5
                 dw img6_slice6
 img6_descr
-                db "   bisex"
+                db "             bi-  sexual"
 img6_palette
                 hex 0f1213150f0f0f0f0f0f0f0f0f0f0f0f
 img6_slice0
@@ -267,7 +267,7 @@ image7_ptrs
                 dw img7_slice5
                 dw img7_slice6
 img7_descr
-                db " demisex"
+                db "           demi-  sexual"
 img7_palette
                 hex 0f0410300f0f0f0f0f0f0f0f0f0f0f0f
 img7_slice0
@@ -301,7 +301,7 @@ image8_ptrs
                 dw img8_slice5
                 dw img8_slice6
 img8_descr
-                db "  gaymen"
+                db "             gay     men"
 img8_palette
                 hex 0f1222300f03120f0f1b2b300f0b1b0f
 img8_slice0
@@ -329,7 +329,7 @@ image9_ptrs
                 dw img9_slice5
                 dw img9_slice6
 img9_descr
-                db "gndrflui"
+                db "         gender-   fluid"
 img9_palette
                 hex 0f1425300f020f0f0f0f0f0f0f0f0f0f
 img9_slice0
@@ -357,7 +357,7 @@ image10_ptrs
                 dw img10_slice5
                 dw img10_slice6
 img10_descr
-                db "gndrquer"
+                db "         gender-   queer"
 img10_palette
                 hex 0f1319300f0f0f0f0f0f0f0f0f0f0f0f
 img10_slice0
@@ -385,7 +385,7 @@ image11_ptrs
                 dw img11_slice5
                 dw img11_slice6
 img11_descr
-                db "intersex"
+                db "          inter-     sex"
 img11_palette
                 hex 0f04280f0f0f0f0f0f0f0f0f0f0f0f0f
 img11_slice0
@@ -419,7 +419,7 @@ image12_ptrs
                 dw img12_slice5
                 dw img12_slice6
 img12_descr
-                db " leather"
+                db "                 leather"
 img12_palette
                 hex 0f0115300f0f0f0f0f0f0f0f0f0f0f0f
 img12_slice0
@@ -450,7 +450,7 @@ image13_ptrs
                 dw img13_slice5
                 dw img13_slice6
 img13_descr
-                db "lesbian5"
+                db "         lesbian5stripes"
 img13_palette
                 hex 0f2427300f14240f0f17270f0f0f0f0f
 img13_slice0
@@ -478,7 +478,7 @@ image14_ptrs
                 dw img14_slice5
                 dw img14_slice6
 img14_descr
-                db "lesbian7"
+                db "         lesbian7stripes"
 img14_palette
                 hex 0f1424300f04140f0f0717270f27300f
 img14_slice0
@@ -506,7 +506,7 @@ image15_ptrs
                 dw img15_slice5
                 dw img15_slice6
 img15_descr
-                db "nonbinar"
+                db "            non-  binary"
 img15_palette
                 hex 0f1328300f0f0f0f0f0f0f0f0f0f0f0f
 img15_slice0
@@ -534,7 +534,7 @@ image16_ptrs
                 dw img16_slice5
                 dw img16_slice6
 img16_descr
-                db "  pansex"
+                db "            pan-  sexual"
 img16_palette
                 hex 0f1521280f0f0f0f0f0f0f0f0f0f0f0f
 img16_slice0
@@ -562,7 +562,7 @@ image17_ptrs
                 dw img17_slice5
                 dw img17_slice6
 img17_descr
-                db "polyamor"
+                db "           poly-   amory"
 img17_palette
                 hex 0f0215280f0f0f0f0f0f0f0f0f0f0f0f
 img17_slice0
@@ -592,7 +592,7 @@ image18_ptrs
                 dw img18_slice5
                 dw img18_slice6
 img18_descr
-                db " polysex"
+                db "           poly-  sexual"
 img18_palette
                 hex 0f14212b0f0f0f0f0f0f0f0f0f0f0f0f
 img18_slice0
@@ -620,7 +620,7 @@ image19_ptrs
                 dw img19_slice5
                 dw img19_slice6
 img19_descr
-                db " rainbo6"
+                db "         rainbow6stripes"
 img19_palette
                 hex 0f1627280f0412190f19280f0f0f0f0f
 img19_slice0
@@ -648,7 +648,7 @@ image20_ptrs
                 dw img20_slice5
                 dw img20_slice6
 img20_descr
-                db " rainbo7"
+                db "         rainbow7stripes"
 img20_palette
                 hex 0f19282c0f03042c0f1627280f0f0f0f
 img20_slice0
@@ -676,7 +676,7 @@ image21_ptrs
                 dw img21_slice5
                 dw img21_slice6
 img21_descr
-                db " rainbo8"
+                db "         rainbow8stripes"
 img21_palette
                 hex 0f19282c0f1627280f03042c0f16250f
 img21_slice0
@@ -705,7 +705,7 @@ image22_ptrs
                 dw img22_slice5
                 dw img22_slice6
 img22_descr
-                db " rainbop"
+                db "         rainbowprogress"
 img22_palette
                 hex 0f1927280f2125300f0412190f081621
 img22_slice0
@@ -761,7 +761,7 @@ image23_ptrs
                 dw img23_slice5
                 dw img23_slice6
 img23_descr
-                db "rainbopi"
+                db " rainbowprogressintersex"
 img23_palette
                 hex 0f0419280f0821250f1216270f252830
 img23_slice0
@@ -829,7 +829,7 @@ image24_ptrs
                 dw img24_slice5
                 dw img24_slice6
 img24_descr
-                db "trnsgndr"
+                db "          trans-  gender"
 img24_palette
                 hex 0f2125300f0f0f0f0f0f0f0f0f0f0f0f
 img24_slice0

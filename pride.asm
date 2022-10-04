@@ -105,29 +105,29 @@ init_main_ram   ; initialize main RAM
                 inx
                 bne -
 
-                ; set attributes of image description sprites (0-7)
-                ldx #0
+                ; set attributes of image description sprites (0-23)
+                ldx #(23*4)
 -               lda #%00000000          ; subpalette 0, no mirroring
                 sta sprite_data+2,x
-                inx
-                inx
-                inx
-                inx
-                cpx #(8*4)
-                bne -
+                dex
+                dex
+                dex
+                dex
+                bpl -
 
-                ; set X positions of image description sprites (0-7)
-                ldx #0
-                lda #(22*8)
+                ; set X positions of image description sprites (0-23)
+                ldx #(7*4)
+                lda #(29*8)
 -               sta sprite_data+3,x
-                clc
-                adc #8
-                inx
-                inx
-                inx
-                inx
-                cpx #(8*4)
-                bne -
+                sta sprite_data+8*4+3,x
+                sta sprite_data+16*4+3,x
+                sec
+                sbc #8
+                dex
+                dex
+                dex
+                dex
+                bpl -
 
                 lda #0                  ; start drawing first image
                 sta ppu_upd_phase
@@ -235,27 +235,35 @@ prev_image      dec which_image
                 sta ppu_upd_phase
                 rts
 
-toggle_text     ; show or hide image description (sprites 0-7)
+toggle_text     ; show or hide image description (sprites 0-23)
 
                 lda text_visible        ; toggle MSB
                 eor #%10000000
                 sta text_visible
 
-                bmi +                   ; A = Y position of sprites
-                lda #$ff
+                bmi +                   ; get index for sprite Y positions
+                ldy #0
                 jmp ++
-+               lda #(26*8-1)
++               ldy #3
 
-++              ldx #0
--               sta sprite_data+0,x
-                inx
-                inx
-                inx
-                inx
-                cpx #(8*4)
-                bne -
+++              ldx #(7*4)
+-               lda spr_y_pos+0,y
+                sta sprite_data+0,x
+                lda spr_y_pos+1,y
+                sta sprite_data+8*4+0,x
+                lda spr_y_pos+2,y
+                sta sprite_data+16*4+0,x
+                dex
+                dex
+                dex
+                dex
+                bpl -
 
                 rts
+
+spr_y_pos       ; Y positions of 1st/2nd sprite row
+                db $ff, $ff, $ff            ; hidden
+                db 24*8-1, 25*8-1, 26*8-1   ; visible
 
 prep_ppu_upd    ; prepare a PPU memory update according to ppu_upd_phase
 
@@ -374,8 +382,8 @@ update_sprites  ; update tiles of image description sprites
                 ldy #0
                 jsr get_slice_addr
 
-                ldy #7                  ; source index
-                ldx #(7*4)              ; destination index
+                ldy #(24-1)             ; source index
+                ldx #(23*4)             ; destination index
                 ;
 -               lda (grafix_ptr),y
                 sta sprite_data+1,x

@@ -3,10 +3,11 @@
 import itertools, os, sys
 from PIL import Image  # Pillow, https://python-pillow.org
 
-IMAGE_DIR  = "img"          # read images from here
-IMAGE_EXT  = ".png"         # read images with this extension
-PT_FILE    = "chr-bg.bin"   # write pattern table data here
-ASM_FILE   = "imgdata.asm"  # write all other data in ASM6 format here
+IMAGE_DIR  = "img"           # read images from here
+IMAGE_EXT  = ".png"          # read images with this extension
+TITLE_FILE = "title_screen"  # sort this first (no extension)
+PT_FILE    = "chr-bg.bin"    # write pattern table data here
+ASM_FILE   = "imgdata.asm"   # write all other data in ASM6 format here
 
 # NES color number for background and unused colors (black)
 NES_BG_COLOR = 0x0f
@@ -260,7 +261,7 @@ def get_unique_tiles(filenames):
                 print(f"{filename}: has tile with only 1 px of some color.")
             uniqueTiles.update(tiles)
             print(
-                f"{'':4}{filename:8}: {len(tiles):3} unique tiles, "
+                f"{'':4}{filename:16}: {len(tiles):3} unique tiles, "
                 + f"{len(uniqueTiles):3} total so far"
             )
             if len(uniqueTiles) > 256:
@@ -284,6 +285,24 @@ def asmlabel(label, comment=""):
 def asminstr(instruction):
     # return an ASM6 line with an instruction (no label/comment)
     return f"{'':16}{instruction}"
+
+def filename_to_description(filename):
+    # format a string (filename without extension) into three eight-character
+    # lines aligned right & bottom; replace "_" with newline; add newline
+    # after "-"; examples:
+    #     "X"     -> 23 spaces + "x"
+    #     "X-Y_Z" ->  6 spaces + "x-" + 7 spaces + "y" + 7 spaces + "z"
+    filename = filename.lower().replace("_", "\n").replace("-", "-\n")
+    if not filename.isascii():
+        sys.exit("Filenames must be ASCII.")
+    lines = filename.split("\n")
+    if len(lines) > 3:
+        sys.exit("Filenames must not contain more than one '-' or '_'.")
+    while len(lines) < 3:
+        lines.insert(0, "")
+    if max(len(l) for l in lines) > 8:
+        sys.exit("Each line of filename must be 8 characters or less.")
+    return "".join(l.rjust(8) for l in lines)
 
 def rle_encode_raw(data):
     # generate runs: (length, byte)
@@ -358,12 +377,9 @@ def generate_asm_file(filenames, uniqueTiles):
         yield asminstr(f"dw img{fi}_palette")
         for si in range(7):
             yield asminstr(f"dw img{fi}_slice{si}")
-        # description (can't show more than 8 sprites per scanline)
-        filename = filename.lower()
-        if len(filename) > 8 or not filename.isascii():
-            sys.exit("Files must be 8 ASCII chars or less (excl. extens.).")
+        # description
         yield asmlabel(f"img{fi}_descr")
-        yield asminstr(f'db "{filename:>8}"')
+        yield asminstr(f'db "{filename_to_description(filename)}"')
         # open file
         path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
         with open(path, "rb") as handle:
@@ -394,7 +410,13 @@ def get_filenames():
         )
 
 def main():
-    filenames = sorted(get_filenames())
+    # get filenames; sort without punctuation, title screen first
+    filenames = sorted(
+        get_filenames(), key=lambda f: f.replace("_", "").replace("-", "")
+    )
+    filenames.sort(key=lambda f: f != TITLE_FILE)
+    if TITLE_FILE not in filenames:
+        sys.exit(f"{TITLE_FILE+IMAGE_EXT} not found.")
 
     print(f"Writing pattern table data to {PT_FILE}...")
     uniqueTiles = get_unique_tiles(filenames)
