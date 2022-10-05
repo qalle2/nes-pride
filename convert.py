@@ -243,7 +243,7 @@ def encode_pt_data(tiles):
                     ((tile[py*8+i] >> bp) & 1) << (7 - i) for i in range(8)
                 ))
     # pad to a multiple of 16 tiles
-    ptData.extend((256 - len(ptData) % 256) * b"\xff")
+    ptData.extend(((256 - len(ptData) % 256) % 256) * b"\xff")
     return ptData
 
 def get_unique_tiles(filenames):
@@ -288,7 +288,7 @@ def filename_to_description(filename):
         sys.exit("Filenames must be ASCII.")
     lines = filename.split("\n")
     if len(lines) > 3:
-        sys.exit("Filenames must not contain more than one '-' or '_'.")
+        sys.exit("Filenames must not contain more than two '-' or '_'.")
     while len(lines) < 3:
         lines.insert(0, "")
     if max(len(l) for l in lines) > 8:
