@@ -95,37 +95,44 @@ def create_subpalettes(colorSets):
     # split sets of color indexes into subpalettes
     # colorSets: set of sets of color indexes in attribute blocks
     # return: list of 4 subpalettes (sets) with up to 3 color indexes each
+    # TODO: speed this up
 
-    # sort sets by decreasing length
-    colorSets = sorted(colorSets)
-    colorSets.sort(key=lambda s: len(s), reverse=True)
+    # delete sets that are a subset of another set
+    colorSets = {
+        s1 for s1 in colorSets
+        if not any(s1.issubset(s2) and s1 != s2 for s2 in colorSets)
+    }
 
-    subpals = [set() for i in range(4)]
+    # try all permutations
+    for colorSetsPerm in itertools.permutations(colorSets):
+        subpals = [set() for i in range(4)]
+        success = True
+        for colorSet in colorSetsPerm:
+            # get maximum number of common colors with a subpalette in which
+            # the new colors fit
+            try:
+                maxCnt = max(
+                    len(s & colorSet) for s in subpals
+                    if len(s | colorSet) <= 3
+                )
+            except ValueError:
+                success = False
+                break
+            # which subpalette was it (first one if several)
+            bestSubpal = [
+                i for (i, s) in enumerate(subpals)
+                if len(s & colorSet) == maxCnt and len(s | colorSet) <= 3
+            ][0]
+            # add colors there
+            subpals[bestSubpal].update(colorSet)
+        if success:
+            break
 
-    for colorSet in colorSets:
-        # get maximum number of common colors with a subpalette in which
-        # the new colors fit
-        try:
-            maxCnt = max(
-                len(s & colorSet) for s in subpals if len(s | colorSet) <= 3
-            )
-        except ValueError:
-            # an ugly hack for rainbow3.png (will stop working if palette order
-            # changes)
-            subpals = [{1, 5, 9}, {2, 6, 7}, {3, 4, 8}, {6, 9, 10}]
-            if all(any(c.issubset(s) for s in subpals) for c in colorSets):
-                return subpals
-            sys.exit(
-                "Couldn't arrange colors into 4 subpalettes with 3 unique "
-                f"colors plus ${NES_BG_COLOR:02x} each."
-            )
-        # which subpalette was it (first one if several)
-        bestSubpal = [
-            i for (i, s) in enumerate(subpals)
-            if len(s & colorSet) == maxCnt and len(s | colorSet) <= 3
-        ][0]
-        # add colors there
-        subpals[bestSubpal].update(colorSet)
+    if not success:
+        sys.exit(
+            "Couldn't arrange colors into 4 subpalettes with 3 unique colors "
+            f"plus ${NES_BG_COLOR:02x} each."
+        )
 
     return subpals
 
