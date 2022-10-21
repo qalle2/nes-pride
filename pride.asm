@@ -27,7 +27,7 @@ ppu_buf_lastind equ $89    ; last index used in PPU buffer (length - 1)
 text_visible    equ $8a    ; flag description visible? (boolean)
 rle_src_ind     equ $8b    ; RLE decoder - source index
 rle_dst_ind     equ $8c    ; RLE decoder - destination index
-rle_direct      equ $8d    ; RLE direct (implied byte)
+rle_direct      equ $8d    ; RLE direct (implied) byte
 visible_nt      equ $8e    ; which name table to show (0/1)
 sprite_data     equ $0200  ; OAM page ($100 bytes)
 
@@ -278,7 +278,7 @@ prep_ppu_upd    ; prepare a PPU memory update according to ppu_upd_phase
                 rts
 
 nt_at_to_buffer ; copy one seventh of name & attribute table data of current
-                ; image ($80 bytes) to backwards to ppu_buffer according to
+                ; image ($80 bytes) backwards to ppu_buffer according to
                 ; ppu_upd_phase (must be 0-6)
 
                 ldy ppu_upd_phase
@@ -327,11 +327,11 @@ nt_at_to_buffer ; copy one seventh of name & attribute table data of current
                 ;
                 jmp --
 
-rle_end         ; PPU address: $2000 + (~visible_nt) * $400
+rle_end         ; PPU address: $2000 + (visible_nt^1) * $400
                 ; + (ppu_upd_phase + 1) * $80
-                ; (bottom of non-visible name table and entire non-visible AT0)
+                ; (bottom of non-visible name table and entire non-visible AT)
                 ;
-                ; high byte: $20 + (~visible_nt) * 4 + (ppu_upd_phase + 1) / 2
+                ; high byte: $20 + (visible_nt^1) * 4 + (ppu_upd_phase + 1) / 2
                 ldx ppu_upd_phase
                 inx
                 txa

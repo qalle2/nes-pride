@@ -1,12 +1,22 @@
 # convert images of pride flags into NES-compatible format
 
-import itertools, os, sys
+# NES graphics glossary:
+# - tile = 8*8 pixels, 2 bits/pixel
+# - attribute block = 2*2 tiles
+# - (sub)palette = 4 colors
+# - palette(s) = 8 subpalettes (4 for background, 4 for sprites)
+# - PT = pattern table (16 bytes/tile; what the tiles look like)
+# - NT = name table (1 byte/tile; which tile at each screen position)
+# - AT = attribute table (2 bits / attribute block; which subpalette for each
+#   attribute block)
+
+import collections, itertools, os, sys
 from PIL import Image  # Pillow, https://python-pillow.org
 
 IMAGE_DIR  = "img"           # read images from here
 IMAGE_EXT  = ".png"          # read images with this extension
 TITLE_FILE = "title_screen"  # sort this first (no extension)
-PT_FILE    = "chr-bg.bin"    # write pattern table data here
+PT_FILE    = "chr-bg.bin"    # write PT data here
 ASM_FILE   = "imgdata.asm"   # write all other data in ASM6 format here
 
 # NES color number for background and unused colors (black)
@@ -84,12 +94,29 @@ def closest_nes_color(rgb):
         if color_diff(NES_PALETTE[i], rgb) == minDiff
     ][0]
 
-def get_color_sets(image):
-    # for each attribute block (16*16 px), generate set of PNG color indexes,
-    # e.g. {0, 2}
-    for ay in range(0, 13 * 16, 16):
-        for ax in range(0, 16 * 16, 16):
-            yield set(image.crop((ax, ay, ax + 16, ay + 16)).getdata())
+def get_palette(image):
+    # get color indexes and their best NES equivalents from the image:
+    # {pngIndex: nesColor, ...}
+
+    if image.width != 256 or image.height != 208 or image.mode != "P":
+        sys.exit("Image must be 256*208 pixels and have a palette.")
+
+    usedColors = image.getcolors(13)  # [(count, index), ...] or None
+    if usedColors is None:
+        sys.exit("Image has more than 13 unique colors.")
+    usedColors = [c[1] for c in usedColors]
+
+    # get best NES equivalents: {pngIndex: nesColor, ...}
+    palette = image.getpalette()  # [R, G, B, ...]
+    palette = dict(
+        (i, closest_nes_color(palette[i*3:(i+1)*3])) for i in usedColors
+    )
+    if len(set(palette.values()) - {NES_BG_COLOR}) > 12:
+        sys.exit(f"Can only have 12 unique colors plus ${NES_BG_COLOR:02x}.")
+    if len(set(palette.values())) < len(palette):
+        sys.exit("More than one PNG color maps to same NES color.")
+
+    return palette
 
 def create_subpalettes(colorSets):
     # split sets of color indexes into subpalettes
@@ -136,8 +163,14 @@ def create_subpalettes(colorSets):
 
     return subpals
 
-def get_attr_data(image, subpals, bgIndex):
-    # generate attribute table data (int 0-3 for each attribute block)
+def get_color_sets(image):
+    # generate attribute blocks as sets of PNG color indexes
+    for y in range(0, 13 * 16, 16):
+        for x in range(0, 16 * 16, 16):
+            yield frozenset(image.crop((x, y, x + 16, y + 16)).getdata())
+
+def generate_at_data(image, subpals, bgIndex):
+    # generate AT data (int 0-3 for each attribute block)
     subpals = [sp | {bgIndex} for sp in subpals]
     yield from (
         [i for i in range(4) if subpals[i].issuperset(colorSet)][0]
@@ -145,50 +178,49 @@ def get_attr_data(image, subpals, bgIndex):
     )
 
 def get_tiles(image):
-    # for each tile (8*8 px), generate PNG indexes of all pixels,
-    # e.g. (0, 2, ...)
-    for ty in range(0, 26 * 8, 8):
-        for tx in range(0, 32 * 8, 8):
-            yield tuple(image.crop((tx, ty, tx + 8, ty + 8)).getdata())
+    # generate tiles as tuples of PNG color indexes (64 ints)
+    for y in range(0, 26 * 8, 8):
+        for x in range(0, 32 * 8, 8):
+            yield tuple(image.crop((x, y, x + 8, y + 8)).getdata())
 
-def convert_tiles(image, attrData, palette, subpalsNes):
+def convert_tiles(image, atData, palette, subpalsNes):
     # generate tiles as tuples of 64 2-bit ints
     for (i, tile) in enumerate(get_tiles(image)):
-        # get subpalette for this tile
-        # (bits: tile YYYYyXXXXx, attr YYYYXXXX)
-        subpal = attrData[(i >> 2) & 0b11110000 | (i >> 1) & 0b1111]
+        # get subpalette for this tile (bits: YYYYyXXXXx -> YYYYXXXX)
+        subpal = atData[(i >> 2) & 0b1111_0000 | (i >> 1) & 0b1111]
         # convert PNG indexes to subpalette indexes
         yield tuple(subpalsNes[subpal].index(palette[i]) for i in tile)
+
+def encode_at_data(atData):
+    # encode AT data (13*16 2-bit ints) into 64 bytes
+
+    atData = 2 * 16 * [0] + atData + 16 * [0]  # pad to 16 rows
+    atBytes = bytearray()
+    for y in range(8):
+        for x in range(8):
+            s = y * 32 + x * 2  # source index
+            atBytes.append(
+                atData[s]
+                | (atData[s+1] << 2)
+                | (atData[s+16] << 4)
+                | (atData[s+17] << 6)
+            )
+    return atBytes
 
 def process_image(image, mode=0, uniqueTiles=None):
     # If mode=0: return NES palette for image (ignore uniqueTiles arg).
     # If mode=1: return set of unique tiles   (ignore uniqueTiles arg).
-    # If mode=2: return name & attribute table data using uniqueTiles arg.
+    # If mode=2: return NT & AT data using uniqueTiles arg.
 
-    if image.width != 256 or image.height != 208 or image.mode != "P":
-        sys.exit("Image must be 256*208 pixels and have a palette.")
-
-    # get used color indexes and best NES equivalents:
-    # {pngIndex: nesColor, ...}
-    palette = image.getpalette()  # [R, G, B, ...]
-    if len(image.getcolors()) > 13:
-        sys.exit("Image has more than 13 unique colors.")
-    palette = dict(
-        (i[1], closest_nes_color(palette[i[1]*3:(i[1]+1)*3]))
-        for i in image.getcolors()
-    )
-    if len(set(palette.values()) - {NES_BG_COLOR}) > 12:
-        sys.exit(f"Can only have 12 unique colors plus ${NES_BG_COLOR:02x}.")
-    if len(set(palette.values())) < len(palette):
-        sys.exit("More than one PNG color maps to same NES color.")
+    palette = get_palette(image)  # {pngIndex: nesColor, ...}
 
     # get PNG index of NES background color
     try:
         bgIndex = [i for i in palette if palette[i] == NES_BG_COLOR][0]
     except IndexError:
-        bgIndex = -1
+        bgIndex = None
 
-    # get unique sets of color indexes in attr. blocks, e.g. {{1, 2}, {1, 3}}
+    # get unique sets of color indexes in attribute blocks
     colorSets = {frozenset(s - {bgIndex}) for s in get_color_sets(image)}
     if max(len(s) for s in colorSets) > 3:
         sys.exit(
@@ -198,6 +230,7 @@ def process_image(image, mode=0, uniqueTiles=None):
 
     # split sets of color indexes into subpalettes
     subpals = create_subpalettes(colorSets)
+
     # convert subpalettes into NES colors and pad with background color;
     # note: the order of colors affects the number of unique tiles a lot; this
     # isn't currently taken advantage of
@@ -207,40 +240,27 @@ def process_image(image, mode=0, uniqueTiles=None):
         for sp in subpals
     ]
     if mode == 0:
-        return list(itertools.chain.from_iterable(subpalsNes))
+        return subpalsNes
 
     # generate AT data using subpalettes
-    attrData = list(get_attr_data(image, subpals, bgIndex))
+    atData = list(generate_at_data(image, subpals, bgIndex))
 
     if mode == 1:
         # return set of unique tiles
-        return set(convert_tiles(image, attrData, palette, subpalsNes))
+        return set(convert_tiles(image, atData, palette, subpalsNes))
 
-    # get name table data using predetermined list of unique tiles
-    ntData = list(
+    # get NT data using predetermined list of unique tiles
+    ntData = bytes(
         uniqueTiles.index(tile) for tile in
-        convert_tiles(image, attrData, palette, subpalsNes)
+        convert_tiles(image, atData, palette, subpalsNes)
     )
 
-    # encode AT data
-    atBytes = bytearray(8 * b"\x00")  # first 2 rows of blocks
-    attrData.extend(16 * [0])  # pad to 14 rows of blocks
-    for y in range(7):
-        for x in range(8):
-            s = y * 32 + x * 2  # source index
-            atBytes.append(
-                attrData[s]
-                | (attrData[s+1] << 2)
-                | (attrData[s+16] << 4)
-                | (attrData[s+17] << 6)
-            )
-
-    return bytes(ntData) + atBytes
+    return ntData + encode_at_data(atData)
 
 # --- get_unique_tiles() and functions called by it ---------------------------
 
 def encode_pt_data(tiles):
-    # return pattern table data for all images as bytes; each tile is 64 ints
+    # return PT data for all images as bytes; each tile is 64 ints
 
     ptData = bytearray()
     for tile in tiles:
@@ -266,7 +286,10 @@ def get_unique_tiles(filenames):
             handle.seek(0)
             tiles = process_image(Image.open(handle), 1)
             if any(any(t.count(c) == 1 for c in range(4)) for t in tiles):
-                print(f"{filename}: has tile with only 1 px of some color.")
+                print(
+                    f"{filename}: has tile with only 1 px of some color.",
+                    file=sys.stderr
+                )
             uniqueTiles.update(tiles)
             print(
                 f"{'':4}{filename:26}: {len(tiles):2} ({len(uniqueTiles):3})"
@@ -280,26 +303,20 @@ def get_unique_tiles(filenames):
 
 # --- generate_asm_file() and functions called by it --------------------------
 
-def asminstr(instruction):
-    # return an ASM6 line with an instruction
-    return f"{'':4}{instruction}"
-
-def filename_to_description(filename):
+def filename_to_descr(filename):
     # format a string (filename without extension) into three eight-character
-    # lines aligned right & bottom; replace "_" with newline; add newline
-    # after "-"; examples:
-    #     "X"     -> 23 spaces + "x"
-    #     "X-Y_Z" ->  6 spaces + "x-" + 7 spaces + "y" + 7 spaces + "z"
-    filename = filename.lower().replace("_", "\n").replace("-", "-\n")
-    if not filename.isascii():
-        sys.exit("Filenames must be ASCII.")
-    lines = filename.split("\n")
-    if len(lines) > 3:
-        sys.exit("Filenames must not contain more than two '-' or '_'.")
-    while len(lines) < 3:
-        lines.insert(0, "")
-    if max(len(l) for l in lines) > 8:
-        sys.exit("Each line of filename must be 8 characters or less.")
+    # lines aligned right & bottom; replace "_" with newline; examples:
+    #     "X"   -> 23 spaces + "x"
+    #     "X_Y" -> 15 spaces + "x" + 7 spaces + "y"
+
+    lines = filename.lower().split("_")
+    if len(lines) > 3 or max(len(l) for l in lines) > 8 \
+    or not all(l.isascii() for l in lines):
+        sys.exit(
+            "Filenames (without extension): no more than 3 strings separated "
+            "by '_'; each string must be 8 ASCII characters or less."
+        )
+    lines = (3 - len(lines)) * [""] + lines
     return "".join(l.rjust(8) for l in lines)
 
 def rle_encode_raw(data):
@@ -334,11 +351,9 @@ def rle_encode(data):
     assert len(data) <= 128
 
     # the direct byte (the most common byte that begins a run)
-    runStartBytes = [r[1] for r in rle_encode_raw(data)]
-    mostCommonBytes = sorted(set(runStartBytes))
-    directByte = sorted(
-        mostCommonBytes, key=lambda b: runStartBytes.count(b), reverse=True
-    )[0]
+    directByte = collections.Counter(
+        r[1] for r in rle_encode_raw(data)
+    ).most_common(1)[0][0]
     yield directByte
     # RLE data itself
     for (length, byte) in rle_encode_raw(data):
@@ -355,39 +370,41 @@ def generate_asm_file(filenames, uniqueTiles):
     yield "; This file was generated automatically by convert.py."
     yield ""
     yield "; number of images"
-    yield f"image_count equ {len(filenames)}"
+    yield "image_count equ " + str(len(filenames))
     yield ""
 
     yield "; pointers to the following array"
     yield "image_ptrs"
     for i in range(len(filenames)):
-        yield asminstr(f"dw image{i}_ptrs")
+        yield f" dw image{i}_ptrs"
     yield ""
 
     yield "; for each image:"
     yield "; - description (24 bytes)"
     yield "; - background palette data (16 bytes)"
-    yield "; - compressed name & attribute table data in 7 slices"
+    yield "; - compressed NT & AT data in 7 slices"
     totalDataLen = 0
     for (fi, filename) in enumerate(filenames):
         # pointers
         yield f"image{fi}_ptrs"
-        yield asminstr(f"dw img{fi}_descr")
-        yield asminstr(f"dw img{fi}_palette")
+        yield f" dw img{fi}_descr"
+        yield f" dw img{fi}_palette"
         for si in range(7):
-            yield asminstr(f"dw img{fi}_slice{si}")
+            yield f" dw img{fi}_slice{si}"
         # description
         yield f"img{fi}_descr"
-        yield asminstr(f'db "{filename_to_description(filename)}"')
+        yield f' db "{filename_to_descr(filename)}"'
         # open file
         path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
         with open(path, "rb") as handle:
             handle.seek(0)
             image = Image.open(handle)
             # palette
-            palette = bytes(process_image(image, 0))
+            palette = bytes(itertools.chain.from_iterable(
+                process_image(image, 0)
+            ))
             yield f"img{fi}_palette"
-            yield asminstr(f"hex {palette.hex()}")
+            yield " hex " + palette.hex()
             # NT & AT data
             ntAtData = process_image(image, 2, uniqueTiles)
             for si in range(7):
@@ -395,7 +412,7 @@ def generate_asm_file(filenames, uniqueTiles):
                 totalDataLen += len(rleData)
                 yield f"img{fi}_slice{si}"
                 for i in range(0, len(rleData), 32):
-                    yield asminstr("hex " + rleData[i:i+32].hex())
+                    yield " hex " + rleData[i:i+32].hex()
     print(f"Total length of other data: {totalDataLen}")
 
 # -----------------------------------------------------------------------------
