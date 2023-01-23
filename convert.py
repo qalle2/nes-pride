@@ -99,7 +99,7 @@ def get_palette(image):
     # {pngIndex: nesColor, ...}
 
     if image.width != 256 or image.height != 192 or image.mode != "P":
-        sys.exit("Image must be 256*208 pixels and have a palette.")
+        sys.exit("Image must be 256*192 pixels and have a palette.")
 
     usedColors = image.getcolors(13)  # [(count, index), ...] or None
     if usedColors is None:

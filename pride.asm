@@ -29,6 +29,7 @@ rle_src_ind     equ $8b    ; RLE decoder - source index
 rle_dst_ind     equ $8c    ; RLE decoder - destination index
 rle_direct      equ $8d    ; RLE direct (implied) byte
 visible_nt      equ $8e    ; which name table to show (0/1)
+frame_counter   equ $8f    ; counts between image_count-2...0; for random flag
 sprite_data     equ $0200  ; OAM page ($100 bytes)
 
 ; memory-mapped registers
@@ -172,7 +173,12 @@ main_loop       bit run_main_loop       ; wait until NMI routine has set flag
 
                 lsr run_main_loop       ; clear flag
 
-                lda pad_status
+                dec frame_counter
+                bpl +
+                lda #image_count-2
+                sta frame_counter
+
++               lda pad_status
                 sta prev_pad_status
                 jsr read_joypad
                 jsr button_logic
@@ -209,6 +215,7 @@ button_logic    ; exit if anything pressed on previous frame
                 bne +
 
                 lda pad_status
+                bmi random_image        ; A
                 lsr a
                 bcs next_image          ; right
                 lsr a
@@ -218,6 +225,14 @@ button_logic    ; exit if anything pressed on previous frame
                 lsr a
                 bcs toggle_text         ; start
 +               rts
+
+random_image    ; get random image (add 1 if frame_counter >= which_image)
+                ldx frame_counter
+                cpx which_image
+                bcc +
+                inx
++               stx which_image
+                jmp +
 
 next_image      inc which_image
                 lda which_image
@@ -231,7 +246,8 @@ prev_image      dec which_image
                 bpl +
                 lda #(image_count-1)
                 sta which_image
-+               lda #0                  ; NT & AT must be updated
+                ;
++               lda #0                  ; set up image redraw
                 sta ppu_upd_phase
                 rts
 
@@ -293,7 +309,6 @@ nt_at_to_buffer ; copy one seventh of name & attribute table data of current
                 ; 0bLLLLLLL1     : output direct_byte 0bLLLLLLL+1 times (1-128)
                 ; 0bLLLLLLL0 0xBB: output byte 0xBB   0bLLLLLLL   times (1-127)
                 ; 0b00000000     : terminator (end of data)
-                ; 0b00000001     : (forbidden)
                 ;
                 lda #$7f
                 sta rle_dst_ind         ; destination index

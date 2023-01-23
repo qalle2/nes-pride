@@ -1,5 +1,5 @@
 # nes-pride
-Shows pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
+Browse 25 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
 
 ![screenshot](snap1.png)
 ![screenshot](snap2.png)
@@ -14,7 +14,7 @@ Table of contents:
 
 ## List of files
 Images:
-* `img/*.png`: pride flags (256&times;208 pixels)
+* `img/*.png`: pride flags (256&times;192 pixels)
 * `chr-spr.png`: sprite pattern table data; can be encoded using `nes_chr_encode.py` from [my NES utilities](https://github.com/qalle2/nes-util/)
 * `snap*.png`: screenshots
 
@@ -37,6 +37,7 @@ Other (gzip compressed):
 ## How to use the NES program
 * left arrow: previous flag
 * right arrow: next flag
+* A button: random flag
 * start button: toggle flag descriptions on or off
 
 ## Technical info of the NES program
@@ -61,5 +62,6 @@ Other (gzip compressed):
 ## Sources of flags
 * [Wikipedia &ndash; Pride flag](https://en.wikipedia.org/wiki/Pride_flag)
 * [Wikipedia &ndash; Rainbow flag (LGBT)](https://en.wikipedia.org/wiki/Rainbow_flag_%28LGBT%29)
+* [Wikipedia &ndash; Autistic Pride Flag](https://commons.wikimedia.org/wiki/File:Autistic_Pride_Flag.png)
 
 The license of this project does not apply to the flag images (I guess).
