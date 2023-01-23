@@ -491,7 +491,7 @@ set_ppu_addr    sty ppu_addr            ; Y*$100 + A -> address
 
 set_ppu_regs    lda #0                  ; set scroll value
                 sta ppu_scroll
-                lda #16
+                lda #3*8
                 sta ppu_scroll
                 lda #%10001000          ; enable NMI, use PT1 for sprites
                 ora visible_nt

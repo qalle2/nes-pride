@@ -47,9 +47,11 @@ Other (gzip compressed):
 * pattern table 0: background (flag images)
 * pattern table 1: sprites (flag descriptions)
 * each image has its own background palettes (black and 4&times;3 other colors)
-* the flag images are 256&times;208 pixels (32&times;26 tiles or 16&times;13 attribute blocks at the bottom of a name/attribute table)
+* the visible flag images are 256&times;192 pixels (32&times;24 tiles or 16&times;12 attribute blocks)
+* the flag images are internally stored with a padding of two rows of black tiles at the beginning
+* the flag images are shown at the bottom of a name/attribute table
 * name/attribute table data of each flag image:
-  * uncompressed size: 896 = 7&times;128 bytes
+  * uncompressed size (including padding): 896 = 7&times;128 bytes
   * saved as seven run-length encoded slices, each of which decompresses into 128 bytes
 * an image is updated during eight frames:
   * first seven frames: extract one slice of name/attribute table data to an invisible name/attribute table

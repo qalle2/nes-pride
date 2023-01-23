@@ -98,7 +98,7 @@ def get_palette(image):
     # get color indexes and their best NES equivalents from the image:
     # {pngIndex: nesColor, ...}
 
-    if image.width != 256 or image.height != 208 or image.mode != "P":
+    if image.width != 256 or image.height != 192 or image.mode != "P":
         sys.exit("Image must be 256*208 pixels and have a palette.")
 
     usedColors = image.getcolors(13)  # [(count, index), ...] or None
@@ -165,7 +165,7 @@ def create_subpalettes(colorSets):
 
 def get_color_sets(image):
     # generate attribute blocks as sets of PNG color indexes
-    for y in range(0, 13 * 16, 16):
+    for y in range(0, 12 * 16, 16):
         for x in range(0, 16 * 16, 16):
             yield frozenset(image.crop((x, y, x + 16, y + 16)).getdata())
 
@@ -179,7 +179,7 @@ def generate_at_data(image, subpals, bgIndex):
 
 def get_tiles(image):
     # generate tiles as tuples of PNG color indexes (64 ints)
-    for y in range(0, 26 * 8, 8):
+    for y in range(0, 24 * 8, 8):
         for x in range(0, 32 * 8, 8):
             yield tuple(image.crop((x, y, x + 8, y + 8)).getdata())
 
@@ -192,9 +192,9 @@ def convert_tiles(image, atData, palette, subpalsNes):
         yield tuple(subpalsNes[subpal].index(palette[i]) for i in tile)
 
 def encode_at_data(atData):
-    # encode AT data (13*16 2-bit ints) into 64 bytes
+    # encode AT data (12*16 2-bit ints) into 64 bytes
 
-    atData = 2 * 16 * [0] + atData + 16 * [0]  # pad to 16 rows
+    atData = 3 * 16 * [0] + atData + 16 * [0]  # pad to 16 rows
     atBytes = bytearray()
     for y in range(8):
         for x in range(8):
@@ -249,8 +249,9 @@ def process_image(image, mode=0, uniqueTiles=None):
         # return set of unique tiles
         return set(convert_tiles(image, atData, palette, subpalsNes))
 
-    # get NT data using predetermined list of unique tiles
-    ntData = bytes(
+    # get NT data using predetermined list of unique tiles; pad to 24 rows
+    # with black tiles
+    ntData = 2 * 32 * b"\x00" + bytes(
         uniqueTiles.index(tile) for tile in
         convert_tiles(image, atData, palette, subpalsNes)
     )
@@ -343,7 +344,6 @@ def rle_encode(data):
     # 0bLLLLLLL1     : output direct_byte 0bLLLLLLL+1 times (1-128)
     # 0bLLLLLLL0 0xBB: output byte 0xBB   0bLLLLLLL   times (1-127)
     # 0b00000000     : terminator (end of data)
-    # 0b00000001     : (forbidden)
     # note: the ability to output 128-byte runs is important because there
     # are lots of exactly 128-byte runs
 
