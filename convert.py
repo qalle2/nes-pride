@@ -395,7 +395,7 @@ def generate_asm_file(filenames, uniqueTiles):
     yield ""
 
     # data for each image
-    totalDataLen = 0
+    totalNtAtDataLen = 0
     for (fi, filename) in enumerate(filenames):
         # description
         yield f"img{fi}_descr"
@@ -414,16 +414,19 @@ def generate_asm_file(filenames, uniqueTiles):
             + " ".join(palette[i:i+4].hex() for i in range(0, len(palette), 4))
             # NT & AT data
             ntAtData = process_image(image, 2, uniqueTiles)
+            ntAtDataLen = 0
             for si in range(7):
                 rleData = bytes(rle_encode(ntAtData[si*0x80:(si+1)*0x80]))
-                totalDataLen += len(rleData)
+                ntAtDataLen += len(rleData)
                 yield f"img{fi}_slice{si}"
                 yield "  hex " + rleData[:1].hex()
                 for i in range(0, len(rleData) - 2, 16):
                     yield "  hex " + rleData[1:-1][i:i+16].hex()
                 yield "  hex " + rleData[-1:].hex()
+            print(f"{4*' '}{filename:26}: {ntAtDataLen:4}")
         yield ""
-    print(f"Total length of other data: {totalDataLen}")
+        totalNtAtDataLen += ntAtDataLen
+    print(f"{4*' '}{'TOTAL':26}: {totalNtAtDataLen:4}")
 
 # -----------------------------------------------------------------------------
 
@@ -451,6 +454,7 @@ def main():
         handle.write(encode_pt_data(uniqueTiles))
 
     print(f"Writing other data to {ASM_FILE}...")
+    print("Length of compressed NT/AT data:")
     with open(ASM_FILE, "wt", encoding="ascii") as handle:
         handle.seek(0)
         for line in generate_asm_file(filenames, uniqueTiles):
