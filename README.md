@@ -62,6 +62,6 @@ Other (gzip compressed):
 ## Sources of flags
 * [Wikipedia &ndash; Pride flag](https://en.wikipedia.org/wiki/Pride_flag)
 * [Wikipedia &ndash; Rainbow flag (LGBT)](https://en.wikipedia.org/wiki/Rainbow_flag_%28LGBT%29)
-* [Wikipedia &ndash; Autistic Pride Flag](https://commons.wikimedia.org/wiki/File:Autistic_Pride_Flag.png)
+* [Wikimedia Commons &ndash; Autistic Pride Flag](https://commons.wikimedia.org/wiki/File:Autistic_Pride_Flag.png)
 
 The license of this project does not apply to the flag images (I guess).

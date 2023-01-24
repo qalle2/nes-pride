@@ -375,25 +375,31 @@ def generate_asm_file(filenames, uniqueTiles):
 
     yield "; pointers to the following array"
     yield "image_ptrs"
-    for i in range(len(filenames)):
-        yield f" dw image{i}_ptrs"
+    ptrs = [f"image{i}_ptrs" for i in range(len(filenames))]
+    for i in range(0, len(ptrs), 4):
+        yield "  dw " + ", ".join(ptrs[i:i+4])
     yield ""
 
-    yield "; for each image:"
-    yield "; - description (24 bytes)"
-    yield "; - background palette data (16 bytes)"
-    yield "; - compressed NT & AT data in 7 slices"
+    # pointers
+    yield "; pointers to the following arrays"
+    for fi in range(len(filenames)):
+        yield f"image{fi}_ptrs"
+        ptrs = [f"img{fi}_descr", f"img{fi}_palette"] \
+        + [f"img{fi}_slice{si}" for si in range(7)]
+        for pi in range(0, len(ptrs), 4):
+            yield "  dw " + ", ".join(ptrs[pi:pi+4])
+    yield ""
+
+    yield "; for each image: description (24 bytes), background palette data"
+    yield "; (16 bytes), compressed NT & AT data in 7 slices"
+    yield ""
+
+    # data for each image
     totalDataLen = 0
     for (fi, filename) in enumerate(filenames):
-        # pointers
-        yield f"image{fi}_ptrs"
-        yield f" dw img{fi}_descr"
-        yield f" dw img{fi}_palette"
-        for si in range(7):
-            yield f" dw img{fi}_slice{si}"
         # description
         yield f"img{fi}_descr"
-        yield f' db "{filename_to_descr(filename)}"'
+        yield f'  db "{filename_to_descr(filename)}"'
         # open file
         path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
         with open(path, "rb") as handle:
@@ -404,15 +410,19 @@ def generate_asm_file(filenames, uniqueTiles):
                 process_image(image, 0)
             ))
             yield f"img{fi}_palette"
-            yield " hex " + palette.hex()
+            yield "  hex " \
+            + " ".join(palette[i:i+4].hex() for i in range(0, len(palette), 4))
             # NT & AT data
             ntAtData = process_image(image, 2, uniqueTiles)
             for si in range(7):
                 rleData = bytes(rle_encode(ntAtData[si*0x80:(si+1)*0x80]))
                 totalDataLen += len(rleData)
                 yield f"img{fi}_slice{si}"
-                for i in range(0, len(rleData), 32):
-                    yield " hex " + rleData[i:i+32].hex()
+                yield "  hex " + rleData[:1].hex()
+                for i in range(0, len(rleData) - 2, 16):
+                    yield "  hex " + rleData[1:-1][i:i+16].hex()
+                yield "  hex " + rleData[-1:].hex()
+        yield ""
     print(f"Total length of other data: {totalDataLen}")
 
 # -----------------------------------------------------------------------------

@@ -414,7 +414,7 @@ update_sprites  ; update tiles of image description sprites
 get_slice_addr  ; in:  which_image = which image, Y = which slice
                 ; out: grafix_ptr = pointer
 
-                ; image address in graphics data -> grafix_ptr
+                ; image address in graphics data
                 lda which_image
                 asl a
                 tax
