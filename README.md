@@ -1,4 +1,4 @@
-# nes-pride
+# Qalle's Pride Flag Show
 Browse 25 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
 
 ![screenshot](snap1.png)
