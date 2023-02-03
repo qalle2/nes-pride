@@ -109,11 +109,20 @@ def get_palette(image):
         sys.exit("More than one PNG color corresponds to same NES color.")
     return palette
 
-def create_subpalettes(colorSets):
-    # split sets of color indexes into subpalettes
-    # colorSets: set of sets of color indexes in attribute blocks
+def create_subpalettes(nesPixels):
+    # nesPixels: image pixels as NES colors
     # return: list of 4 subpalettes (sets) with up to 3 color indexes each
     # TODO: speed this up
+
+    # get unique sets of color indexes in attribute blocks
+    colorSets = {
+        frozenset(s - {NES_BG_COLOR}) for s in get_color_sets(nesPixels)
+    }
+    if max(len(s) for s in colorSets) > 3:
+        sys.exit(
+            f"Can only have 3 unique colors plus ${NES_BG_COLOR:02x} per "
+            "attribute block."
+        )
 
     # delete sets that are a subset of another set
     colorSets = {
@@ -167,7 +176,7 @@ def get_color_sets(nesPixels):
 
 def generate_at_data(nesPixels, subpals):
     # generate AT data (int 0-3 for each attribute block)
-    subpals = [sp | {NES_BG_COLOR} for sp in subpals]
+    subpals = [frozenset(s) for s in subpals]
     yield from (
         [i for i in range(4) if subpals[i].issuperset(s)][0]
         for s in get_color_sets(nesPixels)
@@ -208,7 +217,23 @@ def encode_at_data(atData):
             )
     return atBytes
 
-def process_image(image, mode=0, uniqueTiles=None):
+# optional manually-defined palettes by filename;
+# 4 lists with up to 3 NES colors each (order matters);
+# must have exactly the same colors as the image, minus NES_BG_COLOR
+MANUAL_SUBPALS = {
+    # together, these save 14 tiles
+    "title_screen": [
+        [0x21, 0x30, 0x13], [0x30, 0x15], [0x30, 0x27], [0x30, 0x19, 0x12]
+    ],
+    "autism": [
+        [0x37, 0x14, 0x25], [0x37, 0x21, 0x2c], [0x37, 0x27, 0x29],
+        [0x21, 0x27]
+    ],
+    "intersex": [[0x28, 0x04], [], [], []],
+}
+assert all(len(v) == 4 for v in MANUAL_SUBPALS.values())
+
+def process_image(image, filename, mode, uniqueTiles=None):
     # If mode=0: return NES palette for image (ignore uniqueTiles arg).
     # If mode=1: return set of unique tiles   (ignore uniqueTiles arg).
     # If mode=2: return NT & AT data using uniqueTiles arg.
@@ -221,41 +246,41 @@ def process_image(image, mode=0, uniqueTiles=None):
     nesPixels = [pngToNesIndex[i] for i in image.getdata()]
     del pngToNesIndex
 
-    # get unique sets of color indexes in attribute blocks
-    colorSets = {
-        frozenset(s - {NES_BG_COLOR}) for s in get_color_sets(nesPixels)
-    }
-    if max(len(s) for s in colorSets) > 3:
-        sys.exit(
-            f"Can only have 3 unique colors plus ${NES_BG_COLOR:02x} per "
-            "attribute block."
-        )
+    # get subpalettes
+    if filename in MANUAL_SUBPALS:
+        subpals = MANUAL_SUBPALS[filename]
+        if set(itertools.chain.from_iterable(subpals)) \
+        != set(nesPixels) - {NES_BG_COLOR}:
+            sys.exit("Manual subpalette definition has incorrect colors.")
+        # already ordered; restore background color and pad
+        subpals = [
+            [NES_BG_COLOR] + sp + (3 - len(sp)) * [NES_BG_COLOR]
+            for sp in subpals
+        ]
+    else:
+        # get automatically
+        subpals = create_subpalettes(nesPixels)
+        # order subpalettes, restore background color and pad
+        subpals = [
+            [NES_BG_COLOR] + sorted(sp) + (3 - len(sp)) * [NES_BG_COLOR]
+            for sp in subpals
+        ]
 
-    # split sets of color indexes into subpalettes
-    subpals = create_subpalettes(colorSets)
-
-    # order subpalettes, restore background color and pad;
-    # note: the order of colors affects the number of unique tiles a lot; this
-    # isn't currently taken advantage of
-    orderedSubpals = [
-        [NES_BG_COLOR] + sorted(sp) + (3 - len(sp)) * [NES_BG_COLOR]
-        for sp in subpals
-    ]
     if mode == 0:
-        return orderedSubpals
+        return subpals
 
     # generate AT data using subpalettes
     atData = list(generate_at_data(nesPixels, subpals))
 
     if mode == 1:
         # return set of unique tiles
-        return set(convert_tiles(nesPixels, atData, orderedSubpals))
+        return set(convert_tiles(nesPixels, atData, subpals))
 
     # get NT data using predetermined list of unique tiles; pad to 24 rows
     # with black tiles
     ntData = 2 * 32 * b"\x00" + bytes(
         uniqueTiles.index(tile) for tile in
-        convert_tiles(nesPixels, atData, orderedSubpals)
+        convert_tiles(nesPixels, atData, subpals)
     )
 
     return ntData + encode_at_data(atData)
@@ -281,15 +306,14 @@ def get_unique_tiles(filenames):
     # return a list of unique tiles in all images
     # (each tile is a tuple of 64 2-bit ints)
 
-    # make sure we have a blank tile (for nonsafe screen area)
+    # make sure we have a blank tile for borders
     uniqueTiles = {tuple(64 * [0])}
-    #print("Unique tiles / total unique tiles so far:")
     for filename in filenames:
         print(f"{'':4}{filename}:")
         path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
         with open(path, "rb") as handle:
             handle.seek(0)
-            tiles = process_image(Image.open(handle), 1)
+            tiles = process_image(Image.open(handle), filename, 1)
             if any(any(t.count(c) == 1 for c in range(4)) for t in tiles):
                 print(
                     "Warning: a tile with only 1 px of some color.",
@@ -300,9 +324,10 @@ def get_unique_tiles(filenames):
             print(f"{'':8}Total unique tiles: {len(uniqueTiles):3}")
             if len(uniqueTiles) > 256:
                 sys.exit("Error: more than 256 unique tiles total.")
-    # sort by number of colors
+    # sort by pixels, by which colors are used and by number of colors
     uniqueTiles = sorted(uniqueTiles)
-    uniqueTiles.sort(key = lambda t: len(set(t)))
+    uniqueTiles.sort(key=lambda t: sorted(set(t)))
+    uniqueTiles.sort(key=lambda t: len(set(t)))
     return uniqueTiles
 
 # --- generate_asm_file() and functions called by it --------------------------
@@ -411,22 +436,14 @@ def generate_asm_file(filenames, uniqueTiles):
             image = Image.open(handle)
             # palette
             palette = bytes(itertools.chain.from_iterable(
-                process_image(image, 0)
+                process_image(image, filename, 0)
             ))
-            paletteHex = " ".join(
+            yield f"img{fi}_palette"
+            yield "  hex " + " ".join(
                 palette[i:i+4].hex() for i in range(0, len(palette), 4)
             )
-            print(
-                f"{'':8}Unique colors:   " + " ".join(
-                    f"{c:02x}" for c in sorted(set(palette) - {NES_BG_COLOR})
-                )
-            )
-            print(f"{'':8}Palette:         " + paletteHex)
-            #
-            yield f"img{fi}_palette"
-            yield "  hex " + paletteHex
             # NT & AT data
-            ntAtData = process_image(image, 2, uniqueTiles)
+            ntAtData = process_image(image, filename, 2, uniqueTiles)
             ntAtDataLen = 0
             for si in range(7):
                 rleData = bytes(rle_encode(ntAtData[si*0x80:(si+1)*0x80]))
