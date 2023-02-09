@@ -10,17 +10,47 @@
 # - AT = attribute table (2 bits / attribute block; which subpalette for each
 #   attribute block)
 
-import collections, itertools, os, sys
+import collections, itertools, os, re, sys
 from PIL import Image  # Pillow, https://python-pillow.org
 
 IMAGE_DIR  = "img"           # read images from here
 IMAGE_EXT  = ".png"          # read images with this extension
 TITLE_FILE = "title_screen"  # sort this first (no extension)
 PT_FILE    = "chr-bg.bin"    # write PT data here
-ASM_FILE   = "imgdata.asm"   # write all other data in ASM6 format here
+ASM_FILE   = "imgdata.asm"   # write filename/palette/NT/AT data in ASM6 format
+
+# image height in AT blocks
+# (1-15; changing this requires changing NES program as well as images)
+VERT_AT_BLKS = 12
 
 # NES color number for background and unused colors (black)
 NES_BG_COLOR = 0x0f
+
+# optional manually-defined palettes by filename;
+# 4 tuples with up to 3 NES colors each (order matters);
+# must have exactly the same colors as the image, minus NES_BG_COLOR
+MANUAL_SUBPALS = {
+    # together, these save 14 tiles
+    "title_screen": (
+        (0x21, 0x30, 0x13),
+        (0x30, 0x15),
+        (0x30, 0x27),
+        (0x30, 0x19, 0x12)
+    ),
+    "autism": (
+        (0x37, 0x14, 0x25),
+        (0x37, 0x21, 0x2c),
+        (0x37, 0x27, 0x29),
+        (0x21, 0x27)
+    ),
+    "intersex": (
+        (0x28, 0x04),
+        (),
+        (),
+        ()
+    ),
+}
+assert all(len(v) == 4 for v in MANUAL_SUBPALS.values())
 
 # NES master palette
 # key=index, value=(red, green, blue); source: FCEUX (fceux.pal)
@@ -88,11 +118,13 @@ def color_diff(rgb1, rgb2):
 
 def closest_nes_color(rgb):
     # get best match (NES color number) for color (red, green, blue)
-    minDiff = min(color_diff(NES_PALETTE[i], rgb) for i in NES_PALETTE)
-    return [
-        i for i in sorted(NES_PALETTE)
-        if color_diff(NES_PALETTE[i], rgb) == minDiff
-    ][0]
+    minDiff = 9999
+    for nesColor in sorted(NES_PALETTE):
+        diff = color_diff(NES_PALETTE[nesColor], rgb)
+        if diff < minDiff:
+            minDiff = diff
+            bestNesColor = nesColor
+    return bestNesColor
 
 def get_palette(image):
     # get closest NES color index for each PNG color index used in image:
@@ -100,14 +132,25 @@ def get_palette(image):
 
     indexesUsed = [c[1] for c in image.getcolors()]
     palette = image.getpalette()  # [R, G, B, ...]
-    palette = dict(
-        (i, closest_nes_color(palette[i*3:(i+1)*3])) for i in indexesUsed
-    )
+    palette = dict((i, tuple(palette[i*3:(i+1)*3])) for i in indexesUsed)
+    palette = dict((i, closest_nes_color(palette[i])) for i in palette)
+
     if len(set(palette.values()) - {NES_BG_COLOR}) > 12:
         sys.exit(f"Can only have 12 unique colors plus ${NES_BG_COLOR:02x}.")
     if len(set(palette.values())) < len(palette):
-        sys.exit("More than one PNG color corresponds to same NES color.")
+        sys.exit("More than one image color corresponds to same NES color.")
     return palette
+
+def get_color_sets(nesPixels):
+    # generate attribute blocks as sets of NES color indexes
+    colors = set()
+    for ay in range(0, VERT_AT_BLKS * 16, 16):
+        for ax in range(0, 16 * 16, 16):
+            colors.clear()
+            for py in range(16):
+                srcInd = (ay + py) * 256 + ax
+                colors.update(nesPixels[srcInd:srcInd+16])
+            yield frozenset(colors)
 
 def create_subpalettes(nesPixels):
     # nesPixels: image pixels as NES colors
@@ -163,18 +206,7 @@ def create_subpalettes(nesPixels):
 
     return subpals
 
-def get_color_sets(nesPixels):
-    # generate attribute blocks as sets of NES color indexes
-    colors = set()
-    for ay in range(0, 12 * 16, 16):
-        for ax in range(0, 16 * 16, 16):
-            colors.clear()
-            for py in range(16):
-                srcInd = (ay + py) * 256 + ax
-                colors.update(nesPixels[srcInd:srcInd+16])
-            yield frozenset(colors)
-
-def generate_at_data(nesPixels, subpals):
+def get_at_data(nesPixels, subpals):
     # generate AT data (int 0-3 for each attribute block)
     subpals = [frozenset(s) for s in subpals]
     yield from (
@@ -183,7 +215,7 @@ def generate_at_data(nesPixels, subpals):
     )
 
 def get_tiles(nesPixels):
-    # generate tiles as tuples of PNG color indexes (64 ints)
+    # generate tiles as tuples of NES color indexes (64 ints)
     pixels = []
     for ay in range(0, 24 * 8, 8):
         for ax in range(0, 32 * 8, 8):
@@ -202,9 +234,11 @@ def convert_tiles(nesPixels, atData, orderedSubpals):
         yield tuple(orderedSubpals[subpal].index(i) for i in tile)
 
 def encode_at_data(atData):
-    # encode AT data (12*16 2-bit ints) into 64 bytes
+    # encode AT data (VERT_AT_BLKS*16 2-bit ints) into 64 bytes
 
-    atData = 3 * 16 * [0] + atData + 16 * [0]  # pad to 16 rows
+    # pad to 16 rows
+    atData = (16 - VERT_AT_BLKS - 1) * 16 * [0] + atData + 16 * [0]
+
     atBytes = bytearray()
     for y in range(8):
         for x in range(8):
@@ -217,29 +251,17 @@ def encode_at_data(atData):
             )
     return atBytes
 
-# optional manually-defined palettes by filename;
-# 4 lists with up to 3 NES colors each (order matters);
-# must have exactly the same colors as the image, minus NES_BG_COLOR
-MANUAL_SUBPALS = {
-    # together, these save 14 tiles
-    "title_screen": [
-        [0x21, 0x30, 0x13], [0x30, 0x15], [0x30, 0x27], [0x30, 0x19, 0x12]
-    ],
-    "autism": [
-        [0x37, 0x14, 0x25], [0x37, 0x21, 0x2c], [0x37, 0x27, 0x29],
-        [0x21, 0x27]
-    ],
-    "intersex": [[0x28, 0x04], [], [], []],
-}
-assert all(len(v) == 4 for v in MANUAL_SUBPALS.values())
-
 def process_image(image, filename, mode, uniqueTiles=None):
     # If mode=0: return NES palette for image (ignore uniqueTiles arg).
     # If mode=1: return set of unique tiles   (ignore uniqueTiles arg).
     # If mode=2: return NT & AT data using uniqueTiles arg.
 
-    if image.width != 256 or image.height != 192 or image.mode != "P":
-        sys.exit("Image must be 256*192 pixels and have a palette.")
+    if image.width != 256:
+        sys.exit("Image width must be 256.")
+    if image.height != VERT_AT_BLKS * 16:
+        sys.exit(f"Image height must be {VERT_AT_BLKS*16}.")
+    if image.mode != "P":
+        sys.exit("Image must have a palette.")
 
     # read pixels, convert into NES colors
     pngToNesIndex = get_palette(image)  # {pngIndex: nesColor, ...}
@@ -248,13 +270,17 @@ def process_image(image, filename, mode, uniqueTiles=None):
 
     # get subpalettes
     if filename in MANUAL_SUBPALS:
+        # manually-defined
         subpals = MANUAL_SUBPALS[filename]
-        if set(itertools.chain.from_iterable(subpals)) \
-        != set(nesPixels) - {NES_BG_COLOR}:
-            sys.exit("Manual subpalette definition has incorrect colors.")
+        definedColors = set(itertools.chain.from_iterable(subpals))
+        actualColors = set(nesPixels) - {NES_BG_COLOR}
+        if actualColors - definedColors:
+            sys.exit("Manual subpalette definition lacks colors.")
+        if definedColors - actualColors:
+            sys.exit("Manual subpalette definition has extra colors.")
         # already ordered; restore background color and pad
         subpals = [
-            [NES_BG_COLOR] + sp + (3 - len(sp)) * [NES_BG_COLOR]
+            [NES_BG_COLOR] + list(sp) + (3 - len(sp)) * [NES_BG_COLOR]
             for sp in subpals
         ]
     else:
@@ -270,15 +296,15 @@ def process_image(image, filename, mode, uniqueTiles=None):
         return subpals
 
     # generate AT data using subpalettes
-    atData = list(generate_at_data(nesPixels, subpals))
+    atData = list(get_at_data(nesPixels, subpals))
 
     if mode == 1:
         # return set of unique tiles
         return set(convert_tiles(nesPixels, atData, subpals))
 
-    # get NT data using predetermined list of unique tiles; pad to 24 rows
-    # with black tiles
-    ntData = 2 * 32 * b"\x00" + bytes(
+    # get NT data using predetermined list of unique tiles; pad to 13*2 rows
+    # with black tiles (doesn't work if VERT_AT_BLKS > 13)
+    ntData = (13 - VERT_AT_BLKS) * 2 * 32 * b"\x00" + bytes(
         uniqueTiles.index(tile) for tile in
         convert_tiles(nesPixels, atData, subpals)
     )
@@ -319,9 +345,14 @@ def get_unique_tiles(filenames):
                     "Warning: a tile with only 1 px of some color.",
                     file=sys.stderr
                 )
+            oldCnt = len(uniqueTiles)
             uniqueTiles.update(tiles)
-            print(f"{'':8}Unique tiles:       {len(tiles):3}")
-            print(f"{'':8}Total unique tiles: {len(uniqueTiles):3}")
+            print(
+                f"{'':8}Unique/new unique/total unique tiles: "
+                f"{len(tiles):3}/"
+                f"{len(uniqueTiles)-oldCnt:3}/"
+                f"{len(uniqueTiles):3}"
+            )
             if len(uniqueTiles) > 256:
                 sys.exit("Error: more than 256 unique tiles total.")
     # sort by pixels, by which colors are used and by number of colors
@@ -338,13 +369,20 @@ def filename_to_descr(filename):
     #     "X"   -> 23 spaces + "x"
     #     "X_Y" -> 15 spaces + "x" + 7 spaces + "y"
 
-    lines = filename.lower().split("_")
-    if len(lines) > 3 or max(len(l) for l in lines) > 8 \
-    or not all(l.isascii() for l in lines):
+    if re.search("^[0-9a-z_-]+$", filename) is None:
         sys.exit(
-            "Filenames (without extension): no more than 3 strings separated "
-            "by '_'; each string must be 8 ASCII characters or less."
+            "Only 0-9, a-z, _, - allowed in filenames (excluding extension)."
         )
+
+    lines = filename.split("_")
+    if len(lines) > 3:
+        sys.exit("No more than 2 underscores allowed in filenames.")
+    if max(len(l) for l in lines) > 8:
+        sys.exit(
+            "No more than 8 consecutive non-underscore characters allowed "
+            "in filenames (excluding extension)."
+        )
+
     lines = (3 - len(lines)) * [""] + lines
     return "".join(l.rjust(8) for l in lines)
 
@@ -438,10 +476,12 @@ def generate_asm_file(filenames, uniqueTiles):
             palette = bytes(itertools.chain.from_iterable(
                 process_image(image, filename, 0)
             ))
-            yield f"img{fi}_palette"
-            yield "  hex " + " ".join(
+            palette = " ".join(
                 palette[i:i+4].hex() for i in range(0, len(palette), 4)
             )
+            print(f"{'':8}Palette:{'':8} {palette}")
+            yield f"img{fi}_palette"
+            yield f"  hex {palette}"
             # NT & AT data
             ntAtData = process_image(image, filename, 2, uniqueTiles)
             ntAtDataLen = 0
@@ -461,37 +501,44 @@ def generate_asm_file(filenames, uniqueTiles):
 # -----------------------------------------------------------------------------
 
 def get_filenames():
-    # generate names of PNG files without extensions
+    # generate PNG filenames without extensions
     with os.scandir(IMAGE_DIR) as dirIter:
-        yield from (
-            os.path.splitext(e.name)[0] for e in dirIter
-            if e.is_file() and os.path.splitext(e.name)[1] == IMAGE_EXT
-        )
+        for entry in dirIter:
+            (filename, extension) = os.path.splitext(entry.name)
+            if entry.is_file() and extension == IMAGE_EXT:
+                yield filename
 
 def main():
-    # get filenames; sort without punctuation, title screen first
-    filenames = sorted(
-        get_filenames(), key=lambda f: f.replace("_", "").replace("-", "")
-    )
-    filenames.sort(key=lambda f: f != TITLE_FILE)
+    # get filenames
+    filenames = list(get_filenames())
+    if not 1 <= len(filenames) <= 256:
+        sys.exit("Must have 1-256 images.")
     if TITLE_FILE not in filenames:
-        sys.exit(f"{TITLE_FILE+IMAGE_EXT} not found.")
+        sys.exit(f"Title screen image {TITLE_FILE+IMAGE_EXT} not found.")
+    if set(MANUAL_SUBPALS) - set(filenames):
+        sys.exit(
+            "Manual subpalette definitions contain nonexistent filenames."
+        )
 
-    print(f"Writing pattern table data to {PT_FILE}...")
+    # sort filenames without punctuation, title screen first
+    filenames.sort()
+    filenames.sort(key=lambda f: f.replace("_", "").replace("-", ""))
+    filenames.sort(key=lambda f: f != TITLE_FILE)
+
+    print(f"Writing PT data to {PT_FILE}...")
     uniqueTiles = get_unique_tiles(filenames)
     with open(PT_FILE, "wb") as handle:
         handle.seek(0)
         handle.write(encode_pt_data(uniqueTiles))
+        size = handle.tell()
+    print(f"{'':4}Wrote {size} bytes.")
     print()
 
     print(f"Writing NT/AT/palette data to {ASM_FILE}...")
-    print(
-        "(Colors are hexadecimal NES colors. Unique colors don't include "
-        f"{NES_BG_COLOR:02x}.)"
-    )
     with open(ASM_FILE, "wt", encoding="ascii") as handle:
         handle.seek(0)
         for line in generate_asm_file(filenames, uniqueTiles):
             print(line, file=handle)
+    print()
 
 main()
