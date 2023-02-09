@@ -1,5 +1,5 @@
 # Qalle's Pride Flag Show
-Browse 27 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
+Browse 32 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
 
 ![screenshot](snap1.png)
 ![screenshot](snap2.png)
@@ -60,10 +60,13 @@ Other (gzip compressed):
   * for speed, all PPU memory updates (VRAM/palette) go through a buffer on the zero page
 
 ## Sources of flags
-* [Wikimedia Commons &ndash; Autistic Pride Flag](https://commons.wikimedia.org/wiki/File:Autistic_Pride_Flag.png)
-* [Wikipedia &ndash; Pride flag](https://en.wikipedia.org/wiki/Pride_flag)
-* [Wikipedia &ndash; Rainbow flag (LGBT)](https://en.wikipedia.org/wiki/Rainbow_flag_%28LGBT%29)
-* [Wikipedia &ndash; Demigirl Pride Flag](https://en.wikipedia.org/wiki/File:Demigirl_Pride-Flag.png)
-* [Wikipedia &ndash; Demiguy Pride Flag](https://en.wikipedia.org/wiki/File:Demiguy_Pride-Flag.png)
+* [Androgyne - LGBTQIA+ Wiki](https://lgbtqia.fandom.com/wiki/Androgyne)
+* [Autistic Pride Flag - Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Autistic_Pride_Flag.png)
+* [Demigender - LGBTQIA+ Wiki](https://lgbtqia.fandom.com/wiki/Demigender)
+* [Demigirl Pride Flag - Wikipedia](https://en.wikipedia.org/wiki/File:Demigirl_Pride-Flag.png)
+* [Demiguy Pride Flag - Wikipedia](https://en.wikipedia.org/wiki/File:Demiguy_Pride-Flag.png)
+* [Omnisexual - LGBTQIA+ Wiki](https://lgbtqia.fandom.com/wiki/Omnisexual)
+* [Pride flag - Wikipedia](https://en.wikipedia.org/wiki/Pride_flag)
+* [Rainbow flag (LGBT) - Wikipedia](https://en.wikipedia.org/wiki/Rainbow_flag_%28LGBT%29)
 
 The license of this project does not apply to the flag images (I guess).

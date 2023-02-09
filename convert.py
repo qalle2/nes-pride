@@ -43,7 +43,7 @@ MANUAL_SUBPALS = {
         (0x37, 0x27, 0x29),
         (0x21, 0x27)
     ),
-    "intersex": (
+    "inter-_sex": (
         (0x28, 0x04),
         (),
         (),
