@@ -450,28 +450,38 @@ def generate_asm_file(filenames, uniqueTiles):
     yield "; pointers to the following arrays"
     for fi in range(len(filenames)):
         yield f"image{fi}_ptrs"
-        ptrs = [f"img{fi}_descr", f"img{fi}_palette"] \
-        + [f"img{fi}_slice{si}" for si in range(7)]
+        ptrs = [f"img{fi}_nt_at{si}" for si in range(7)] \
+        + [f"img{fi}_palette", f"img{fi}_descr"]
         for pi in range(0, len(ptrs), 4):
             yield "  dw " + ", ".join(ptrs[pi:pi+4])
     yield ""
 
-    yield "; for each image: description (24 bytes), background palette data"
-    yield "; (16 bytes), compressed NT & AT data in 7 slices"
+    yield "; for each image: compressed NT & AT data in 7 slices, background "
+    yield "; palette data (16 bytes), description"
     yield ""
 
     # data for each image
     totalNtAtDataLen = 0
     for (fi, filename) in enumerate(filenames):
         print(f"{'':4}{filename}:")
-        # description
-        yield f"img{fi}_descr"
-        yield f'  db "{filename_to_descr(filename)}"'
         # open file
         path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
         with open(path, "rb") as handle:
             handle.seek(0)
             image = Image.open(handle)
+            # NT & AT data
+            ntAtData = process_image(image, filename, 2, uniqueTiles)
+            ntAtDataLen = 0
+            for si in range(7):
+                rleData = bytes(rle_encode(ntAtData[si*0x80:(si+1)*0x80]))
+                ntAtDataLen += len(rleData)
+                yield f"img{fi}_nt_at{si}"
+                yield "  hex " + rleData[:1].hex()
+                for i in range(0, len(rleData) - 2, 16):
+                    yield "  hex " + rleData[1:-1][i:i+16].hex()
+                yield "  hex " + rleData[-1:].hex()
+            print(f"{'':8}NT/AT data size: {ntAtDataLen}")
+            totalNtAtDataLen += ntAtDataLen
             # palette
             palette = bytes(itertools.chain.from_iterable(
                 process_image(image, filename, 0)
@@ -482,20 +492,12 @@ def generate_asm_file(filenames, uniqueTiles):
             print(f"{'':8}Palette:{'':8} {palette}")
             yield f"img{fi}_palette"
             yield f"  hex {palette}"
-            # NT & AT data
-            ntAtData = process_image(image, filename, 2, uniqueTiles)
-            ntAtDataLen = 0
-            for si in range(7):
-                rleData = bytes(rle_encode(ntAtData[si*0x80:(si+1)*0x80]))
-                ntAtDataLen += len(rleData)
-                yield f"img{fi}_slice{si}"
-                yield "  hex " + rleData[:1].hex()
-                for i in range(0, len(rleData) - 2, 16):
-                    yield "  hex " + rleData[1:-1][i:i+16].hex()
-                yield "  hex " + rleData[-1:].hex()
-            print(f"{'':8}NT/AT data size: {ntAtDataLen}")
+        # description
+        yield f"img{fi}_descr"
+        descr = filename_to_descr(filename).lstrip(" ")
+        yield f'  db {len(descr)}, "{descr}"'
         yield ""
-        totalNtAtDataLen += ntAtDataLen
+
     print("Total NT/AT data size:", totalNtAtDataLen)
 
 # -----------------------------------------------------------------------------

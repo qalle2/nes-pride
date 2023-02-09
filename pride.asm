@@ -298,9 +298,7 @@ nt_at_to_buffer ; copy one seventh of name & attribute table data of current
                 ; ppu_upd_phase (must be 0-6)
 
                 ldy ppu_upd_phase
-                iny
-                iny
-                jsr get_slice_addr
+                jsr get_sect_addr
 
                 ; decode RLE data from nt_at_data backwards into PPU buffer
                 ; (always decodes into $80 bytes)
@@ -371,8 +369,8 @@ ppu_dst_highs   ; high bytes of PPU destination addresses
 pal_to_buffer   ; copy background palettes (16 bytes) of current image from
                 ; nt_at_data backwards to ppu_buffer
 
-                ldy #1
-                jsr get_slice_addr
+                ldy #7
+                jsr get_sect_addr
 
                 ldy #0                  ; source index
                 ldx #(16-1)             ; destination index
@@ -394,12 +392,16 @@ pal_to_buffer   ; copy background palettes (16 bytes) of current image from
 
 update_sprites  ; update tiles of image description sprites
 
-                ldy #0
-                jsr get_slice_addr
+                ldy #8
+                jsr get_sect_addr
 
-                ldy #(24-1)             ; source index
+                ; 1st byte = length
+                ldy #0
+                lda (grafix_ptr),y
+                tay                     ; source index
+
+                ; other bytes are tile numbers
                 ldx #(23*4)             ; destination index
-                ;
 -               lda (grafix_ptr),y
                 sta sprite_data+1,x
                 dex
@@ -407,11 +409,25 @@ update_sprites  ; update tiles of image description sprites
                 dex
                 dex
                 dey
+                bne -
+
+                ; pad if necessary
+                txa
+                beq +
+                ;
+                lda #$20                ; space
+-               sta sprite_data+1,x
+                dex
+                dex
+                dex
+                dex
                 bpl -
 
-                rts
++               rts
 
-get_slice_addr  ; in:  which_image = which image, Y = which slice
+get_sect_addr   ; in: which_image = which image
+                ; in: Y = which section (0-6 = NT/AT slice, 7 = palette,
+                ;         8 = description)
                 ; out: grafix_ptr = pointer
 
                 ; image address in graphics data
@@ -423,7 +439,7 @@ get_slice_addr  ; in:  which_image = which image, Y = which slice
                 lda image_ptrs+1,x
                 sta grafix_ptr+1
 
-                ; slice address in this image's data -> grafix_ptr
+                ; section address in this image's data -> grafix_ptr
                 tya
                 asl a
                 tay
