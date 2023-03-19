@@ -1,5 +1,5 @@
 # Qalle's Pride Flag Show
-Browse 32 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
+Browse 33 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
 
 ![screenshot](snap1.png)
 ![screenshot](snap2.png)
@@ -68,6 +68,7 @@ Other (gzip compressed):
 * [Demiguy Pride Flag - Wikipedia](https://en.wikipedia.org/wiki/File:Demiguy_Pride-Flag.png)
 * [Omnisexual - LGBTQIA+ Wiki](https://lgbtqia.fandom.com/wiki/Omnisexual)
 * [Pride flag - Wikipedia](https://en.wikipedia.org/wiki/Pride_flag)
+* [Queer Pride Flag - Queer in the World](https://queerintheworld.com/queer-pride-flag/)
 * [Rainbow flag (LGBT) - Wikipedia](https://en.wikipedia.org/wiki/Rainbow_flag_%28LGBT%29)
 
 The license of this project does not apply to the flag images (I guess).
