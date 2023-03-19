@@ -28,26 +28,32 @@ NES_BG_COLOR = 0x0f
 
 # optional manually-defined palettes by filename;
 # 4 tuples with up to 3 NES colors each (order matters);
-# must have exactly the same colors as the image, minus NES_BG_COLOR
+# must have exactly the same colors as the image, minus NES_BG_COLOR;
+# these reduce the number of unique tiles a little
 MANUAL_SUBPALS = {
-    # together, these save 14 tiles
     "title_screen": (
-        (0x21, 0x30, 0x13),
-        (0x30, 0x15),
-        (0x30, 0x27),
-        (0x30, 0x19, 0x12)
+        (0x21, 0x30, 0x13),  # cyan, white, purple
+        (0x30, 0x15),        # white, red
+        (0x30, 0x27),        # white, yellow
+        (0x30, 0x19, 0x12)   # white, green, blue
     ),
     "autism": (
-        (0x37, 0x14, 0x25),
-        (0x37, 0x21, 0x2c),
-        (0x37, 0x27, 0x29),
-        (0x21, 0x27)
+        (0x37, 0x14, 0x25),  # yellow, purple, red
+        (0x37, 0x21, 0x2c),  # yellow, blue, cyan
+        (0x37, 0x27, 0x29),  # yellow, orange, green
+        (0x21, 0x27)         # blue, orange
     ),
     "inter-_sex": (
-        (0x28, 0x04),
+        (0x28, 0x04),  # yellow, purple
         (),
         (),
         ()
+    ),
+    "sapphic": (
+        (0x25,),             # pink
+        (0x30, 0x13, 0x27),  # white, purple, yellow
+        (),
+        (),
     ),
 }
 assert all(len(v) == 4 for v in MANUAL_SUBPALS.values())

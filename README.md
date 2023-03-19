@@ -1,5 +1,5 @@
 # Qalle's Pride Flag Show
-Browse 33 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
+Browse 35 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
 
 ![screenshot](snap1.png)
 ![screenshot](snap2.png)
@@ -62,6 +62,7 @@ Other (gzip compressed):
 
 ## Sources of flags
 * [Androgyne - LGBTQIA+ Wiki](https://lgbtqia.fandom.com/wiki/Androgyne)
+* [Aromantic Asexual - LGBTQIA+ Wiki](https://lgbtqia.fandom.com/wiki/Aromantic_asexual)
 * [Autistic Pride Flag - Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Autistic_Pride_Flag.png)
 * [Demigender - LGBTQIA+ Wiki](https://lgbtqia.fandom.com/wiki/Demigender)
 * [Demigirl Pride Flag - Wikipedia](https://en.wikipedia.org/wiki/File:Demigirl_Pride-Flag.png)
@@ -70,5 +71,6 @@ Other (gzip compressed):
 * [Pride flag - Wikipedia](https://en.wikipedia.org/wiki/Pride_flag)
 * [Queer Pride Flag - Queer in the World](https://queerintheworld.com/queer-pride-flag/)
 * [Rainbow flag (LGBT) - Wikipedia](https://en.wikipedia.org/wiki/Rainbow_flag_%28LGBT%29)
+* [Sapphic - LGBTQIA+ Wiki](https://lgbtqia.fandom.com/wiki/Sapphic)
 
 The license of this project does not apply to the flag images (I guess).

@@ -2,7 +2,7 @@
 ; This file was generated automatically by convert.py.
 
 ; number of images
-image_count equ 34
+image_count equ 36
 
 ; pointers to the following array
 image_ptrs
@@ -14,7 +14,7 @@ image_ptrs
   dw image20_ptrs, image21_ptrs, image22_ptrs, image23_ptrs
   dw image24_ptrs, image25_ptrs, image26_ptrs, image27_ptrs
   dw image28_ptrs, image29_ptrs, image30_ptrs, image31_ptrs
-  dw image32_ptrs, image33_ptrs
+  dw image32_ptrs, image33_ptrs, image34_ptrs, image35_ptrs
 
 ; pointers to the following arrays
 image0_ptrs
@@ -153,6 +153,14 @@ image33_ptrs
   dw img33_nt_at0, img33_nt_at1, img33_nt_at2, img33_nt_at3
   dw img33_nt_at4, img33_nt_at5, img33_nt_at6, img33_palette
   dw img33_descr
+image34_ptrs
+  dw img34_nt_at0, img34_nt_at1, img34_nt_at2, img34_nt_at3
+  dw img34_nt_at4, img34_nt_at5, img34_nt_at6, img34_palette
+  dw img34_descr
+image35_ptrs
+  dw img35_nt_at0, img35_nt_at1, img35_nt_at2, img35_nt_at3
+  dw img35_nt_at4, img35_nt_at5, img35_nt_at6, img35_palette
+  dw img35_descr
 
 ; for each image: compressed NT & AT data in 7 slices, background 
 ; palette data (16 bytes), description
@@ -325,46 +333,79 @@ img3_descr
 
 img4_nt_at0
   hex 00
-  hex ff
+  hex 7f8001
   hex 00
 img4_nt_at1
-  hex 00
-  hex ff
+  hex 01
+  hex 7f40404002
   hex 00
 img4_nt_at2
-  hex 01
-  hex ff
+  hex 02
+  hex bf40d1
   hex 00
 img4_nt_at3
-  hex 01
-  hex 7f8003
-  hex 00
-img4_nt_at4
   hex 03
   hex ff
   hex 00
+img4_nt_at4
+  hex df
+  hex 3fc002
+  hex 00
 img4_nt_at5
   hex 02
-  hex ff
+  hex 3f40938001
   hex 00
 img4_nt_at6
-  hex 02
-  hex 7f8000
+  hex 00
+  hex 80010f105020553f
   hex 00
 img4_palette
-  hex 0f001430 0f0f0f0f 0f0f0f0f 0f0f0f0f
+  hex 0f0c2130 0f172830 0f0f0f0f 0f0f0f0f
 img4_descr
-  db 7, "asexual"
+  db 18, "a-romantic asexual"
 
 img5_nt_at0
   hex 00
-  hex 7f8001
+  hex ff
   hex 00
 img5_nt_at1
-  hex 01
+  hex 00
   hex ff
   hex 00
 img5_nt_at2
+  hex 01
+  hex ff
+  hex 00
+img5_nt_at3
+  hex 01
+  hex 7f8003
+  hex 00
+img5_nt_at4
+  hex 03
+  hex ff
+  hex 00
+img5_nt_at5
+  hex 02
+  hex ff
+  hex 00
+img5_nt_at6
+  hex 02
+  hex 7f8000
+  hex 00
+img5_palette
+  hex 0f001430 0f0f0f0f 0f0f0f0f 0f0f0f0f
+img5_descr
+  db 7, "asexual"
+
+img6_nt_at0
+  hex 00
+  hex 7f8001
+  hex 00
+img6_nt_at1
+  hex 01
+  hex ff
+  hex 00
+img6_nt_at2
   hex 01
   hex 0d02ad02b402030202027402440b0243
   hex 02550202020302bf02ae1902b3060306
@@ -373,7 +414,7 @@ img5_nt_at2
   hex b2060302c903028e0602026e02520602
   hex 02920302c6060302bc07
   hex 00
-img5_nt_at3
+img6_nt_at3
   hex 01
   hex 0702bb040302c907028e040202870602
   hex 02920702c6040302c30f06030b028e02
@@ -382,7 +423,7 @@ img5_nt_at3
   hex 0702520602024a0402026e0702b30403
   hex 02ca07
   hex 00
-img5_nt_at4
+img6_nt_at4
   hex 01
   hex 07025a0602026e03025206020292028e
   hex 0602026e0302b3060302c111028e1002
@@ -391,58 +432,20 @@ img5_nt_at4
   hex 040202a602910b028d02a40202020302
   hex cd02c80d
   hex 00
-img5_nt_at5
+img6_nt_at5
   hex 01
   hex ff
   hex 00
-img5_nt_at6
+img6_nt_at6
   hex 00
   hex 800133028802a202540255025107025e
   hex 02b50102a50502440215028a02aa022a
   hex 21
   hex 00
-img5_palette
-  hex 0f371425 0f37212c 0f372729 0f21270f
-img5_descr
-  db 6, "autism"
-
-img6_nt_at0
-  hex 00
-  hex 7f8001
-  hex 00
-img6_nt_at1
-  hex 01
-  hex 03022e022b0216020901022a02302d04
-  hex 4602e9020002ea02330246023202e72e
-  hex 4603022a0230021a0200021903022d02
-  hex 2c2d0205020a0c00020b29
-  hex 00
-img6_nt_at2
-  hex 02
-  hex 083f02e8080002e62c3f030239023701
-  hex 0600023631023a023301040002363702
-  hex 3b0200023631
-  hex 00
-img6_nt_at3
-  hex d2
-  hex 0702ed02ec33800340e3
-  hex 00
-img6_nt_at4
-  hex 02
-  hex bf408b
-  hex 00
-img6_nt_at5
-  hex 01
-  hex 7f402f4000
-  hex 00
-img6_nt_at6
-  hex 00
-  hex 8f10a0100a0f105020550f
-  hex 00
 img6_palette
-  hex 0f172737 0f003037 0f07170f 0f0f0f0f
+  hex 0f371425 0f37212c 0f372729 0f21270f
 img6_descr
-  db 4, "bear"
+  db 6, "autism"
 
 img7_nt_at0
   hex 00
@@ -450,101 +453,103 @@ img7_nt_at0
   hex 00
 img7_nt_at1
   hex 01
-  hex 3f40468002
+  hex 03022e022b0216020901022a02302d04
+  hex 4602e9020002ea02330246023202e72e
+  hex 4603022a0230021a0200021903022d02
+  hex 2c2d0205020a0c00020b29
   hex 00
 img7_nt_at2
-  hex cf
-  hex 3fc003
+  hex 02
+  hex 083f02e8080002e62c3f030239023701
+  hex 0600023631023a023301040002363702
+  hex 3b0200023631
   hex 00
 img7_nt_at3
-  hex de
-  hex 3f800240d0
+  hex d2
+  hex 0702ed02ec33800340e3
   hex 00
 img7_nt_at4
-  hex 03
-  hex bf40c5
+  hex 02
+  hex bf408b
   hex 00
 img7_nt_at5
   hex 01
-  hex 7f40a23f
+  hex 7f402f4000
   hex 00
 img7_nt_at6
-  hex 01
-  hex 7f40001055105010a5100a
+  hex 00
+  hex 8f10a0100a0f105020550f
   hex 00
 img7_palette
-  hex 0f142433 0f213033 0f11210f 0f0f0f0f
+  hex 0f172737 0f003037 0f07170f 0f0f0f0f
 img7_descr
-  db 8, "bigender"
+  db 4, "bear"
 
 img8_nt_at0
   hex 00
-  hex 7f8003
+  hex 7f8001
   hex 00
 img8_nt_at1
-  hex 03
-  hex ff
+  hex 01
+  hex 3f40468002
   hex 00
 img8_nt_at2
-  hex 03
-  hex bf40e2
+  hex cf
+  hex 3fc003
   hex 00
 img8_nt_at3
-  hex 02
-  hex ff
+  hex de
+  hex 3f800240d0
   hex 00
 img8_nt_at4
-  hex 97
-  hex 3fc001
+  hex 03
+  hex bf40c5
   hex 00
 img8_nt_at5
   hex 01
-  hex ff
+  hex 7f40a23f
   hex 00
 img8_nt_at6
   hex 01
-  hex 7f8000
+  hex 7f40001055105010a5100a
   hex 00
 img8_palette
-  hex 0f121315 0f0f0f0f 0f0f0f0f 0f0f0f0f
+  hex 0f142433 0f213033 0f11210f 0f0f0f0f
 img8_descr
-  db 8, "bisexual"
+  db 8, "bigender"
 
 img9_nt_at0
   hex 00
-  hex 7f8001
+  hex 7f8003
   hex 00
 img9_nt_at1
-  hex 01
-  hex 3f40467f
+  hex 03
+  hex ff
   hex 00
 img9_nt_at2
-  hex 02
-  hex 104210ac10d110ac0f30030f30030f30
   hex 03
+  hex bf40e2
   hex 00
 img9_nt_at3
   hex 02
   hex ff
   hex 00
 img9_nt_at4
-  hex 02
-  hex 0f30030f30030f3003109710cb10df10
-  hex cb
+  hex 97
+  hex 3fc001
   hex 00
 img9_nt_at5
   hex 01
-  hex 7f40a23f
+  hex ff
   hex 00
 img9_nt_at6
-  hex 00
-  hex 80010f1050100508aa04551308aa0455
-  hex 0310501005
+  hex 01
+  hex 7f8000
   hex 00
 img9_palette
-  hex 0f103031 0f00103b 0f103538 0f0f0f0f
+  hex 0f121315 0f0f0f0f 0f0f0f0f 0f0f0f0f
 img9_descr
-  db 13, "demi-   fluid"
+  db 8, "bisexual"
 
 img10_nt_at0
   hex 00
@@ -555,16 +560,18 @@ img10_nt_at1
   hex 3f40467f
   hex 00
 img10_nt_at2
-  hex aa
-  hex 3fc003
+  hex 02
+  hex 104210ac10d110ac0f30030f30030f30
+  hex 03
   hex 00
 img10_nt_at3
-  hex d2
-  hex 3f800340ce
+  hex 02
+  hex ff
   hex 00
 img10_nt_at4
   hex 02
-  hex bf408b
+  hex 0f30030f30030f3003109710cb10df10
+  hex cb
   hex 00
 img10_nt_at5
   hex 01
@@ -572,12 +579,13 @@ img10_nt_at5
   hex 00
 img10_nt_at6
   hex 00
-  hex 80010f10a0100a0f10550f10a0100a
+  hex 80010f1050100508aa04551308aa0455
+  hex 0310501005
   hex 00
 img10_palette
-  hex 0f103136 0f313638 0f00100f 0f0f0f0f
+  hex 0f103031 0f00103b 0f103538 0f0f0f0f
 img10_descr
-  db 13, "demi-    flux"
+  db 13, "demi-   fluid"
 
 img11_nt_at0
   hex 00
@@ -592,12 +600,12 @@ img11_nt_at2
   hex 3fc003
   hex 00
 img11_nt_at3
-  hex de
-  hex 3f800240d0
+  hex d2
+  hex 3f800340ce
   hex 00
 img11_nt_at4
-  hex 03
-  hex bf40c5
+  hex 02
+  hex bf408b
   hex 00
 img11_nt_at5
   hex 01
@@ -605,12 +613,12 @@ img11_nt_at5
   hex 00
 img11_nt_at6
   hex 00
-  hex 80010f105010052f10501005
+  hex 80010f10a0100a0f10550f10a0100a
   hex 00
 img11_palette
-  hex 0f103038 0f00100f 0f0f0f0f 0f0f0f0f
+  hex 0f103136 0f313638 0f00100f 0f0f0f0f
 img11_descr
-  db 13, "demi-  gender"
+  db 13, "demi-    flux"
 
 img12_nt_at0
   hex 00
@@ -618,32 +626,32 @@ img12_nt_at0
   hex 00
 img12_nt_at1
   hex 01
-  hex 3f40468002
+  hex 3f40467f
   hex 00
 img12_nt_at2
-  hex cf
+  hex aa
   hex 3fc003
   hex 00
 img12_nt_at3
-  hex 93
-  hex 3f80014040
+  hex de
+  hex 3f800240d0
   hex 00
 img12_nt_at4
   hex 03
-  hex bf40dc
+  hex bf40c5
   hex 00
 img12_nt_at5
-  hex 02
-  hex 7f40a24001
+  hex 01
+  hex 7f40a23f
   hex 00
 img12_nt_at6
   hex 00
-  hex 80013f10552f
+  hex 80010f105010052f10501005
   hex 00
 img12_palette
-  hex 0f001035 0f30350f 0f0f0f0f 0f0f0f0f
+  hex 0f103038 0f00100f 0f0f0f0f 0f0f0f0f
 img12_descr
-  db 8, "demigirl"
+  db 13, "demi-  gender"
 
 img13_nt_at0
   hex 00
@@ -674,80 +682,80 @@ img13_nt_at6
   hex 80013f10552f
   hex 00
 img13_palette
-  hex 0f001031 0f30310f 0f0f0f0f 0f0f0f0f
+  hex 0f001035 0f30350f 0f0f0f0f 0f0f0f0f
 img13_descr
-  db 7, "demiguy"
+  db 8, "demigirl"
 
 img14_nt_at0
   hex 00
-  hex 7f023e3e0301023e3c03
+  hex 7f8001
   hex 00
 img14_nt_at1
+  hex 01
+  hex 3f40468002
+  hex 00
+img14_nt_at2
+  hex cf
+  hex 3fc003
+  hex 00
+img14_nt_at3
+  hex 93
+  hex 3f80014040
+  hex 00
+img14_nt_at4
+  hex 03
+  hex bf40dc
+  hex 00
+img14_nt_at5
+  hex 02
+  hex 7f40a24001
+  hex 00
+img14_nt_at6
+  hex 00
+  hex 80013f10552f
+  hex 00
+img14_palette
+  hex 0f001031 0f30310f 0f0f0f0f 0f0f0f0f
+img14_descr
+  db 7, "demiguy"
+
+img15_nt_at0
+  hex 00
+  hex 7f023e3e0301023e3c03
+  hex 00
+img15_nt_at1
   hex 00
   hex 03023e3a0305023e380307023e360309
   hex 023e3403
   hex 00
-img14_nt_at2
+img15_nt_at2
   hex 00
   hex 0b023e32030d023e30030f023e2e0311
   hex 023e2c03
   hex 00
-img14_nt_at3
+img15_nt_at3
   hex 00
   hex 13020c2a0115020c2801150208280113
   hex 02082a01
   hex 00
-img14_nt_at4
+img15_nt_at4
   hex 00
   hex 1102342c020f02342e020d023430020b
   hex 02343202
   hex 00
-img14_nt_at5
+img15_nt_at5
   hex 00
   hex 09023434020702343602050234380203
   hex 02343a02
   hex 00
-img14_nt_at6
+img15_nt_at6
   hex 00
   hex 0102343c0202343e027f
   hex 00
-img14_palette
-  hex 0f041030 0f0f0f0f 0f0f0f0f 0f0f0f0f
-img14_descr
-  db 13, "demi-  sexual"
-
-img15_nt_at0
-  hex 00
-  hex 7f8001
-  hex 00
-img15_nt_at1
-  hex 01
-  hex 3f40467f
-  hex 00
-img15_nt_at2
-  hex 3f
-  hex 3fc002
-  hex 00
-img15_nt_at3
-  hex d2
-  hex 3f800340e3
-  hex 00
-img15_nt_at4
-  hex 02
-  hex bf408b
-  hex 00
-img15_nt_at5
-  hex 01
-  hex 7f40a23f
-  hex 00
-img15_nt_at6
-  hex 00
-  hex 80010f10f0100f0f1050105510a5100a
-  hex 00
 img15_palette
-  hex 0f1b2b30 0f122230 0f03120f 0f0b1b0f
+  hex 0f041030 0f0f0f0f 0f0f0f0f 0f0f0f0f
 img15_descr
-  db 11, "gay     men"
+  db 13, "demi-  sexual"
 
 img16_nt_at0
   hex 00
@@ -755,32 +763,32 @@ img16_nt_at0
   hex 00
 img16_nt_at1
   hex 01
-  hex 7f40404002
+  hex 3f40467f
   hex 00
 img16_nt_at2
-  hex 03
-  hex bf40e2
+  hex 3f
+  hex 3fc002
   hex 00
 img16_nt_at3
-  hex 02
-  hex ff
+  hex d2
+  hex 3f800340e3
   hex 00
 img16_nt_at4
-  hex 3c
-  hex 3fc000
+  hex 02
+  hex bf408b
   hex 00
 img16_nt_at5
-  hex 00
-  hex 3f40078001
+  hex 01
+  hex 7f40a23f
   hex 00
 img16_nt_at6
   hex 00
-  hex 80010f105010554f
+  hex 80010f10f0100f0f1050105510a5100a
   hex 00
 img16_palette
-  hex 0f021430 0f25300f 0f0f0f0f 0f0f0f0f
+  hex 0f1b2b30 0f122230 0f03120f 0f0b1b0f
 img16_descr
-  db 15, "gender-   fluid"
+  db 11, "gay     men"
 
 img17_nt_at0
   hex 00
@@ -788,32 +796,32 @@ img17_nt_at0
   hex 00
 img17_nt_at1
   hex 01
-  hex ff
+  hex 7f40404002
   hex 00
 img17_nt_at2
-  hex 01
-  hex 7f8003
+  hex 03
+  hex bf40e2
   hex 00
 img17_nt_at3
-  hex 03
+  hex 02
   hex ff
   hex 00
 img17_nt_at4
-  hex 03
-  hex 7f8002
+  hex 3c
+  hex 3fc000
   hex 00
 img17_nt_at5
-  hex 02
-  hex ff
+  hex 00
+  hex 3f40078001
   hex 00
 img17_nt_at6
-  hex 02
-  hex 7f8000
+  hex 00
+  hex 80010f105010554f
   hex 00
 img17_palette
-  hex 0f131930 0f0f0f0f 0f0f0f0f 0f0f0f0f
+  hex 0f021430 0f25300f 0f0f0f0f 0f0f0f0f
 img17_descr
-  db 15, "gender-   queer"
+  db 15, "gender-   fluid"
 
 img18_nt_at0
   hex 00
@@ -825,102 +833,102 @@ img18_nt_at1
   hex 00
 img18_nt_at2
   hex 01
+  hex 7f8003
+  hex 00
+img18_nt_at3
+  hex 03
+  hex ff
+  hex 00
+img18_nt_at4
+  hex 03
+  hex 7f8002
+  hex 00
+img18_nt_at5
+  hex 02
+  hex ff
+  hex 00
+img18_nt_at6
+  hex 02
+  hex 7f8000
+  hex 00
+img18_palette
+  hex 0f131930 0f0f0f0f 0f0f0f0f 0f0f0f0f
+img18_descr
+  db 15, "gender-   queer"
+
+img19_nt_at0
+  hex 00
+  hex 7f8001
+  hex 00
+img19_nt_at1
+  hex 01
+  hex ff
+  hex 00
+img19_nt_at2
+  hex 01
   hex 590243024d0402025002443102520202
   hex 02a6049f02a40202026e2d0251020202
   hex 9207028e0202026b15
   hex 00
-img18_nt_at3
+img19_nt_at3
   hex 01
   hex 15026102960b029402842b0202027f0b
   hex 025b02022b0202027f0b025b02022b02
   hex 6a02850b0262028a15
   hex 00
-img18_nt_at4
+img19_nt_at4
   hex 01
   hex 15025a0202026e0702520202027e2d02
   hex 8e02020274044502550202029231028d
   hex 02a3040202a5029159
   hex 00
-img18_nt_at5
+img19_nt_at5
   hex 01
   hex ff
   hex 00
-img18_nt_at6
+img19_nt_at6
   hex 01
   hex 7f8000
   hex 00
-img18_palette
+img19_palette
   hex 0f28040f 0f0f0f0f 0f0f0f0f 0f0f0f0f
-img18_descr
+img19_descr
   db 14, "inter-     sex"
 
-img19_nt_at0
+img20_nt_at0
   hex 00
   hex cb0234040202352b
   hex 00
-img19_nt_at1
+img20_nt_at1
   hex 02
   hex 0a0402e40702e52a040a010b3001024a
   hex 0d2a01042902eb0f2a29
   hex 00
-img19_nt_at2
+img20_nt_at2
   hex 02
   hex 0400112e00112a00040102670f300102
   hex 670d2a01
   hex 00
-img19_nt_at3
+img20_nt_at3
   hex ac
   hex 3f800340cb
   hex 00
-img19_nt_at4
+img20_nt_at4
   hex 01
   hex 7f8000
   hex 00
-img19_nt_at5
+img20_nt_at5
   hex 04
   hex 3f80014029
   hex 00
-img19_nt_at6
-  hex 00
-  hex ff
-  hex 00
-img19_palette
-  hex 0f011530 0f0f0f0f 0f0f0f0f 0f0f0f0f
-img19_descr
-  db 7, "leather"
-
-img20_nt_at0
-  hex 00
-  hex 7f8001
-  hex 00
-img20_nt_at1
-  hex 01
-  hex 7f40404002
-  hex 00
-img20_nt_at2
-  hex 02
-  hex bf40d1
-  hex 00
-img20_nt_at3
-  hex 03
-  hex ff
-  hex 00
-img20_nt_at4
-  hex cb
-  hex 3fc001
-  hex 00
-img20_nt_at5
-  hex 02
-  hex 3f40938001
-  hex 00
 img20_nt_at6
   hex 00
-  hex 80010f105010552f10aa100a
+  hex ff
   hex 00
 img20_palette
-  hex 0f242730 0f17270f 0f14240f 0f0f0f0f
+  hex 0f011530 0f0f0f0f 0f0f0f0f 0f0f0f0f
 img20_descr
-  db 15, "lesbian5stripes"
+  db 7, "leather"
 
 img21_nt_at0
   hex 00
@@ -928,65 +936,65 @@ img21_nt_at0
   hex 00
 img21_nt_at1
   hex 01
-  hex 3f40467f
+  hex 7f40404002
   hex 00
 img21_nt_at2
-  hex 3f
-  hex 3fc002
+  hex 02
+  hex bf40d1
   hex 00
 img21_nt_at3
-  hex d2
-  hex 3f800340e3
+  hex 03
+  hex ff
   hex 00
 img21_nt_at4
-  hex 02
-  hex bf408b
+  hex cb
+  hex 3fc001
   hex 00
 img21_nt_at5
-  hex 01
-  hex 7f40a23f
+  hex 02
+  hex 3f40938001
   hex 00
 img21_nt_at6
   hex 00
-  hex 80010f10a0105a105510050f10f0100f
+  hex 80010f105010552f10aa100a
   hex 00
 img21_palette
-  hex 0f142430 0f172730 0f07170f 0f04140f
+  hex 0f242730 0f17270f 0f14240f 0f0f0f0f
 img21_descr
-  db 15, "lesbian7stripes"
+  db 15, "lesbian5stripes"
 
 img22_nt_at0
   hex 00
-  hex 7f8002
-  hex 00
-img22_nt_at1
-  hex 02
-  hex ff
-  hex 00
-img22_nt_at2
-  hex 03
-  hex ff
-  hex 00
-img22_nt_at3
-  hex 03
   hex 7f8001
   hex 00
-img22_nt_at4
+img22_nt_at1
   hex 01
-  hex ff
+  hex 3f40467f
+  hex 00
+img22_nt_at2
+  hex 3f
+  hex 3fc002
+  hex 00
+img22_nt_at3
+  hex d2
+  hex 3f800340e3
+  hex 00
+img22_nt_at4
+  hex 02
+  hex bf408b
   hex 00
 img22_nt_at5
-  hex 00
-  hex ff
+  hex 01
+  hex 7f40a23f
   hex 00
 img22_nt_at6
   hex 00
-  hex ff
+  hex 80010f10a0105a105510050f10f0100f
   hex 00
 img22_palette
-  hex 0f132830 0f0f0f0f 0f0f0f0f 0f0f0f0f
+  hex 0f142430 0f172730 0f07170f 0f04140f
 img22_descr
-  db 12, "non-  binary"
+  db 15, "lesbian7stripes"
 
 img23_nt_at0
   hex 00
@@ -994,65 +1002,65 @@ img23_nt_at0
   hex 00
 img23_nt_at1
   hex 02
-  hex 7f40a74001
-  hex 00
-img23_nt_at2
-  hex 01
-  hex bf402f
-  hex 00
-img23_nt_at3
-  hex 00
   hex ff
   hex 00
+img23_nt_at2
+  hex 03
+  hex ff
+  hex 00
+img23_nt_at3
+  hex 03
+  hex 7f8001
+  hex 00
 img23_nt_at4
-  hex 06
-  hex 3fc001
+  hex 01
+  hex ff
   hex 00
 img23_nt_at5
-  hex 01
-  hex 3f40498002
+  hex 00
+  hex ff
   hex 00
 img23_nt_at6
   hex 00
-  hex 80020f105020553f
+  hex ff
   hex 00
 img23_palette
-  hex 0f22320f 0f25350f 0f0f0f0f 0f0f0f0f
+  hex 0f132830 0f0f0f0f 0f0f0f0f 0f0f0f0f
 img23_descr
-  db 13, "omni-  sexual"
+  db 12, "non-  binary"
 
 img24_nt_at0
   hex 00
-  hex 7f8001
+  hex 7f8002
   hex 00
 img24_nt_at1
-  hex 01
-  hex ff
+  hex 02
+  hex 7f40a74001
   hex 00
 img24_nt_at2
   hex 01
-  hex 7f8003
+  hex bf402f
   hex 00
 img24_nt_at3
-  hex 03
+  hex 00
   hex ff
   hex 00
 img24_nt_at4
-  hex 03
-  hex 7f8002
+  hex 06
+  hex 3fc001
   hex 00
 img24_nt_at5
-  hex 02
-  hex ff
+  hex 01
+  hex 3f40498002
   hex 00
 img24_nt_at6
-  hex 02
-  hex 7f8000
+  hex 00
+  hex 80020f105020553f
   hex 00
 img24_palette
-  hex 0f152128 0f0f0f0f 0f0f0f0f 0f0f0f0f
+  hex 0f22320f 0f25350f 0f0f0f0f 0f0f0f0f
 img24_descr
-  db 12, "pan-  sexual"
+  db 13, "omni-  sexual"
 
 img25_nt_at0
   hex 00
@@ -1064,29 +1072,28 @@ img25_nt_at1
   hex 00
 img25_nt_at2
   hex 01
-  hex 7f8002
+  hex 7f8003
   hex 00
 img25_nt_at3
-  hex 02
-  hex 1902d402e002e102e002e102d93502d5
-  hex 0102d53902d60102d63902da0102db1d
+  hex 03
+  hex ff
   hex 00
 img25_nt_at4
-  hex 02
-  hex 7f8000
+  hex 03
+  hex 7f8002
   hex 00
 img25_nt_at5
-  hex 00
+  hex 02
   hex ff
   hex 00
 img25_nt_at6
-  hex 00
-  hex ff
+  hex 02
+  hex 7f8000
   hex 00
 img25_palette
-  hex 0f021528 0f0f0f0f 0f0f0f0f 0f0f0f0f
+  hex 0f152128 0f0f0f0f 0f0f0f0f 0f0f0f0f
 img25_descr
-  db 13, "poly-   amory"
+  db 12, "pan-  sexual"
 
 img26_nt_at0
   hex 00
@@ -1098,174 +1105,208 @@ img26_nt_at1
   hex 00
 img26_nt_at2
   hex 01
-  hex 7f8003
-  hex 00
-img26_nt_at3
-  hex 03
-  hex ff
-  hex 00
-img26_nt_at4
-  hex 03
   hex 7f8002
   hex 00
-img26_nt_at5
+img26_nt_at3
   hex 02
-  hex ff
+  hex 1902d402e002e102e002e102d93502d5
+  hex 0102d53902d60102d63902da0102db1d
   hex 00
-img26_nt_at6
+img26_nt_at4
   hex 02
   hex 7f8000
   hex 00
+img26_nt_at5
+  hex 00
+  hex ff
+  hex 00
+img26_nt_at6
+  hex 00
+  hex ff
+  hex 00
 img26_palette
-  hex 0f14212b 0f0f0f0f 0f0f0f0f 0f0f0f0f
+  hex 0f021528 0f0f0f0f 0f0f0f0f 0f0f0f0f
 img26_descr
-  db 13, "poly-  sexual"
+  db 13, "poly-   amory"
 
 img27_nt_at0
   hex 00
-  hex ff
+  hex 7f8001
   hex 00
 img27_nt_at1
-  hex 31
-  hex 3f80024097
+  hex 01
+  hex ff
   hex 00
 img27_nt_at2
   hex 01
-  hex 7f8002
+  hex 7f8003
   hex 00
 img27_nt_at3
-  hex d1
-  hex 3f800340cb
-  hex 00
-img27_nt_at4
-  hex 01
+  hex 03
   hex ff
   hex 00
+img27_nt_at4
+  hex 03
+  hex 7f8002
+  hex 00
 img27_nt_at5
-  hex 42
-  hex 3f8002403c
+  hex 02
+  hex ff
   hex 00
 img27_nt_at6
-  hex 00
-  hex 9f105510a510aa100a1f
+  hex 02
+  hex 7f8000
   hex 00
 img27_palette
-  hex 0f26350f 0f21310f 0f282930 0f0f0f0f
+  hex 0f14212b 0f0f0f0f 0f0f0f0f 0f0f0f0f
 img27_descr
-  db 5, "queer"
+  db 13, "poly-  sexual"
 
 img28_nt_at0
   hex 00
-  hex 7f8003
+  hex ff
   hex 00
 img28_nt_at1
-  hex 03
-  hex 7f8002
+  hex 31
+  hex 3f80024097
   hex 00
 img28_nt_at2
-  hex 02
-  hex 7f8003
+  hex 01
+  hex 7f8002
   hex 00
 img28_nt_at3
-  hex 03
-  hex 7f8001
+  hex d1
+  hex 3f800340cb
   hex 00
 img28_nt_at4
   hex 01
-  hex 7f8002
+  hex ff
   hex 00
 img28_nt_at5
-  hex 02
-  hex 7f8001
+  hex 42
+  hex 3f8002403c
   hex 00
 img28_nt_at6
   hex 00
-  hex 80010f105010051f105010551005
+  hex 9f105510a510aa100a1f
   hex 00
 img28_palette
-  hex 0f192728 0f041216 0f0f0f0f 0f0f0f0f
+  hex 0f26350f 0f21310f 0f282930 0f0f0f0f
 img28_descr
-  db 15, "rainbow6stripes"
+  db 5, "queer"
 
 img29_nt_at0
   hex 00
-  hex 7f8001
+  hex 7f8003
   hex 00
 img29_nt_at1
-  hex 01
-  hex 3f40468002
+  hex 03
+  hex 7f8002
   hex 00
 img29_nt_at2
-  hex cf
-  hex 3f40038002
+  hex 02
+  hex 7f8003
   hex 00
 img29_nt_at3
-  hex 93
-  hex 3f800140ab
+  hex 03
+  hex 7f8001
   hex 00
 img29_nt_at4
-  hex 03
-  hex bf40c5
+  hex 01
+  hex 7f8002
   hex 00
 img29_nt_at5
-  hex 01
-  hex 7f40424002
+  hex 02
+  hex 7f8001
   hex 00
 img29_nt_at6
   hex 00
-  hex 80020f10a010aa105a10552f
+  hex 80010f105010051f105010551005
   hex 00
 img29_palette
-  hex 0f03042c 0f19282c 0f162728 0f0f0f0f
+  hex 0f192728 0f041216 0f0f0f0f 0f0f0f0f
 img29_descr
-  db 15, "rainbow7stripes"
+  db 15, "rainbow6stripes"
 
 img30_nt_at0
   hex 00
-  hex 7f8002
-  hex 00
-img30_nt_at1
-  hex 02
-  hex 3fc001
-  hex 00
-img30_nt_at2
-  hex 01
-  hex bf4002
-  hex 00
-img30_nt_at3
-  hex 02
   hex 7f8001
   hex 00
-img30_nt_at4
+img30_nt_at1
   hex 01
-  hex 3fc002
+  hex 3f40468002
+  hex 00
+img30_nt_at2
+  hex cf
+  hex 3f40038002
+  hex 00
+img30_nt_at3
+  hex 93
+  hex 3f800140ab
+  hex 00
+img30_nt_at4
+  hex 03
+  hex bf40c5
   hex 00
 img30_nt_at5
   hex 01
-  hex bf4002
+  hex 7f40424002
   hex 00
 img30_nt_at6
   hex 00
-  hex 80020f10a010aa105510f510ff1f
+  hex 80020f10a010aa105a10552f
   hex 00
 img30_palette
-  hex 0f03040f 0f27280f 0f16250f 0f192c0f
+  hex 0f03042c 0f19282c 0f162728 0f0f0f0f
 img30_descr
-  db 15, "rainbow8stripes"
+  db 15, "rainbow7stripes"
 
 img31_nt_at0
+  hex 00
+  hex 7f8002
+  hex 00
+img31_nt_at1
+  hex 02
+  hex 3fc001
+  hex 00
+img31_nt_at2
+  hex 01
+  hex bf4002
+  hex 00
+img31_nt_at3
+  hex 02
+  hex 7f8001
+  hex 00
+img31_nt_at4
+  hex 01
+  hex 3fc002
+  hex 00
+img31_nt_at5
+  hex 01
+  hex bf4002
+  hex 00
+img31_nt_at6
+  hex 00
+  hex 80020f10a010aa105510f510ff1f
+  hex 00
+img31_palette
+  hex 0f03040f 0f27280f 0f16250f 0f192c0f
+img31_descr
+  db 15, "rainbow8stripes"
+
+img32_nt_at0
   hex 00
   hex 7f026e0201020d0102383802026e0201
   hex 020d0102383402
   hex 00
-img31_nt_at1
+img32_nt_at1
   hex 6e
   hex 010201010201020d0200023834020102
   hex 02010201020d02000238300202d80202
   hex 010201010201020d0200023e300302d8
   hex 0202010202010201020d0200023e2c03
   hex 00
-img31_nt_at2
+img32_nt_at2
   hex 6e
   hex 040302d80202010201010201020d0200
   hex 023e300302d80202010202010201020d
@@ -1273,7 +1314,7 @@ img31_nt_at2
   hex 020d0200023e300302d8020201020201
   hex 0201020d0200023e2403
   hex 00
-img31_nt_at3
+img32_nt_at3
   hex 02
   hex 0c0302d801026e0201026e0201020d02
   hex 00023e300302d801026e01026e020102
@@ -1281,7 +1322,7 @@ img31_nt_at3
   hex 01021a020002341f0c0302dd01029202
   hex 0102920201021a0200023421
   hex 00
-img31_nt_at4
+img32_nt_at4
   hex 02
   hex 0a0302dd0102920102920201021a0200
   hex 023423080302dd010292020102920201
@@ -1289,7 +1330,7 @@ img31_nt_at4
   hex 920201021a020002082801040302dd01
   hex 0292020102920201021a020002082a01
   hex 00
-img31_nt_at5
+img32_nt_at5
   hex 01
   hex 020302dd020202920202029201021a02
   hex 0002082b02dd0202029201029201021a
@@ -1297,7 +1338,7 @@ img31_nt_at5
   hex 020002082f029201029201021a020002
   hex 0831
   hex 00
-img31_nt_at6
+img32_nt_at6
   hex 01
   hex 0202029201021a020002083302920102
   hex 1a020002083512000ef002a2020c0c5f
@@ -1305,18 +1346,18 @@ img31_nt_at6
   hex 02aa022a02400a55022a02c00cf50200
   hex 0e0f
   hex 00
-img31_palette
+img32_palette
   hex 0f082128 0f121927 0f212530 0f04160f
-img31_descr
+img32_descr
   db 15, "rainbowprogress"
 
-img32_nt_at0
+img33_nt_at0
   hex 02
   hex 800002d801026e0201026e0201020d02
   hex 0002382d020302d801026e01026e0201
   hex 020d020002382b
   hex 00
-img32_nt_at1
+img33_nt_at1
   hex 02
   hex 02d7020302d801026e0201026e020102
   hex 0d020002382b02d7020302d801026e01
@@ -1325,7 +1366,7 @@ img32_nt_at1
   hex 26030502d7020302d801026e01026e02
   hex 01020d0200023e2403
   hex 00
-img32_nt_at2
+img33_nt_at2
   hex 02
   hex 0702d7020302d801026e0201026e0201
   hex 020d0200023e22030902d7020302d801
@@ -1335,7 +1376,7 @@ img32_nt_at2
   hex d7020302d801026e01026e0201020d02
   hex 0002381b
   hex 00
-img32_nt_at3
+img33_nt_at3
   hex 02
   hex 010288024c03024f02680102d7020302
   hex d801026e0201026e0201020d02000238
@@ -1346,7 +1387,7 @@ img32_nt_at3
   hex 02570102d3020302dd01029202010292
   hex 0201021a0200023d1a03
   hex 00
-img32_nt_at4
+img33_nt_at4
   hex 02
   hex 03024e02630286024b0102d3020302dd
   hex 0102920102920201021a0200023d1c03
@@ -1356,7 +1397,7 @@ img32_nt_at4
   hex 02d3020302dd01029202010292020102
   hex 1a020002082201
   hex 00
-img32_nt_at5
+img33_nt_at5
   hex 01
   hex 060202d3020302dd0202029202020292
   hex 01021a0200020823040202d3020302dd
@@ -1365,7 +1406,7 @@ img32_nt_at5
   hex 021a020002082702d3020302dd020202
   hex 9201029201021a0200020829
   hex 00
-img32_nt_at6
+img33_nt_at6
   hex 00
   hex 020302dd02020292020202920201021a
   hex 0102082c0102dd020202920201029202
@@ -1374,41 +1415,76 @@ img32_nt_at6
   hex aa02ee02330248065a02aa02ea023f02
   hex 40085502ea023f02800aa5020f010c0a
   hex 00
-img32_palette
+img33_palette
   hex 0f082127 0f121619 0f042830 0f212530
-img32_descr
+img33_descr
   db 23, "rainbowprogressintersex"
 
-img33_nt_at0
+img34_nt_at0
   hex 00
   hex 7f8001
   hex 00
-img33_nt_at1
+img34_nt_at1
+  hex 01
+  hex ff
+  hex 00
+img34_nt_at2
+  hex 01
+  hex dd04021d
+  hex 00
+img34_nt_at3
+  hex 02
+  hex 1e0103380101026e028e029202520134
+  hex 01028e0102ef02ee0102923601025203
+  hex 026e1c01
+  hex 00
+img34_nt_at4
+  hex 01
+  hex 1b02020292028e0202db
+  hex 00
+img34_nt_at5
+  hex 01
+  hex ff
+  hex 00
+img34_nt_at6
+  hex 00
+  hex 80012f1050105510051f
+  hex 00
+img34_palette
+  hex 0f250f0f 0f301327 0f0f0f0f 0f0f0f0f
+img34_descr
+  db 7, "sapphic"
+
+img35_nt_at0
+  hex 00
+  hex 7f8001
+  hex 00
+img35_nt_at1
   hex 01
   hex 7f40404002
   hex 00
-img33_nt_at2
+img35_nt_at2
   hex 02
   hex bf40d1
   hex 00
-img33_nt_at3
+img35_nt_at3
   hex 03
   hex ff
   hex 00
-img33_nt_at4
+img35_nt_at4
   hex df
   hex 3fc002
   hex 00
-img33_nt_at5
+img35_nt_at5
   hex 02
   hex 3f40938001
   hex 00
-img33_nt_at6
+img35_nt_at6
   hex 01
   hex 7f8000
   hex 00
-img33_palette
+img35_palette
   hex 0f212530 0f0f0f0f 0f0f0f0f 0f0f0f0f
-img33_descr
+img35_descr
   db 14, "trans-  gender"
 
