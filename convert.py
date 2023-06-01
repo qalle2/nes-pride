@@ -332,9 +332,8 @@ def process_image(image, filename, mode, uniqueTiles=None, extraInfo=False):
         # return set of unique tiles
         return set(convert_tiles(nesPixels, atData, subpals))
 
-    # get NT data using predetermined list of unique tiles; pad to 13*2 rows
-    # with black tiles (doesn't work if VERT_AT_BLKS > 13)
-    ntData = (13 - VERT_AT_BLKS) * 2 * 32 * b"\x00" + bytes(
+    # get NT data using predetermined list of unique tiles
+    ntData = bytes(
         uniqueTiles.index(tile) for tile in
         convert_tiles(nesPixels, atData, subpals)
     )
@@ -513,7 +512,7 @@ def generate_asm_file(filenames, uniqueTiles):
         with open(path, "rb") as handle:
             handle.seek(0)
             image = Image.open(handle)
-            # NT & AT data
+            # NT & AT data in 7 slices
             ntAtData = process_image(image, filename, 2, uniqueTiles)
             ntAtDataLen = 0
             for si in range(7):

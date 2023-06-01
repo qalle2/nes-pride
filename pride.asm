@@ -1,4 +1,30 @@
-; NES/ASM6: pride flag show
+; NES/ASM6: Qalle's Pride Flag Show, https://github.com/qalle2/nes-pride
+
+; --- Call graph --------------------------------------------------------------
+
+; reset
+;     wait_vbl_start
+;     init_main_ram
+;     prep_ppu_upd
+;         nt_at_to_buffer
+;             get_sect_addr
+;         pal_to_buffer
+;             get_sect_addr
+;         update_sprites
+;             get_sect_addr
+;     init_ppu_mem
+;         set_ppu_addr
+;     set_ppu_regs
+;     main_loop
+;         read_joypad
+;         button_logic
+;         prep_ppu_upd
+;             (see above)
+; nmi
+;     do_oam_dma
+;     buffer_to_ppu
+;     set_ppu_regs
+; irq
 
 ; --- Constants ---------------------------------------------------------------
 
@@ -6,7 +32,7 @@
 ; - addresses are little-endian (low byte first)
 ; - boolean variables: $00-$7f = false, $80-$ff = true
 ; - ppu_buffer: what to copy *backwards* to PPU memory on next VBlank;
-;     only indexes ppu_buf_lastind...0 are used
+;     only the first ppu_buf_length indexes are used
 ; - ppu_upd_phase: how to update PPU memory:
 ;     0-6: copy one seventh of name & attribute table ($80 bytes) via PPU
 ;          buffer to non-visible name table
@@ -23,7 +49,7 @@ pad_status      equ $85    ; joypad status
 prev_pad_status equ $86    ; previous joypad status
 which_image     equ $87    ; which image is being shown
 ppu_upd_phase   equ $88    ; PPU update phase; see above
-ppu_buf_lastind equ $89    ; last index used in PPU buffer (length - 1)
+ppu_buf_length  equ $89    ; length of PPU buffer
 text_visible    equ $8a    ; flag description visible? (boolean)
 rle_src_ind     equ $8b    ; RLE decoder - source index
 rle_dst_ind     equ $8c    ; RLE decoder - destination index
@@ -130,9 +156,6 @@ init_main_ram   ; initialize main RAM
                 dex
                 bpl -
 
-                lda #0                  ; start drawing first image
-                sta ppu_upd_phase
-
                 rts
 
 init_ppu_mem    ; initialize PPU memory
@@ -166,6 +189,10 @@ init_ppu_mem    ; initialize PPU memory
 
                 rts
 
+set_ppu_addr    sty ppu_addr            ; Y*$100 + A -> address
+                sta ppu_addr
+                rts
+
 ; --- Main loop ---------------------------------------------------------------
 
 main_loop       bit run_main_loop       ; wait until NMI routine has set flag
@@ -192,6 +219,8 @@ main_loop       bit run_main_loop       ; wait until NMI routine has set flag
                 sta visible_nt
 
 +               jmp main_loop
+
+; -----------------------------------------------------------------------------
 
 read_joypad     ; read 1st joypad or Famicom expansion port controller
                 ; see https://www.nesdev.org/wiki/Controller_reading_code
@@ -281,6 +310,8 @@ spr_y_pos       ; Y positions of 1st/2nd/3rd sprite row
                 db $ff, $ff, $ff            ; hidden
                 db 24*8-1, 25*8-1, 26*8-1   ; visible
 
+; -----------------------------------------------------------------------------
+
 prep_ppu_upd    ; prepare a PPU memory update according to ppu_upd_phase
 
                 lda ppu_upd_phase
@@ -308,8 +339,12 @@ nt_at_to_buffer ; copy one seventh of name & attribute table data of current
                 ; 0bLLLLLLL0 0xBB: output byte 0xBB   0bLLLLLLL   times (1-127)
                 ; 0b00000000     : terminator (end of data)
                 ;
-                lda #$7f
-                sta rle_dst_ind         ; destination index
+                ldx ppu_upd_phase
+                lda slice_lengths,x
+                tax
+                dex
+                stx rle_dst_ind         ; destination index
+                ;
                 ldy #0
                 lda (grafix_ptr),y
                 sta rle_direct          ; direct (implied) byte
@@ -340,31 +375,30 @@ nt_at_to_buffer ; copy one seventh of name & attribute table data of current
                 ;
                 jmp --
 
-rle_end         ; PPU address: $2000 + (visible_nt^1) * $400
-                ; + (ppu_upd_phase + 1) * $80
-                ; (bottom of non-visible name table and entire non-visible AT)
-                ;
-                ; high byte: $20 + (visible_nt^1) * 4 + (ppu_upd_phase + 1) / 2
+rle_end         ; PPU destination address; use non-visible NT
                 ldx ppu_upd_phase
-                inx
-                txa
-                lsr a                   ; LSB -> carry
-                ldx visible_nt
-                ora ppu_dst_highs,x
+                ldy visible_nt
+                lda ppu_dst_highs,x
+                ora nt_high_invis,y
                 sta ppu_dst_addr+1
-                ;
-                ; low byte: (ppu_upd_phase & 1) * $80
-                lda #0
-                ror a
+                lda ppu_dst_lows,x
                 sta ppu_dst_addr+0
 
-                lda #($80-1)            ; length - 1
-                sta ppu_buf_lastind
+                ; length
+                ldx ppu_upd_phase
+                lda slice_lengths,x
+                sta ppu_buf_length
 
                 rts
 
-ppu_dst_highs   ; high bytes of PPU destination addresses
-                hex 24 20
+                ; PPU destination address within NT and length for each slice
+                ; (we use bottom of NT and entire AT)
+ppu_dst_highs   hex 20 21 21 22 22 23 23  ; high bytes of addresses
+ppu_dst_lows    hex c0 40 c0 40 c0 40 c0  ; low bytes of addresses
+slice_lengths   hex 80 80 80 80 80 80 40  ; lengths
+
+nt_high_invis   ; ORA high byte of NT address with these to get non-visible NT
+                hex 04 00
 
 pal_to_buffer   ; copy background palettes (16 bytes) of current image from
                 ; nt_at_data backwards to ppu_buffer
@@ -385,8 +419,8 @@ pal_to_buffer   ; copy background palettes (16 bytes) of current image from
                 lda #$00
                 sta ppu_dst_addr+0
 
-                lda #(16-1)             ; length - 1
-                sta ppu_buf_lastind
+                lda #16                 ; length
+                sta ppu_buf_length
 
                 rts
 
@@ -503,7 +537,8 @@ buffer_to_ppu   ; copy PPU buffer backwards to PPU memory
                 lda ppu_dst_addr+0
                 sta ppu_addr
                 ;
-                ldx ppu_buf_lastind
+                ldx ppu_buf_length
+                dex
 -               lda ppu_buffer,x
                 sta ppu_data
                 dex
@@ -514,15 +549,9 @@ buffer_to_ppu   ; copy PPU buffer backwards to PPU memory
                 ;
                 rts
 
-; --- Subs used in many places ------------------------------------------------
-
-set_ppu_addr    sty ppu_addr            ; Y*$100 + A -> address
-                sta ppu_addr
-                rts
-
-set_ppu_regs    lda #0                  ; set scroll value
+set_ppu_regs    lda #0                  ; horizontal scroll
                 sta ppu_scroll
-                lda #3*8
+                lda #3*8                ; vertical scroll: 3 tiles up
                 sta ppu_scroll
                 lda #%10001000          ; enable NMI, use PT1 for sprites
                 ora visible_nt
