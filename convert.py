@@ -20,7 +20,7 @@ PT_FILE    = "chr-bg.bin"    # write PT data here
 ASM_FILE   = "imgdata.asm"   # write filename/palette/NT/AT data in ASM6 format
 
 # image height in AT blocks
-# (1-15; changing this requires changing NES program as well as images)
+# (changing this would require changing the NES program as well)
 VERT_AT_BLKS = 12
 
 # NES color number for background and unused colors (black)
@@ -368,6 +368,7 @@ def encode_pt_data(tiles):
                 ptData.append(sum(
                     ((tile[py*8+i] >> bp) & 1) << (7 - i) for i in range(8)
                 ))
+
     # pad to a multiple of 16 tiles
     paddingLength = (256 - len(ptData) % 256) % 256
     ptData.extend(paddingLength * b"\xff")
@@ -451,8 +452,8 @@ def rle_encode(data):
     # generate bytes: direct_byte, run, run, ..., 0
     # 1st byte of data is the direct (implied) byte; other bytes are runs of
     # 1/2 bytes:
-    # 0bLLLLLLL1     : output direct_byte 0bLLLLLLL+1 times (1-128)
-    # 0bLLLLLLL0 0xBB: output byte 0xBB   0bLLLLLLL   times (1-127)
+    # 0b1LLLLLLL     : output direct_byte 0bLLLLLLL+1 times (1-128)
+    # 0b0LLLLLLL 0xBB: output byte 0xBB   0bLLLLLLL   times (1-127)
     # 0b00000000     : terminator (end of data)
     # note: the ability to output 128-byte runs is important because there
     # are lots of exactly 128-byte runs
@@ -468,9 +469,9 @@ def rle_encode(data):
     # RLE data itself
     for (length, byte) in rle_encode_raw(data):
         if byte == directByte:
-            yield ((length - 1) << 1) | 0b1
+            yield 0x80 | (length - 1)
         else:
-            yield length << 1
+            yield length
             yield byte
     # terminator
     yield 0x00
@@ -494,37 +495,39 @@ def generate_asm_file(filenames, uniqueTiles):
     yield "; pointers to the following arrays"
     for fi in range(len(filenames)):
         yield f"image{fi}_ptrs"
-        ptrs = [f"img{fi}_nt_at{si}" for si in range(7)] \
-        + [f"img{fi}_palette", f"img{fi}_descr"]
-        for pi in range(0, len(ptrs), 4):
-            yield "  dw " + ", ".join(ptrs[pi:pi+4])
+        ptrs = [f"img{fi}_nt{si}" for si in range(6)] \
+        + [f"img{fi}_at", f"img{fi}_palette", f"img{fi}_descr"]
+        yield "  dw " + ", ".join(ptrs[:6])
+        yield "  dw " + ", ".join(ptrs[6:])
     yield ""
 
     yield "; for each image: compressed NT & AT data in 7 slices, background "
     yield "; palette data (16 bytes), description"
     yield ""
 
-    # data for each image
-    totalNtAtDataLen = 0
+    # all data for each image
+    totalRleDataLen = 0
     for (fi, filename) in enumerate(filenames):
         # open file
         path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
         with open(path, "rb") as handle:
             handle.seek(0)
             image = Image.open(handle)
-            # NT & AT data in 7 slices
+
+            # RLE-compressed NT/AT data in 7 slices
             ntAtData = process_image(image, filename, 2, uniqueTiles)
-            ntAtDataLen = 0
+            rleDataLen = 0
             for si in range(7):
                 rleData = bytes(rle_encode(ntAtData[si*0x80:(si+1)*0x80]))
-                ntAtDataLen += len(rleData)
-                yield f"img{fi}_nt_at{si}"
+                rleDataLen += len(rleData)
+                yield f"img{fi}_nt{si}" if si < 6 else f"img{fi}_at"
                 yield "  hex " + rleData[:1].hex()
                 for i in range(0, len(rleData) - 2, 16):
                     yield "  hex " + rleData[1:-1][i:i+16].hex()
                 yield "  hex " + rleData[-1:].hex()
-            print(f"{'':4}{filename:26}: {ntAtDataLen:3}")
-            totalNtAtDataLen += ntAtDataLen
+            print(f"{'':4}{filename:26}: {rleDataLen:3}")
+            totalRleDataLen += rleDataLen
+
             # palette
             palette = bytes(itertools.chain.from_iterable(
                 process_image(image, filename, 0)
@@ -534,13 +537,14 @@ def generate_asm_file(filenames, uniqueTiles):
             )
             yield f"img{fi}_palette"
             yield f"  hex {palette}"
+
         # description
         yield f"img{fi}_descr"
         descr = filename_to_descr(filename).lstrip(" ")
         yield f'  db {len(descr)}, "{descr}"'
         yield ""
 
-    print("Total compressed NT/AT data size:", totalNtAtDataLen)
+    print("Total compressed NT/AT data size:", totalRleDataLen)
 
 # -----------------------------------------------------------------------------
 
@@ -555,8 +559,8 @@ def get_filenames():
 def main():
     # get filenames
     filenames = list(get_filenames())
-    if not 1 <= len(filenames) <= 256:
-        sys.exit("Must have 1-256 images.")
+    if not 1 <= len(filenames) <= 255:
+        sys.exit("Must have 1-255 images.")
     if TITLE_FILE not in filenames:
         sys.exit(f"Title screen image {TITLE_FILE+IMAGE_EXT} not found.")
     if set(MANUAL_SUBPALS) - set(filenames):

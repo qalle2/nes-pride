@@ -55,7 +55,7 @@ rle_src_ind     equ $8b    ; RLE decoder - source index
 rle_dst_ind     equ $8c    ; RLE decoder - destination index
 rle_direct      equ $8d    ; RLE direct (implied) byte
 visible_nt      equ $8e    ; which name table to show (0/1)
-frame_counter   equ $8f    ; counts between image_count-2...0; for random flag
+prng            equ $8f    ; for random flag; counts image_count-2...0
 sprite_data     equ $0200  ; OAM page ($100 bytes)
 
 ; memory-mapped registers
@@ -195,23 +195,28 @@ set_ppu_addr    sty ppu_addr            ; Y*$100 + A -> address
 
 ; --- Main loop ---------------------------------------------------------------
 
-main_loop       bit run_main_loop       ; wait until NMI routine has set flag
+main_loop       ; wait until NMI routine sets flag, then clear it
+                bit run_main_loop
                 bpl main_loop
+                lsr run_main_loop
 
-                lsr run_main_loop       ; clear flag
-
-                dec frame_counter
+                ; update PRNG (image_count-1 values because we never want the
+                ; random flag to be the current flag)
+                dec prng
                 bpl +
                 lda #image_count-2
-                sta frame_counter
+                sta prng
 
-+               lda pad_status
++               ; handle buttons
+                lda pad_status
                 sta prev_pad_status
                 jsr read_joypad
                 jsr button_logic
+
                 jsr prep_ppu_upd
 
-                lda ppu_upd_phase       ; flip visible name table on phase 7
+                ; on phase 7, flip visible name table
+                lda ppu_upd_phase
                 cmp #7
                 bne +
                 lda visible_nt
@@ -255,8 +260,8 @@ button_logic    ; exit if anything pressed on previous frame
                 bcs toggle_text         ; start
 +               rts
 
-random_image    ; get random image (add 1 if frame_counter >= which_image)
-                ldx frame_counter
+random_image    ; get random image (add 1 if prng >= which_image)
+                ldx prng
                 cpx which_image
                 bcc +
                 inx
@@ -312,35 +317,37 @@ spr_y_pos       ; Y positions of 1st/2nd/3rd sprite row
 
 ; -----------------------------------------------------------------------------
 
-prep_ppu_upd    ; prepare a PPU memory update according to ppu_upd_phase
-
+prep_ppu_upd    ; update ppu_buffer or sprite_data according to ppu_upd_phase
+                ;
                 lda ppu_upd_phase
                 cmp #7
                 beq +
-                bpl ++                  ; phase 8
+                bpl ++
                 jsr nt_at_to_buffer     ; phases 0-6
                 rts
+                ;
 +               jsr pal_to_buffer       ; phase 7
-++              jsr update_sprites
+++              jsr update_sprites      ; phases 7 & 8
                 rts
 
-nt_at_to_buffer ; copy one seventh of name & attribute table data of current
-                ; image ($80 bytes) backwards to ppu_buffer according to
+nt_at_to_buffer ; copy one seventh of NT/AT data of current image
+                ; (up to $80 bytes) backwards to ppu_buffer according to
                 ; ppu_upd_phase (must be 0-6)
 
+                ; RLE data address -> grafix_ptr
                 ldy ppu_upd_phase
                 jsr get_sect_addr
 
-                ; decode RLE data from nt_at_data backwards into PPU buffer
-                ; (always decodes into $80 bytes)
+                ; decode RLE data from grafix_ptr backwards into PPU buffer
+                ; (decodes into up to $80 bytes)
                 ; 1st byte of data is the direct (implied) byte; other bytes
                 ; are runs of 1/2 bytes:
-                ; 0bLLLLLLL1     : output direct_byte 0bLLLLLLL+1 times (1-128)
-                ; 0bLLLLLLL0 0xBB: output byte 0xBB   0bLLLLLLL   times (1-127)
+                ; 0b1LLLLLLL     : output direct_byte 0bLLLLLLL+1 times (1-128)
+                ; 0b0LLLLLLL 0xBB: output byte 0xBB   0bLLLLLLL   times (1-127)
                 ; 0b00000000     : terminator (end of data)
                 ;
                 ldx ppu_upd_phase
-                lda slice_lengths,x
+                lda decoded_lengths,x
                 tax
                 dex
                 stx rle_dst_ind         ; destination index
@@ -354,19 +361,22 @@ nt_at_to_buffer ; copy one seventh of name & attribute table data of current
 --              ldy rle_src_ind
                 lda (grafix_ptr),y      ; type & repeat count of run
                 beq rle_end             ; terminator?
-                lsr a                   ; type -> carry
-                tax                     ; repeat count
-                iny
+                bpl +
                 ;
-                bcc +
-                lda rle_direct          ; value to repeat: direct byte
-                inx
+                iny
+                and #%01111111
+                tax
+                inx                     ; length
+                lda rle_direct          ; value to repeat (direct byte)
                 jmp ++
-+               lda (grafix_ptr),y      ; value to repeat: following byte
-                iny
-++              sty rle_src_ind
                 ;
-                ldy rle_dst_ind         ; repeat value
++               iny
+                tax                     ; length
+                lda (grafix_ptr),y      ; value to repeat (following byte)
+                iny
+                ;
+++              sty rle_src_ind
+                ldy rle_dst_ind         ; repeat the value
 -               sta ppu_buffer,y
                 dey
                 dex
@@ -384,25 +394,27 @@ rle_end         ; PPU destination address; use non-visible NT
                 lda ppu_dst_lows,x
                 sta ppu_dst_addr+0
 
-                ; length
+                ; data length
                 ldx ppu_upd_phase
-                lda slice_lengths,x
+                lda decoded_lengths,x
                 sta ppu_buf_length
 
                 rts
 
-                ; PPU destination address within NT and length for each slice
-                ; (we use bottom of NT and entire AT)
+decoded_lengths hex 80 80 80 80 80 80 40  ; lengths of decoded NT/AT slices
+
+                ; PPU destination address within NT/AT and length for each
+                ; slice (we use bottom of NT and entire AT)
 ppu_dst_highs   hex 20 21 21 22 22 23 23  ; high bytes of addresses
 ppu_dst_lows    hex c0 40 c0 40 c0 40 c0  ; low bytes of addresses
-slice_lengths   hex 80 80 80 80 80 80 40  ; lengths
 
 nt_high_invis   ; ORA high byte of NT address with these to get non-visible NT
                 hex 04 00
 
 pal_to_buffer   ; copy background palettes (16 bytes) of current image from
-                ; nt_at_data backwards to ppu_buffer
+                ; NT/AT data backwards to ppu_buffer
 
+                ; palette data address -> grafix_ptr
                 ldy #7
                 jsr get_sect_addr
 
@@ -414,18 +426,19 @@ pal_to_buffer   ; copy background palettes (16 bytes) of current image from
                 dex
                 bpl -
 
-                lda #$3f                ; PPU address
+                ; PPU destination address and data length
+                lda #$3f
                 sta ppu_dst_addr+1
                 lda #$00
                 sta ppu_dst_addr+0
-
-                lda #16                 ; length
+                lda #16
                 sta ppu_buf_length
 
                 rts
 
 update_sprites  ; update tiles of image description sprites
 
+                ; description address -> grafix_ptr
                 ldy #8
                 jsr get_sect_addr
 
@@ -459,9 +472,9 @@ update_sprites  ; update tiles of image description sprites
 
 +               rts
 
-get_sect_addr   ; in: which_image = which image
-                ; in: Y = which section (0-6 = NT/AT slice, 7 = palette,
-                ;         8 = description)
+get_sect_addr   ; in:  which_image = which image
+                ; in:  Y = which section (0-6 = NT/AT slice, 7 = palette,
+                ;          8 = description)
                 ; out: grafix_ptr = pointer
 
                 ; image address in graphics data
@@ -473,7 +486,7 @@ get_sect_addr   ; in: which_image = which image
                 lda image_ptrs+1,x
                 sta grafix_ptr+1
 
-                ; section address in this image's data -> grafix_ptr
+                ; section address in this image's data
                 tya
                 asl a
                 tay
@@ -569,7 +582,7 @@ set_ppu_regs    lda #0                  ; horizontal scroll
 
                 base $0000
                 incbin "chr-bg.bin"     ; background
-
                 pad $1000, $ff
+
                 incbin "chr-spr.bin"    ; sprites
                 pad $2000, $ff
