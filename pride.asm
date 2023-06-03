@@ -1,31 +1,5 @@
 ; NES/ASM6: Qalle's Pride Flag Show, https://github.com/qalle2/nes-pride
 
-; --- Call graph --------------------------------------------------------------
-
-; reset
-;     wait_vbl_start
-;     init_main_ram
-;     prep_ppu_upd
-;         nt_at_to_buffer
-;             get_sect_addr
-;         pal_to_buffer
-;             get_sect_addr
-;         update_sprites
-;             get_sect_addr
-;     init_ppu_mem
-;         set_ppu_addr
-;     set_ppu_regs
-;     main_loop
-;         read_joypad
-;         button_logic
-;         prep_ppu_upd
-;             (see above)
-; nmi
-;     do_oam_dma
-;     buffer_to_ppu
-;     set_ppu_regs
-; irq
-
 ; --- Constants ---------------------------------------------------------------
 
 ; Notes:
@@ -36,8 +10,8 @@
 ; - ppu_upd_phase: how to update PPU memory:
 ;     0-6: copy one seventh of name & attribute table ($80 bytes) via PPU
 ;          buffer to non-visible name table
-;     7: do OAM DMA, copy background palettes (16 bytes) via PPU buffer to PPU
-;        and flip visible name table
+;     7: do OAM DMA, copy background palettes (16 bytes) via PPU buffer to PPU,
+;        flip visible name table and set PT to use
 ;     8: do OAM DMA (previous PPU buffer also copied to PPU)
 
 ; RAM
@@ -54,8 +28,9 @@ text_visible    equ $8a    ; flag description visible? (boolean)
 rle_src_ind     equ $8b    ; RLE decoder - source index
 rle_dst_ind     equ $8c    ; RLE decoder - destination index
 rle_direct      equ $8d    ; RLE direct (implied) byte
-visible_nt      equ $8e    ; which name table to show (0/1)
-prng            equ $8f    ; for random flag; counts image_count-2...0
+bg_pt           equ $8e    ; which PT to use for background (0/1)
+visible_nt      equ $8f    ; which name table to show (0/1)
+prng            equ $90    ; for random flag; counts image_count-2...0
 sprite_data     equ $0200  ; OAM page ($100 bytes)
 
 ; memory-mapped registers
@@ -327,6 +302,7 @@ prep_ppu_upd    ; update ppu_buffer or sprite_data according to ppu_upd_phase
                 rts
                 ;
 +               jsr pal_to_buffer       ; phase 7
+                jsr set_bg_pt           ; phase 7
 ++              jsr update_sprites      ; phases 7 & 8
                 rts
 
@@ -415,7 +391,7 @@ pal_to_buffer   ; copy background palettes (16 bytes) of current image from
                 ; NT/AT data backwards to ppu_buffer
 
                 ; palette data address -> grafix_ptr
-                ldy #7
+                ldy #8
                 jsr get_sect_addr
 
                 ldy #0                  ; source index
@@ -436,10 +412,22 @@ pal_to_buffer   ; copy background palettes (16 bytes) of current image from
 
                 rts
 
+set_bg_pt       ; set PT to use for background
+
+                ; address of PT number -> grafix_ptr
+                ldy #7
+                jsr get_sect_addr
+
+                ldy #0
+                lda (grafix_ptr),y
+                sta bg_pt
+
+                rts
+
 update_sprites  ; update tiles of image description sprites
 
                 ; description address -> grafix_ptr
-                ldy #8
+                ldy #9
                 jsr get_sect_addr
 
                 ; 1st byte = length
@@ -447,9 +435,10 @@ update_sprites  ; update tiles of image description sprites
                 lda (grafix_ptr),y
                 tay                     ; source index
 
-                ; other bytes are tile numbers
+                ; other bytes are ASCII 0x20-0x7f, which are at $a0-$ff in PT1
                 ldx #(23*4)             ; destination index
 -               lda (grafix_ptr),y
+                ora #$80                ; see above
                 sta sprite_data+1,x
                 dex
                 dex
@@ -462,7 +451,7 @@ update_sprites  ; update tiles of image description sprites
                 txa
                 beq +
                 ;
-                lda #$20                ; space
+                lda #$a0                ; space
 -               sta sprite_data+1,x
                 dex
                 dex
@@ -473,8 +462,8 @@ update_sprites  ; update tiles of image description sprites
 +               rts
 
 get_sect_addr   ; in:  which_image = which image
-                ; in:  Y = which section (0-6 = NT/AT slice, 7 = palette,
-                ;          8 = description)
+                ; in:  Y = which section (0-6 = NT/AT slice, 7 = PT to use,
+                ;          8 = palette, 9 = description)
                 ; out: grafix_ptr = pointer
 
                 ; image address in graphics data
@@ -566,9 +555,16 @@ set_ppu_regs    lda #0                  ; horizontal scroll
                 sta ppu_scroll
                 lda #3*8                ; vertical scroll: 3 tiles up
                 sta ppu_scroll
-                lda #%10001000          ; enable NMI, use PT1 for sprites
+                ;
+                lda bg_pt               ; PT to use for BG
+                asl a
+                asl a
+                asl a
+                asl a
+                ora #%10001000          ; enable NMI, use PT1 for sprites
                 ora visible_nt
                 sta ppu_ctrl
+                ;
                 lda #%00011110          ; show background & sprites
                 sta ppu_mask
                 rts
@@ -581,8 +577,10 @@ set_ppu_regs    lda #0                  ; horizontal scroll
 ; --- CHR ROM -----------------------------------------------------------------
 
                 base $0000
-                incbin "chr-bg.bin"     ; background
+                incbin "chr-bg0.bin"    ; PT0 - background (256 tiles)
                 pad $1000, $ff
 
-                incbin "chr-spr.bin"    ; sprites
+                incbin "chr-bg1.bin"    ; PT1 - background (160 tiles)
+                pad $1a00, $ff
+                incbin "chr-spr.bin"    ; PT1 - sprites (96 tiles)
                 pad $2000, $ff

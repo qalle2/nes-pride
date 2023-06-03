@@ -16,8 +16,18 @@ from PIL import Image  # Pillow, https://python-pillow.org
 IMAGE_DIR  = "img"           # read images from here
 IMAGE_EXT  = ".png"          # read images with this extension
 TITLE_FILE = "title_screen"  # sort this first (no extension)
-PT_FILE    = "chr-bg.bin"    # write PT data here
+PT0_FILE   = "chr-bg0.bin"   # write PT0 data here
+PT1_FILE   = "chr-bg1.bin"   # write PT1 data here
 ASM_FILE   = "imgdata.asm"   # write filename/palette/NT/AT data in ASM6 format
+
+# maximum number of tiles in PTs
+PT0_MAX_TILES = 256
+PT1_MAX_TILES = 160
+
+# images that use PT1 instead of PT0
+IMAGES_IN_PT1 = frozenset((
+    "title_screen",
+))
 
 # image height in AT blocks
 # (changing this would require changing the NES program as well)
@@ -374,7 +384,7 @@ def encode_pt_data(tiles):
     ptData.extend(paddingLength * b"\xff")
     return ptData
 
-def get_unique_tiles(filenames):
+def get_unique_tiles(filenames, maxTiles):
     # return a list of unique tiles in all images
     # (each tile is a tuple of 64 2-bit ints)
 
@@ -398,8 +408,8 @@ def get_unique_tiles(filenames):
                 f"{len(uniqueTiles)-oldCnt:3} "
                 f"{len(uniqueTiles):3}"
             )
-            if len(uniqueTiles) > 256:
-                sys.exit("Error: more than 256 unique tiles total.")
+            if len(uniqueTiles) > maxTiles:
+                sys.exit(f"Error: more than {maxTiles} unique tiles total.")
     # sort by pixels, by which colors are used and by number of colors
     uniqueTiles = sorted(uniqueTiles)
     uniqueTiles.sort(key=lambda t: sorted(set(t)))
@@ -476,7 +486,9 @@ def rle_encode(data):
     # terminator
     yield 0x00
 
-def generate_asm_file(filenames, uniqueTiles):
+def generate_asm_file(filenames, uniqueTiles0, uniqueTiles1):
+    # uniqueTiles0/1: unique tiles in PT0/PT1
+
     yield "; Image data excluding pattern tables."
     yield "; This file was generated automatically by convert.py."
     yield ""
@@ -496,13 +508,13 @@ def generate_asm_file(filenames, uniqueTiles):
     for fi in range(len(filenames)):
         yield f"image{fi}_ptrs"
         ptrs = [f"img{fi}_nt{si}" for si in range(6)] \
-        + [f"img{fi}_at", f"img{fi}_palette", f"img{fi}_descr"]
+        + [f"img{fi}_at", f"img{fi}_pt", f"img{fi}_palette", f"img{fi}_descr"]
         yield "  dw " + ", ".join(ptrs[:6])
         yield "  dw " + ", ".join(ptrs[6:])
     yield ""
 
-    yield "; for each image: compressed NT & AT data in 7 slices, background "
-    yield "; palette data (16 bytes), description"
+    yield "; for each image: compressed NT & AT data in 7 slices, PT to use, "
+    yield "; background palette data (16 bytes), description"
     yield ""
 
     # all data for each image
@@ -515,7 +527,10 @@ def generate_asm_file(filenames, uniqueTiles):
             image = Image.open(handle)
 
             # RLE-compressed NT/AT data in 7 slices
-            ntAtData = process_image(image, filename, 2, uniqueTiles)
+            ntAtData = process_image(
+                image, filename, 2,
+                uniqueTiles1 if filename in IMAGES_IN_PT1 else uniqueTiles0
+            )
             rleDataLen = 0
             for si in range(7):
                 rleData = bytes(rle_encode(ntAtData[si*0x80:(si+1)*0x80]))
@@ -527,6 +542,10 @@ def generate_asm_file(filenames, uniqueTiles):
                 yield "  hex " + rleData[-1:].hex()
             print(f"{'':4}{filename:26}: {rleDataLen:3}")
             totalRleDataLen += rleDataLen
+
+            # PT to use
+            yield f"img{fi}_pt"
+            yield "  db " + str(int(filename in IMAGES_IN_PT1))
 
             # palette
             palette = bytes(itertools.chain.from_iterable(
@@ -591,12 +610,26 @@ def main():
         palette_test(filename)
     print()
 
-    print(f"Writing PT data to {PT_FILE}...")
+    print(f"Writing PT data to {PT0_FILE}...")
     print("Number of unique/new unique/total unique tiles after each file.")
-    uniqueTiles = get_unique_tiles(filenames)
-    with open(PT_FILE, "wb") as handle:
+    uniqueTiles0 = get_unique_tiles(
+        (f for f in filenames if f not in IMAGES_IN_PT1), PT0_MAX_TILES
+    )
+    with open(PT0_FILE, "wb") as handle:
         handle.seek(0)
-        handle.write(encode_pt_data(uniqueTiles))
+        handle.write(encode_pt_data(uniqueTiles0))
+        size = handle.tell()
+    print(f"Wrote {size} bytes.")
+    print()
+
+    print(f"Writing PT data to {PT1_FILE}...")
+    print("Number of unique/new unique/total unique tiles after each file.")
+    uniqueTiles1 = get_unique_tiles(
+        (f for f in filenames if f in IMAGES_IN_PT1), PT1_MAX_TILES
+    )
+    with open(PT1_FILE, "wb") as handle:
+        handle.seek(0)
+        handle.write(encode_pt_data(uniqueTiles1))
         size = handle.tell()
     print(f"Wrote {size} bytes.")
     print()
@@ -605,7 +638,7 @@ def main():
     print("Compressed NT/AT data size after each file.")
     with open(ASM_FILE, "wt", encoding="ascii") as handle:
         handle.seek(0)
-        for line in generate_asm_file(filenames, uniqueTiles):
+        for line in generate_asm_file(filenames, uniqueTiles0, uniqueTiles1):
             print(line, file=handle)
     print()
 
