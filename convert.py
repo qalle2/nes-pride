@@ -13,28 +13,25 @@
 import collections, itertools, os, re, sys
 from PIL import Image  # Pillow, https://python-pillow.org
 
-IMAGE_DIR  = "img"           # read images from here
+IMAGE_DIR  = "img"           # read images from this path
 IMAGE_EXT  = ".png"          # read images with this extension
-TITLE_FILE = "title_screen"  # sort this first (no extension)
-PT0_FILE   = "chr-bg0.bin"   # write PT0 data here
-PT1_FILE   = "chr-bg1.bin"   # write PT1 data here
-ASM_FILE   = "imgdata.asm"   # write filename/palette/NT/AT data in ASM6 format
+TITLE_FILE = "title_screen"  # sort this image first (no extension)
+ASM_FILE   = "imgdata.asm"   # write all data except PTs in ASM6 format here
 
-# maximum number of tiles in PTs
-PT0_MAX_TILES = 256
-PT1_MAX_TILES = 160
-
+# write PT0/PT1 data here
+PT_FILES = ("chr-bg0.bin", "chr-bg1.bin")
+# maximum number of tiles in PT0/PT1
+PT_MAX_TILES = (256, 160)
 # images that use PT1 instead of PT0
-IMAGES_IN_PT1 = frozenset((
-    "title_screen",
-))
+PT1_IMAGES = frozenset(("title_screen",))
 
 # image height in AT blocks
 # (changing this would require changing the NES program as well)
 VERT_AT_BLKS = 12
 
-# NES color number for background and unused colors (black)
-NES_BG_COLOR = 0x0f
+# NES color number for background and unused colors; on NTSC, this is also
+# the border color; see https://www.nesdev.org/wiki/PAL_video
+NES_BG_COLOR = 0x0f  # black
 
 # optional manually-defined palettes by filename;
 # up to 4 tuples with up to 3 NES colors each (order matters);
@@ -388,8 +385,9 @@ def get_unique_tiles(filenames, maxTiles):
     # return a list of unique tiles in all images
     # (each tile is a tuple of 64 2-bit ints)
 
-    # make sure we have a blank tile for borders
+    # make sure we have a blank tile for visible unused area
     uniqueTiles = {tuple(64 * [0])}
+
     for filename in filenames:
         path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
         with open(path, "rb") as handle:
@@ -397,8 +395,8 @@ def get_unique_tiles(filenames, maxTiles):
             tiles = process_image(Image.open(handle), filename, 1)
             if any(any(t.count(c) == 1 for c in range(4)) for t in tiles):
                 print(
-                    f"Warning: {filename}: a tile with only one pixel of some "
-                    f"color.", file=sys.stderr
+                    f"Warning: {filename} has a tile with only one pixel of "
+                    "some color; consider optimizing.", file=sys.stderr
                 )
             oldCnt = len(uniqueTiles)
             uniqueTiles.update(tiles)
@@ -417,29 +415,6 @@ def get_unique_tiles(filenames, maxTiles):
     return uniqueTiles
 
 # --- generate_asm_file() and functions called by it --------------------------
-
-def filename_to_descr(filename):
-    # format a string (filename without extension) into three eight-character
-    # lines aligned right & bottom; replace "_" with newline; examples:
-    #     "X"   -> 23 spaces + "x"
-    #     "X_Y" -> 15 spaces + "x" + 7 spaces + "y"
-
-    if re.search("^[0-9a-z_-]+$", filename) is None:
-        sys.exit(
-            "Only 0-9, a-z, _, - allowed in filenames (excluding extension)."
-        )
-
-    lines = filename.split("_")
-    if len(lines) > 3:
-        sys.exit("No more than 2 underscores allowed in filenames.")
-    if max(len(l) for l in lines) > 8:
-        sys.exit(
-            "No more than 8 consecutive non-underscore characters allowed "
-            "in filenames (excluding extension)."
-        )
-
-    lines = (3 - len(lines)) * [""] + lines
-    return "".join(l.rjust(8) for l in lines)
 
 def rle_encode_raw(data):
     # generate runs: (length, byte)
@@ -486,84 +461,132 @@ def rle_encode(data):
     # terminator
     yield 0x00
 
-def generate_asm_file(filenames, uniqueTiles0, uniqueTiles1):
-    # uniqueTiles0/1: unique tiles in PT0/PT1
+def get_rle_and_pal_data(filename, uniqueTilesByPt):
+    # get RLE-compressed NT/AT data and NES palette from file
+    # uniqueTilesByPt: unique tiles in PT0/PT1
+    # return: (RLE data as a tuple of bytes, palette as bytes)
 
-    yield "; Image data excluding pattern tables."
-    yield "; This file was generated automatically by convert.py."
+    path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
+    with open(path, "rb") as handle:
+        handle.seek(0)
+        image = Image.open(handle)
+        # RLE-compressed NT/AT data in 7 slices
+        ntAtData = process_image(
+            image, filename, 2, uniqueTilesByPt[filename in PT1_IMAGES]
+        )
+        rleData = tuple(
+            bytes(rle_encode(ntAtData[i*0x80:(i+1)*0x80])) for i in range(7)
+        )
+        # palette
+        palette = bytes(itertools.chain.from_iterable(
+            process_image(image, filename, 0)
+        ))
+    return(rleData, palette)
+
+def rle_slice_to_chunks(rleSlice):
+    # generate RLE slice (bytes) as chunks (1 or 2 bytes each) for
+    # human-readability
+    i = 0
+    while True:
+        if i == 0 or rleSlice[i] & 0x80 or rleSlice[i] == 0x00:
+            chunkLen = 1  # direct byte definition/reference or terminator
+        else:
+            chunkLen = 2  # reference to following byte
+        yield rleSlice[i:i+chunkLen]
+        if i > 0 and rleSlice[i] == 0x00:
+            break  # terminator
+        i += chunkLen
+
+def filename_to_descr(filename):
+    # format a string (filename without extension) into three eight-character
+    # lines aligned right & bottom; replace "_" with newline; examples:
+    #     "X"   -> 23 spaces + "x"
+    #     "X_Y" -> 15 spaces + "x" + 7 spaces + "y"
+
+    if re.search("^[0-9a-z_-]+$", filename) is None:
+        sys.exit(
+            "Only 0-9, a-z, _, - allowed in filenames (excluding extension)."
+        )
+
+    lines = filename.split("_")
+    if len(lines) > 3:
+        sys.exit("No more than 2 underscores allowed in filenames.")
+    if max(len(l) for l in lines) > 8:
+        sys.exit(
+            "No more than 8 consecutive non-underscore characters allowed "
+            "in filenames (excluding extension)."
+        )
+
+    lines = (3 - len(lines)) * [""] + lines
+    return "".join(l.rjust(8) for l in lines)
+
+def format_rle_chunks(rleChunks):
+    # rleChunks: 1 or 2 bytes each
+    # generate formatted ASM6 lines
+
+    line = ""
+    for chunk in rleChunks:
+        if len(line) + 1 + len(chunk) * 2 > 79 - 8 - 3:
+            yield "\thex" + line
+            line = ""
+        line += " " + chunk.hex()
+    yield "\thex" + line
+
+def generate_asm_file(filenames, uniqueTilesByPt):
+    # uniqueTilesByPt: unique tiles in PT0/PT1
+
+    yield "; Image data excluding pattern tables. Generated by convert.py."
     yield ""
-    yield "; number of images"
+
     yield "image_count equ " + str(len(filenames))
     yield ""
 
-    yield "; pointers to the following array"
     yield "image_ptrs"
-    ptrs = [f"image{i}_ptrs" for i in range(len(filenames))]
-    for i in range(0, len(ptrs), 4):
-        yield "  dw " + ", ".join(ptrs[i:i+4])
+    ptrs = [f"img{i}_ptrs" for i in range(len(filenames))]
+    for i in range(0, len(ptrs), 5):
+        yield "\tdw " + ", ".join(ptrs[i:i+5])
     yield ""
 
-    # pointers
-    yield "; pointers to the following arrays"
     for fi in range(len(filenames)):
-        yield f"image{fi}_ptrs"
+        yield f"img{fi}_ptrs"
         ptrs = [f"img{fi}_nt{si}" for si in range(6)] \
-        + [f"img{fi}_at", f"img{fi}_pt", f"img{fi}_palette", f"img{fi}_descr"]
-        yield "  dw " + ", ".join(ptrs[:6])
-        yield "  dw " + ", ".join(ptrs[6:])
+        + [f"img{fi}_at", f"img{fi}_pt", f"img{fi}_pal", f"img{fi}_txt"]
+        yield "\tdw " + ", ".join(ptrs[:6])
+        yield "\tdw " + ", ".join(ptrs[6:])
     yield ""
 
-    yield "; for each image: compressed NT & AT data in 7 slices, PT to use, "
-    yield "; background palette data (16 bytes), description"
-    yield ""
-
-    # all data for each image
-    totalRleDataLen = 0
+    totalRleSize = 0
     for (fi, filename) in enumerate(filenames):
-        # open file
-        path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
-        with open(path, "rb") as handle:
-            handle.seek(0)
-            image = Image.open(handle)
+        (rleData, palette) = get_rle_and_pal_data(filename, uniqueTilesByPt)
+        totalRleSize += sum(len(s) for s in rleData)
 
-            # RLE-compressed NT/AT data in 7 slices
-            ntAtData = process_image(
-                image, filename, 2,
-                uniqueTiles1 if filename in IMAGES_IN_PT1 else uniqueTiles0
-            )
-            rleDataLen = 0
-            for si in range(7):
-                rleData = bytes(rle_encode(ntAtData[si*0x80:(si+1)*0x80]))
-                rleDataLen += len(rleData)
-                yield f"img{fi}_nt{si}" if si < 6 else f"img{fi}_at"
-                yield "  hex " + rleData[:1].hex()
-                for i in range(0, len(rleData) - 2, 16):
-                    yield "  hex " + rleData[1:-1][i:i+16].hex()
-                yield "  hex " + rleData[-1:].hex()
-            print(f"{'':4}{filename:26}: {rleDataLen:3}")
-            totalRleDataLen += rleDataLen
+        # RLE-compressed NT/AT data in 7 slices
+        for si in range(7):
+            rleChunks = tuple(rle_slice_to_chunks(rleData[si]))
+            yield f"img{fi}_nt{si}" if si < 6 else f"img{fi}_at"
+            yield from format_rle_chunks(rleChunks)
+        print(
+            f"{'':4}{filename:26}:", format(sum(len(s) for s in rleData), "3")
+        )
 
-            # PT to use
-            yield f"img{fi}_pt"
-            yield "  db " + str(int(filename in IMAGES_IN_PT1))
+        # PT to use
+        yield f"img{fi}_pt"
+        yield "\tdb " + str(int(filename in PT1_IMAGES))
 
-            # palette
-            palette = bytes(itertools.chain.from_iterable(
-                process_image(image, filename, 0)
-            ))
-            palette = " ".join(
-                palette[i:i+4].hex() for i in range(0, len(palette), 4)
-            )
-            yield f"img{fi}_palette"
-            yield f"  hex {palette}"
+        # palette
+        palette = " ".join(
+            palette[i:i+4].hex() for i in range(0, len(palette), 4)
+        )
+        yield f"img{fi}_pal"
+        yield f"\thex {palette}"
 
         # description
-        yield f"img{fi}_descr"
         descr = filename_to_descr(filename).lstrip(" ")
-        yield f'  db {len(descr)}, "{descr}"'
+        yield f"img{fi}_txt"
+        yield f'\tdb {len(descr)}, "{descr}"'
         yield ""
 
-    print("Total compressed NT/AT data size:", totalRleDataLen)
+    print("Total compressed NT/AT data size:", totalRleSize)
 
 # -----------------------------------------------------------------------------
 
@@ -610,35 +633,24 @@ def main():
         palette_test(filename)
     print()
 
-    print(f"Writing PT data to {PT0_FILE}...")
-    print("Number of unique/new unique/total unique tiles after each file.")
-    uniqueTiles0 = get_unique_tiles(
-        (f for f in filenames if f not in IMAGES_IN_PT1), PT0_MAX_TILES
-    )
-    with open(PT0_FILE, "wb") as handle:
-        handle.seek(0)
-        handle.write(encode_pt_data(uniqueTiles0))
-        size = handle.tell()
-    print(f"Wrote {size} bytes.")
-    print()
+    uniqueTilesByPt = []
+    for pt in range(2):
+        print(f"Writing PT{pt} data to {PT_FILES[pt]}...")
+        print("Unique/new unique/total unique tile count after each file.")
+        files = (f for f in filenames if int(f in PT1_IMAGES) == pt)
+        uniqueTilesByPt.append(get_unique_tiles(files, PT_MAX_TILES[pt]))
+        with open(PT_FILES[pt], "wb") as handle:
+            handle.seek(0)
+            handle.write(encode_pt_data(uniqueTilesByPt[pt]))
+            size = handle.tell()
+        print(f"Wrote {size} bytes.")
+        print()
 
-    print(f"Writing PT data to {PT1_FILE}...")
-    print("Number of unique/new unique/total unique tiles after each file.")
-    uniqueTiles1 = get_unique_tiles(
-        (f for f in filenames if f in IMAGES_IN_PT1), PT1_MAX_TILES
-    )
-    with open(PT1_FILE, "wb") as handle:
-        handle.seek(0)
-        handle.write(encode_pt_data(uniqueTiles1))
-        size = handle.tell()
-    print(f"Wrote {size} bytes.")
-    print()
-
-    print(f"Writing NT/AT/palette/description data to {ASM_FILE}...")
+    print(f"Writing NT/AT/PT number/palette/description data to {ASM_FILE}...")
     print("Compressed NT/AT data size after each file.")
     with open(ASM_FILE, "wt", encoding="ascii") as handle:
         handle.seek(0)
-        for line in generate_asm_file(filenames, uniqueTiles0, uniqueTiles1):
+        for line in generate_asm_file(filenames, uniqueTilesByPt):
             print(line, file=handle)
     print()
 
