@@ -520,18 +520,6 @@ def filename_to_descr(filename):
     lines = (3 - len(lines)) * [""] + lines
     return "".join(l.rjust(8) for l in lines)
 
-def format_rle_chunks(rleChunks):
-    # rleChunks: 1 or 2 bytes each
-    # generate formatted ASM6 lines
-
-    line = ""
-    for chunk in rleChunks:
-        if len(line) + 1 + len(chunk) * 2 > 79 - 8 - 3:
-            yield "\thex" + line
-            line = ""
-        line += " " + chunk.hex()
-    yield "\thex" + line
-
 def generate_asm_file(filenames, uniqueTilesByPt):
     # uniqueTilesByPt: unique tiles in PT0/PT1
 
@@ -564,7 +552,8 @@ def generate_asm_file(filenames, uniqueTilesByPt):
         for si in range(7):
             rleChunks = tuple(rle_slice_to_chunks(rleData[si]))
             yield f"img{fi}_nt{si}" if si < 6 else f"img{fi}_at"
-            yield from format_rle_chunks(rleChunks)
+            for i in range(0, len(rleChunks), 13):
+                yield "\thex " + " ".join(c.hex() for c in rleChunks[i:i+13])
         print(
             f"{'':4}{filename:26}:", format(sum(len(s) for s in rleData), "3")
         )
