@@ -44,7 +44,7 @@ Other (gzip compressed):
 
 ## Technical info of the NES program
 * mapper: NROM
-* PRG ROM: 16 KiB
+* PRG ROM: 8 KiB
 * CHR ROM: 8 KiB
 * name table mirroring: vertical
 * pattern table 0: background (most flag images)
