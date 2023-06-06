@@ -529,6 +529,18 @@ def generate_asm_file(filenames, uniqueTilesByPt):
     yield "image_count equ " + str(len(filenames))
     yield ""
 
+    # PT to use (least significant bit first)
+    ptBytes = bytes(
+        sum(
+            1 << i for (i, f) in enumerate(filenames[firstIndex:firstIndex+8])
+            if f in PT1_IMAGES
+        )
+        for firstIndex in range(0, len(filenames), 8)
+    )
+    yield "pts_to_use"
+    yield "\tdb " + ", ".join(f"%{b:08b}" for b in ptBytes)
+    yield ""
+
     yield "image_ptrs"
     ptrs = [f"img{i}_ptrs" for i in range(len(filenames))]
     for i in range(0, len(ptrs), 5):
@@ -538,7 +550,7 @@ def generate_asm_file(filenames, uniqueTilesByPt):
     for fi in range(len(filenames)):
         yield f"img{fi}_ptrs"
         ptrs = [f"img{fi}_nt{si}" for si in range(6)] \
-        + [f"img{fi}_at", f"img{fi}_pt", f"img{fi}_pal", f"img{fi}_txt"]
+        + [f"img{fi}_at", f"img{fi}_pal", f"img{fi}_txt"]
         yield "\tdw " + ", ".join(ptrs[:6])
         yield "\tdw " + ", ".join(ptrs[6:])
     yield ""
@@ -557,10 +569,6 @@ def generate_asm_file(filenames, uniqueTilesByPt):
         print(
             f"{'':4}{filename:26}:", format(sum(len(s) for s in rleData), "3")
         )
-
-        # PT to use
-        yield f"img{fi}_pt"
-        yield "\tdb " + str(int(filename in PT1_IMAGES))
 
         # palette
         palette = " ".join(

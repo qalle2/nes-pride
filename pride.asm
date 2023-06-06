@@ -61,7 +61,7 @@ joypad2         equ $4017
                 pad $e000, $ff          ; only use last 8 KiB
 
                 ; image data excluding pattern tables; automatically generated;
-                ; image_count and image_ptrs are defined there
+                ; constants defined there: image_count, pts_to_use, image_ptrs
                 include "imgdata.asm"
 
 reset           ; initialize the NES;
@@ -413,7 +413,7 @@ nt_high_invis   ; visible NT -> high byte of non-visible NT offset
 pal_to_buffer   ; copy background palettes (16 bytes) of current image from
                 ; NT/AT data backwards to ppu_buffer
 
-                ldy #8
+                ldy #7
                 jsr get_sect_addr       ; address -> grafix_ptr
 
                 ldy #0                  ; source index
@@ -436,11 +436,24 @@ pal_to_buffer   ; copy background palettes (16 bytes) of current image from
 
 set_bg_pt       ; set background PT
 
-                ; PT number -> X
-                ldy #7
-                jsr get_sect_addr       ; address -> grafix_ptr
-                ldy #0
-                lda (grafix_ptr),y
+                ; which PT to use (0/1) -> X
+                ;
+                lda which_image         ; byte index -> Y
+                lsr a
+                lsr a
+                lsr a
+                tay
+                ;
+                lda which_image         ; bit index -> X
+                and #%00000111
+                tax
+                ;
+                lda pts_to_use,y        ; read byte
+-               lsr a                   ; shift correct bit to LSB
+                dex
+                bpl -
+                rol a                   ; undo last LSR
+                and #%00000001          ; clear other bits
                 tax
 
                 ; set background PT bit
@@ -456,7 +469,7 @@ bg_pt_values    db %00000000, %00010000
 update_sprites  ; update tiles of description sprites
 
                 ; get description address
-                ldy #9
+                ldy #8
                 jsr get_sect_addr       ; address -> grafix_ptr
 
                 ; 1st byte = length
@@ -492,7 +505,7 @@ update_sprites  ; update tiles of description sprites
 
 get_sect_addr   ; Get address in graphics data.
                 ; in: which_image, Y = which section (0-6 = NT/AT slice,
-                ;     7 = PT to use, 8 = palette, 9 = description)
+                ;     7 = palette, 8 = description)
                 ; out: grafix_ptr
 
                 ; get image address
