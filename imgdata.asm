@@ -155,7 +155,8 @@ img0_at
 img0_pal
 	hex 0f213013 0f30150f 0f30270f 0f301912
 img0_txt
-	db 13, "title  screen"
+	db 13
+	hex ee e3 ee e6 df 00 00 ed dd ec df df e8
 
 img1_nt0
 	hex 00 df 2006 00
@@ -174,7 +175,8 @@ img1_at
 img1_pal
 	hex 0f002930 0f0f0f0f 0f0f0f0f 0f0f0f0f
 img1_txt
-	db 7, "agender"
+	db 7
+	hex db e1 df e8 de df ec
 
 img2_nt0
 	hex 02 89 0153 0a01 017c 0a03 89 0153 0a01 017c 0a03 89 0153
@@ -199,7 +201,8 @@ img2_at
 img2_pal
 	hex 0f13152c 0f0f0f0f 0f0f0f0f 0f0f0f0f
 img2_txt
-	db 14, "andro-    gyne"
+	db 14
+	hex db e8 de ec e9 d0 00 00 00 00 e1 f3 e8 df
 
 img3_nt0
 	hex 01 ff 00
@@ -218,7 +221,8 @@ img3_at
 img3_pal
 	hex 0f002930 0f1a290f 0f0f0f0f 0f0f0f0f
 img3_txt
-	db 10, "a-romantic"
+	db 10
+	hex db d0 ec e9 e7 db e8 ee e3 dd
 
 img4_nt0
 	hex 01 ff 00
@@ -237,7 +241,8 @@ img4_at
 img4_pal
 	hex 0f0c2130 0f172830 0f0f0f0f 0f0f0f0f
 img4_txt
-	db 18, "a-romantic asexual"
+	db 18
+	hex db d0 ec e9 e7 db e8 ee e3 dd 00 db ed df f2 ef db e6
 
 img5_nt0
 	hex 00 ff 00
@@ -256,7 +261,8 @@ img5_at
 img5_pal
 	hex 0f001430 0f0f0f0f 0f0f0f0f 0f0f0f0f
 img5_txt
-	db 7, "asexual"
+	db 7
+	hex db ed df f2 ef db e6
 
 img6_nt0
 	hex 01 ff 00
@@ -285,7 +291,8 @@ img6_at
 img6_pal
 	hex 0f371425 0f37212c 0f372729 0f21270f
 img6_txt
-	db 6, "autism"
+	db 6
+	hex db ef ee e3 ed e7
 
 img7_nt0
 	hex 01 c1 0117 0114 010e 0109 80 0113 0119 96 022e 01a6 0100
@@ -308,7 +315,8 @@ img7_at
 img7_pal
 	hex 0f172737 0f003037 0f07170f 0f0f0f0f
 img7_txt
-	db 4, "bear"
+	db 4
+	hex dc df db ec
 
 img8_nt0
 	hex 01 df 202e 00
@@ -327,7 +335,8 @@ img8_at
 img8_pal
 	hex 0f112133 0f142433 0f30330f 0f0f0f0f
 img8_txt
-	db 8, "bigender"
+	db 8
+	hex dc e3 e1 df e8 de df ec
 
 img9_nt0
 	hex 03 ff 00
@@ -346,7 +355,8 @@ img9_at
 img9_pal
 	hex 0f121315 0f0f0f0f 0f0f0f0f 0f0f0f0f
 img9_txt
-	db 8, "bisexual"
+	db 8
+	hex dc e3 ed df f2 ef db e6
 
 img10_nt0
 	hex 01 df 202e 00
@@ -365,7 +375,8 @@ img10_at
 img10_pal
 	hex 0f001031 0f103538 0f10303b 0f0f0f0f
 img10_txt
-	db 13, "demi-   fluid"
+	db 13
+	hex de df e7 e3 d0 00 00 00 e0 e6 ef e3 de
 
 img11_nt0
 	hex 01 df 202e 00
@@ -384,7 +395,8 @@ img11_at
 img11_pal
 	hex 0f001031 0f103638 0f31380f 0f0f0f0f
 img11_txt
-	db 13, "demi-    flux"
+	db 13
+	hex de df e7 e3 d0 00 00 00 00 e0 e6 ef f2
 
 img12_nt0
 	hex 01 df 202e 00
@@ -403,7 +415,8 @@ img12_at
 img12_pal
 	hex 0f001038 0f30380f 0f0f0f0f 0f0f0f0f
 img12_txt
-	db 13, "demi-  gender"
+	db 13
+	hex de df e7 e3 d0 00 00 e1 df e8 de df ec
 
 img13_nt0
 	hex 01 df 202e 00
@@ -422,7 +435,8 @@ img13_at
 img13_pal
 	hex 0f001035 0f30350f 0f0f0f0f 0f0f0f0f
 img13_txt
-	db 8, "demigirl"
+	db 8
+	hex de df e7 e3 e1 e3 ec e6
 
 img14_nt0
 	hex 01 df 202e 00
@@ -441,7 +455,8 @@ img14_at
 img14_pal
 	hex 0f001031 0f30310f 0f0f0f0f 0f0f0f0f
 img14_txt
-	db 7, "demiguy"
+	db 7
+	hex de df e7 e3 e1 ef f3
 
 img15_nt0
 	hex 27 80 1f03 0100 80 1e03 0200 80 1d03 0300 80 1c03 00
@@ -464,7 +479,8 @@ img15_at
 img15_pal
 	hex 0f041030 0f0f0f0f 0f0f0f0f 0f0f0f0f
 img15_txt
-	db 13, "demi-  sexual"
+	db 13
+	hex de df e7 e3 d0 00 00 ed df f2 ef db e6
 
 img16_nt0
 	hex 01 df 202e 00
@@ -483,7 +499,8 @@ img16_at
 img16_pal
 	hex 0f031222 0f0b1b2b 0f222b30 0f0f0f0f
 img16_txt
-	db 11, "gay     men"
+	db 11
+	hex e1 db f3 00 00 00 00 00 e7 df e8
 
 img17_nt0
 	hex 02 ff 00
@@ -502,7 +519,8 @@ img17_at
 img17_pal
 	hex 0f142530 0f020f0f 0f0f0f0f 0f0f0f0f
 img17_txt
-	db 15, "gender-   fluid"
+	db 15
+	hex e1 df e8 de df ec d0 00 00 00 e0 e6 ef e3 de
 
 img18_nt0
 	hex 01 ff 00
@@ -521,7 +539,8 @@ img18_at
 img18_pal
 	hex 0f131930 0f0f0f0f 0f0f0f0f 0f0f0f0f
 img18_txt
-	db 15, "gender-   queer"
+	db 15
+	hex e1 df e8 de df ec d0 00 00 00 eb ef df df ec
 
 img19_nt0
 	hex 01 ff 00
@@ -544,7 +563,8 @@ img19_at
 img19_pal
 	hex 0f28040f 0f0f0f0f 0f0f0f0f 0f0f0f0f
 img19_txt
-	db 14, "inter-     sex"
+	db 14
+	hex e3 e8 ee df ec d0 00 00 00 00 00 ed df f2
 
 img20_nt0
 	hex 02 2600 011d 81 011e 1600 0504 01a1 83 01a2 1504 0501 85
@@ -565,7 +585,8 @@ img20_at
 img20_pal
 	hex 0f011530 0f0f0f0f 0f0f0f0f 0f0f0f0f
 img20_txt
-	db 7, "leather"
+	db 7
+	hex e6 df db ee e2 df ec
 
 img21_nt0
 	hex 01 ff 00
@@ -584,7 +605,8 @@ img21_at
 img21_pal
 	hex 0f142430 0f172730 0f0f0f0f 0f0f0f0f
 img21_txt
-	db 15, "lesbian5stripes"
+	db 15
+	hex e6 df ed dc e3 db e8 d6 ed ee ec e3 ea df ed
 
 img22_nt0
 	hex 01 df 202e 00
@@ -603,7 +625,8 @@ img22_at
 img22_pal
 	hex 0f041424 0f071727 0f242730 0f0f0f0f
 img22_txt
-	db 15, "lesbian7stripes"
+	db 15
+	hex e6 df ed dc e3 db e8 d8 ed ee ec e3 ea df ed
 
 img23_nt0
 	hex 02 ff 00
@@ -622,7 +645,8 @@ img23_at
 img23_pal
 	hex 0f132830 0f0f0f0f 0f0f0f0f 0f0f0f0f
 img23_txt
-	db 12, "non-  binary"
+	db 12
+	hex e8 e9 e8 d0 00 00 dc e3 e8 db ec f3
 
 img24_nt0
 	hex 02 ff 00
@@ -641,7 +665,8 @@ img24_at
 img24_pal
 	hex 0f22320f 0f25350f 0f0f0f0f 0f0f0f0f
 img24_txt
-	db 13, "omni-  sexual"
+	db 13
+	hex e9 e7 e8 e3 d0 00 00 ed df f2 ef db e6
 
 img25_nt0
 	hex 01 ff 00
@@ -660,7 +685,8 @@ img25_at
 img25_pal
 	hex 0f152128 0f0f0f0f 0f0f0f0f 0f0f0f0f
 img25_txt
-	db 12, "pan-  sexual"
+	db 12
+	hex ea db e8 d0 00 00 ed df f2 ef db e6
 
 img26_nt0
 	hex 01 ff 00
@@ -680,7 +706,8 @@ img26_at
 img26_pal
 	hex 0f021528 0f0f0f0f 0f0f0f0f 0f0f0f0f
 img26_txt
-	db 13, "poly-   amory"
+	db 13
+	hex ea e9 e6 f3 d0 00 00 00 db e7 e9 ec f3
 
 img27_nt0
 	hex 01 ff 00
@@ -699,7 +726,8 @@ img27_at
 img27_pal
 	hex 0f14212b 0f0f0f0f 0f0f0f0f 0f0f0f0f
 img27_txt
-	db 13, "poly-  sexual"
+	db 13
+	hex ea e9 e6 f3 d0 00 00 ed df f2 ef db e6
 
 img28_nt0
 	hex 00 bf 201a 2002 00
@@ -718,7 +746,8 @@ img28_at
 img28_pal
 	hex 0f21310f 0f26350f 0f282930 0f0f0f0f
 img28_txt
-	db 5, "queer"
+	db 5
+	hex eb ef df df ec
 
 img29_nt0
 	hex 03 ff 00
@@ -737,7 +766,8 @@ img29_at
 img29_pal
 	hex 0f041216 0f192728 0f0f0f0f 0f0f0f0f
 img29_txt
-	db 15, "rainbow6stripes"
+	db 15
+	hex ec db e3 e8 dc e9 f1 d7 ed ee ec e3 ea df ed
 
 img30_nt0
 	hex 01 df 202e 00
@@ -756,7 +786,8 @@ img30_at
 img30_pal
 	hex 0f03042c 0f162728 0f19282c 0f0f0f0f
 img30_txt
-	db 15, "rainbow7stripes"
+	db 15
+	hex ec db e3 e8 dc e9 f1 d8 ed ee ec e3 ea df ed
 
 img31_nt0
 	hex 02 df 2001 00
@@ -775,7 +806,8 @@ img31_at
 img31_pal
 	hex 0f03040f 0f16250f 0f192c0f 0f27280f
 img31_txt
-	db 15, "rainbow8stripes"
+	db 15
+	hex ec db e3 e8 dc e9 f1 d9 ed ee ec e3 ea df ed
 
 img32_nt0
 	hex 02 014a 0101 010d 0100 0121 9b 014a 0101 010d 0100 0121 99
@@ -811,7 +843,8 @@ img32_at
 img32_pal
 	hex 0f082125 0f042530 0f121619 0f27280f
 img32_txt
-	db 15, "rainbowprogress"
+	db 15
+	hex ec db e3 e8 dc e9 f1 ea ec e9 e1 ec df ed ed
 
 img33_nt0
 	hex 95 80 0102 80 0102 014a 0101 010d 0100 010c 1701 0103 80
@@ -856,7 +889,9 @@ img33_at
 img33_pal
 	hex 0f042830 0f082125 0f122530 0f161927
 img33_txt
-	db 23, "rainbowprogressintersex"
+	db 23
+	hex ec db e3 e8 dc e9 f1 ea ec e9 e1 ec df ed ed e3 e8 ee df ec ed df
+	hex f2
 
 img34_nt0
 	hex 01 ff 00
@@ -877,7 +912,8 @@ img34_at
 img34_pal
 	hex 0f250f0f 0f301327 0f0f0f0f 0f0f0f0f
 img34_txt
-	db 7, "sapphic"
+	db 7
+	hex ed db ea ea e2 e3 dd
 
 img35_nt0
 	hex 01 ff 00
@@ -896,5 +932,6 @@ img35_at
 img35_pal
 	hex 0f212530 0f0f0f0f 0f0f0f0f 0f0f0f0f
 img35_txt
-	db 14, "trans-  gender"
+	db 14
+	hex ee ec db e8 ed d0 00 00 e1 df e8 de df ec
 

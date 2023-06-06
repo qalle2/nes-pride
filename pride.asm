@@ -477,10 +477,9 @@ update_sprites  ; update tiles of description sprites
                 lda (grafix_ptr),y
                 tay                     ; source index
 
-                ; other bytes are ASCII 0x20-0x7f, which are at $a0-$ff in PT1
+                ; other bytes are tile numbers
                 ldx #(23*4)             ; destination index
 -               lda (grafix_ptr),y
-                ora #$80                ; see above
                 sta sprite_data+1,x
                 dex
                 dex
@@ -493,7 +492,7 @@ update_sprites  ; update tiles of description sprites
                 txa
                 beq +
                 ;
-                lda #$a0                ; space
+                lda #$00                ; space
 -               sta sprite_data+1,x
                 dex
                 dex
@@ -620,7 +619,7 @@ set_ppu_regs    lda #0                  ; horizontal scroll
                 incbin "chr-bg0.bin"    ; PT0 - background (256 tiles)
                 pad $1000, $ff
 
-                incbin "chr-bg1.bin"    ; PT1 - background (160 tiles)
-                pad $1a00, $ff
-                incbin "chr-spr.bin"    ; PT1 - sprites (96 tiles)
+                incbin "chr-bg1.bin"    ; PT1 - background (208 tiles)
+                pad $1d00, $ff
+                incbin "chr-spr.bin"    ; PT1 - sprites (48 tiles)
                 pad $2000, $ff

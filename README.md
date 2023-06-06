@@ -48,8 +48,8 @@ Other (gzip compressed):
 * CHR ROM: 8 KiB
 * name table mirroring: vertical
 * pattern table 0: background (most flag images)
-* pattern table 1 &ndash; first 160 tiles: background (some flag images)
-* pattern table 1 &ndash; last 96 tiles: sprites (flag descriptions), like ASCII 0x20-0x7f
+* pattern table 1 &ndash; first 208 tiles: background (some flag images)
+* pattern table 1 &ndash; last 48 tiles: sprites (flag descriptions)
 * each image has its own background palettes (black and 4&times;3 other colors)
 * flag images are 256&times;192 pixels (32&times;24 tiles or 16&times;12 attribute blocks)
 * flag images are shown at the bottom of a name/attribute table

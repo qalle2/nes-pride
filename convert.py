@@ -21,7 +21,7 @@ ASM_FILE   = "imgdata.asm"   # write all data except PTs in ASM6 format here
 # write PT0/PT1 data here
 PT_FILES = ("chr-bg0.bin", "chr-bg1.bin")
 # maximum number of tiles in PT0/PT1
-PT_MAX_TILES = (256, 160)
+PT_MAX_TILES = (256, 208)
 # images that use PT1 instead of PT0
 PT1_IMAGES = frozenset(("title_screen",))
 
@@ -520,6 +520,19 @@ def filename_to_descr(filename):
     lines = (3 - len(lines)) * [""] + lines
     return "".join(l.rjust(8) for l in lines)
 
+def char_to_tile_number(char):
+    # convert character into NES tile number
+    cp = ord(char)
+    if cp == ord(" "):
+        return 0x00
+    if cp == ord("-"):
+        return 0xd0
+    if ord("0") <= cp <= ord("9"):
+        return 0xd1 + cp - ord("0")
+    if ord("a") <= cp <= ord("z"):
+        return 0xdb + cp - ord("a")
+    sys.exit("Unknown character.")
+
 def generate_asm_file(filenames, uniqueTilesByPt):
     # uniqueTilesByPt: unique tiles in PT0/PT1
 
@@ -579,8 +592,11 @@ def generate_asm_file(filenames, uniqueTilesByPt):
 
         # description
         descr = filename_to_descr(filename).lstrip(" ")
+        descr = bytes(char_to_tile_number(c) for c in descr)
         yield f"img{fi}_txt"
-        yield f'\tdb {len(descr)}, "{descr}"'
+        yield f"\tdb {len(descr)}"
+        for i in range(0, len(descr), 22):
+            yield f"\thex " + " ".join(f"{b:02x}" for b in descr[i:i+22])
         yield ""
 
     print("Total compressed NT/AT data size:", totalRleSize)
@@ -642,6 +658,12 @@ def main():
             size = handle.tell()
         print(f"Wrote {size} bytes.")
         print()
+
+    print(
+        "Identical background tiles in PT0 and PT1:",
+        len(set(uniqueTilesByPt[0]) & set(uniqueTilesByPt[1]))
+    )
+    print()
 
     print(f"Writing NT/AT/PT number/palette/description data to {ASM_FILE}...")
     print("Compressed NT/AT data size after each file.")
