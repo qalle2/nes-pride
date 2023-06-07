@@ -9,6 +9,7 @@ Table of contents:
 * [List of files](#list-of-files)
 * [How to assemble](#how-to-assemble)
 * [How to use the NES program](#how-to-use-the-nes-program)
+* [How to add new flags](#how-to-add-new-flags)
 * [Technical info of the NES program](#technical-info-of-the-nes-program)
 * [Sources of flags](#sources-of-flags)
 
@@ -41,6 +42,31 @@ Other (gzip compressed):
 * right arrow: next flag
 * A button: random flag
 * start button: toggle flag descriptions on or off
+
+## How to add new flags
+You can add flags of your own to the NES program without programming skills.
+However, you need to have Python and ASM6 installed.
+1. Open your flag image in an image editor (e.g. GIMP).
+2. Resize the image to 256&times;192 pixels.
+3. Convert the image into indexed color (so it has a palette).
+4. Because of NES hardware limitations, the colors need to be optimized manually and the pixels may need to be edited as well. This is tricky, but follow these rules:
+** No more than 12 unique colors in addition to black.
+** All unique colors should be clearly distinct from each other. (Try copying colors from existing flags.)
+** Put a 16&times;16-pixel grid on the image (in GIMP, Image &rarr; Configure Grid&hellip; and View &rarr; Show Grid).
+** No grid square can have more than three distinct colors in addition to black.
+** In all grid squares combined, you can't use more than four unique sets of three distinct colors in addition to black.
+5. Save the image in PNG format under the `img` directory. The filename before the extension (`.png`) is important:
+** It will be the flag description text (up to 8&times;3 characters) inside the NES program.
+** 24 characters or less.
+** Only `a`&ndash;`z`, `0`&ndash;`9`, hyphen (`-`) and underscore (`_`) are allowed.
+** Underscores will be converted into newlines.
+** No more than two underscores.
+** No more than eight consecutive non-underscore characters.
+** See the existing filenames for examples.
+6. Run `python3 convert.py`. It should not print any errors. However, the palette creation algorithm isn't very smart, so if you're sure you followed step 4 correctly and the program still complains, you can define the palette manually: edit `MANUAL_SUBPALS` in `convert.py`. (You need to know the NES master palette to do this.)
+7. Extract `chr-spr.bin` from the `.gz` file. (Use e.g. `gunzip` on Linux or 7-Zip on Windows.)
+8. Assemble: `asm6 pride.asm pride.nes` &ndash; again, it should not print any errors.
+9. Run `pride.nes` in an NES emulator (e.g. FCEUX, Nestopia, Mednafen).
 
 ## Technical info of the NES program
 * mapper: NROM
