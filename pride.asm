@@ -8,11 +8,11 @@
 ; - ppu_buffer: what to copy to PPU memory on next VBlank; read using PLA;
 ;     only the first ppu_buf_length bytes are used
 ; - ppu_upd_phase: how to update PPU memory:
-;     0-6: update NT/AT data (up $80 bytes/phase) to non-visible NT via PPU
+;     0-5: update NT/AT data (up 140 bytes/phase) to non-visible NT via PPU
 ;          buffer
-;     7:   update other PPU memory/registers via various buffers in main RAM;
+;     6:   update other PPU memory/registers via various buffers in main RAM;
 ;          do OAM DMA
-;     8:   do OAM DMA (in case user toggles descriptions on/off)
+;     7:   do OAM DMA (in case user toggles descriptions on/off)
 
 ; RAM
 grafix_ptr      equ $00    ; pointer to imgdata.asm (2 bytes)
@@ -29,7 +29,7 @@ stack_ptr       equ $0c    ; copy of stack pointer
 rle_src_ind     equ $0d    ; RLE decoder - source index
 rle_dst_ind     equ $0e    ; RLE decoder - destination index
 rle_direct      equ $0f    ; RLE decoder - direct (implied) byte
-ppu_buffer      equ $0100  ; see above ($80 bytes)
+ppu_buffer      equ $0100  ; see above (140 bytes)
 sprite_data     equ $0200  ; OAM page ($100 bytes)
 
 ; memory-mapped registers
@@ -299,21 +299,21 @@ prep_ppu_upd    ; update PPU buffer, ppu_ctrl_copy or sprite_data according to
                 ; ppu_upd_phase
 
                 lda ppu_upd_phase
-                cmp #7
+                cmp #6
                 beq +
                 bpl ++
                 ;
-                jsr nt_at_to_buffer     ; phases 0-6
+                jsr nt_at_to_buffer     ; phases 0-5
                 rts
                 ;
-+               jsr pal_to_buffer       ; phase 7
++               jsr pal_to_buffer       ; phase 6
                 jsr set_ppu_ctrl
                 jsr update_sprites
                 ;
-++              rts                     ; phase 8
+++              rts                     ; phase 7
 
-nt_at_to_buffer ; copy one seventh of NT/AT data of current image (up to $80
-                ; bytes) to ppu_buffer according to ppu_upd_phase (must be 0-6)
+nt_at_to_buffer ; copy one sixth of NT/AT data of current image (up to 140
+                ; bytes) to ppu_buffer according to ppu_upd_phase (must be 0-5)
 
                 ; get RLE data address
                 ldy ppu_upd_phase
@@ -385,12 +385,12 @@ rle_end         ; PPU destination address; use non-visible NT
                 rts
 
 decoded_lengths ; lengths of decoded NT/AT slices; must be a multiple of 4
-                hex 80 80 80 80 80 80 40
+                hex 8c 8c 8c 8c 8c 84
 
                 ; PPU destination address within NT/AT for each slice
                 ; (we use bottom of NT and entire AT)
-ppu_dst_highs   hex 20 21 21 22 22 23 23  ; high bytes of addresses
-ppu_dst_lows    hex c0 40 c0 40 c0 40 c0  ; low bytes of addresses
+ppu_dst_highs   hex 20 21 21 22 22 23   ; high bytes of addresses
+ppu_dst_lows    hex c0 4c d8 64 f0 7c   ; low bytes of addresses
 
 nt_high_invis   ; visible NT -> high byte of non-visible NT offset
                 hex 04 00
@@ -398,7 +398,7 @@ nt_high_invis   ; visible NT -> high byte of non-visible NT offset
 pal_to_buffer   ; copy background palettes (16 bytes) of current image from
                 ; NT/AT data to ppu_buffer
 
-                ldy #7
+                ldy #6
                 jsr get_sect_addr       ; address -> grafix_ptr
 
                 ldy #0                  ; source/destination index
@@ -450,7 +450,7 @@ bg_pt_values    db %00000000, %00010000
 update_sprites  ; update tiles of description sprites
 
                 ; get description address
-                ldy #8
+                ldy #7
                 jsr get_sect_addr       ; address -> grafix_ptr
 
                 ; 1st byte = length
@@ -484,8 +484,8 @@ update_sprites  ; update tiles of description sprites
 +               rts
 
 get_sect_addr   ; Get address in graphics data.
-                ; in: which_image, Y = which section (0-6 = NT/AT slice,
-                ;     7 = palette, 8 = description)
+                ; in: which_image, Y = which section (0-5 = NT/AT slice,
+                ;     6 = palette, 7 = description)
                 ; out: grafix_ptr
 
                 ; get image address
@@ -523,13 +523,13 @@ nmi             pha                     ; push A, X, Y
 
                 bit ppu_status          ; reset ppu_scroll/ppu_addr latch
 
-                lda ppu_upd_phase       ; do OAM DMA on phases 7-8
-                cmp #7
+                lda ppu_upd_phase       ; do OAM DMA on phases 6-7
+                cmp #6
                 bmi +
                 jsr do_oam_dma
 
-+               lda ppu_upd_phase       ; increment phase on phases 0-7
-                cmp #8
++               lda ppu_upd_phase       ; increment phase on phases 0-6
+                cmp #7
                 beq +
                 inc ppu_upd_phase
 

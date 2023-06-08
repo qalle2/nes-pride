@@ -80,12 +80,12 @@ However, you need to have Python and ASM6 installed and may need to know some Py
 * flag images are 256&times;192 pixels (32&times;24 tiles or 16&times;12 attribute blocks)
 * flag images are shown at the bottom of a name/attribute table
 * name/attribute table data of each flag image:
-  * uncompressed size: 6&times;128 + 64 = 832 bytes
-  * saved as seven run-length encoded slices; the first six decompress into 128 bytes, the last into 64 bytes
-* an image is updated during eight frames:
-  * first seven frames: extract one slice of name/attribute table data to an invisible name/attribute table
-  * eighth frame: copy background palettes, do OAM DMA, flip visible name/attribute table, switch to correct background pattern table
-  * for speed, all PPU memory updates (VRAM/palette) go through a buffer on the zero page
+  * uncompressed size: 24&times;32 + 8&times;8 = 832 bytes
+  * stored as 6 run-length encoded slices; the first 5 decompress into 140 bytes each, the last into 132 bytes
+* an image is updated during 7 frames:
+  * first 6 frames: extract one slice of name/attribute table data to an invisible name/attribute table
+  * 7th frame: copy background palettes, do OAM DMA, flip visible name/attribute table, switch to correct background pattern table
+  * for speed, all PPU memory updates (VRAM/palette) go through a buffer on the stack page (can be read quickly with PLA)
 
 ## Sources of flags
 * [Androgyne - LGBTQIA+ Wiki](https://lgbtqia.fandom.com/wiki/Androgyne)

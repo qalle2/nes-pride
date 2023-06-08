@@ -443,9 +443,6 @@ def rle_encode(data):
     # note: the ability to output 128-byte runs is important because there
     # are lots of exactly 128-byte runs
 
-    # maximum length of direct/non-direct byte runs: 128/127
-    assert len(data) <= 128
-
     # the direct byte (the most common byte that begins a run)
     directByte = collections.Counter(
         r[1] for r in rle_encode_raw(data)
@@ -454,10 +451,20 @@ def rle_encode(data):
     # RLE data itself
     for (length, byte) in rle_encode_raw(data):
         if byte == directByte:
-            yield 0x80 | (length - 1)
+            if length > 128:
+                yield 0x80 | (128 - 1)
+                yield 0x80 | (length - 128 - 1)
+            else:
+                yield 0x80 | (length - 1)
         else:
-            yield length
-            yield byte
+            if length > 127:
+                yield 127
+                yield byte
+                yield length - 127
+                yield byte
+            else:
+                yield length
+                yield byte
     # terminator
     yield 0x00
 
@@ -470,12 +477,12 @@ def get_rle_and_pal_data(filename, uniqueTilesByPt):
     with open(path, "rb") as handle:
         handle.seek(0)
         image = Image.open(handle)
-        # RLE-compressed NT/AT data in 7 slices
+        # RLE-compressed NT/AT data in 6 slices
         ntAtData = process_image(
             image, filename, 2, uniqueTilesByPt[filename in PT1_IMAGES]
         )
         rleData = tuple(
-            bytes(rle_encode(ntAtData[i*0x80:(i+1)*0x80])) for i in range(7)
+            bytes(rle_encode(ntAtData[i*140:(i+1)*140])) for i in range(6)
         )
         # palette
         palette = bytes(itertools.chain.from_iterable(
@@ -562,10 +569,10 @@ def generate_asm_file(filenames, uniqueTilesByPt):
 
     for fi in range(len(filenames)):
         yield f"img{fi}_ptrs"
-        ptrs = [f"img{fi}_nt{si}" for si in range(6)] \
-        + [f"img{fi}_at", f"img{fi}_pal", f"img{fi}_txt"]
-        yield "\tdw " + ", ".join(ptrs[:6])
-        yield "\tdw " + ", ".join(ptrs[6:])
+        ptrs = [f"img{fi}_nt_at{si}" for si in range(6)] \
+        + [f"img{fi}_pal", f"img{fi}_txt"]
+        yield "\tdw " + ", ".join(ptrs[:4])
+        yield "\tdw " + ", ".join(ptrs[4:])
     yield ""
 
     totalRleSize = 0
@@ -573,10 +580,10 @@ def generate_asm_file(filenames, uniqueTilesByPt):
         (rleData, palette) = get_rle_and_pal_data(filename, uniqueTilesByPt)
         totalRleSize += sum(len(s) for s in rleData)
 
-        # RLE-compressed NT/AT data in 7 slices
-        for si in range(7):
+        # RLE-compressed NT/AT data in 6 slices
+        for si in range(6):
             rleChunks = tuple(rle_slice_to_chunks(rleData[si]))
-            yield f"img{fi}_nt{si}" if si < 6 else f"img{fi}_at"
+            yield f"img{fi}_nt_at{si}"
             for i in range(0, len(rleChunks), 13):
                 yield "\thex " + " ".join(c.hex() for c in rleChunks[i:i+13])
         print(
