@@ -5,8 +5,8 @@
 ; Notes:
 ; - addresses are little-endian (low byte first)
 ; - boolean variables: $00-$7f = false, $80-$ff = true
-; - ppu_buffer: what to copy *backwards* to PPU memory on next VBlank;
-;     only the first ppu_buf_length indexes are used
+; - ppu_buffer: what to copy to PPU memory on next VBlank; read using PLA;
+;     only the first ppu_buf_length bytes are used
 ; - ppu_upd_phase: how to update PPU memory:
 ;     0-6: update NT/AT data (up $80 bytes/phase) to non-visible NT via PPU
 ;          buffer
@@ -15,20 +15,21 @@
 ;     8:   do OAM DMA (in case user toggles descriptions on/off)
 
 ; RAM
-ppu_buffer      equ $00    ; see above ($80 bytes)
-grafix_ptr      equ $80    ; pointer to imgdata.asm (2 bytes)
-ppu_dst_addr    equ $82    ; destination address in PPU memory (2 bytes)
-run_main_loop   equ $84    ; main loop allowed to run? (boolean)
-prng            equ $85    ; pseudorandom number generator for random flag
-pad_status      equ $86    ; joypad status
-prev_pad_status equ $87    ; previous joypad status
-which_image     equ $88    ; which image is being shown
-ppu_ctrl_copy   equ $89    ; copy of ppu_ctrl
-ppu_upd_phase   equ $8a    ; PPU update phase; see above
-ppu_buf_length  equ $8b    ; length of PPU buffer
-rle_src_ind     equ $8c    ; RLE decoder - source index
-rle_dst_ind     equ $8d    ; RLE decoder - destination index
-rle_direct      equ $8e    ; RLE decoder - direct (implied) byte
+grafix_ptr      equ $00    ; pointer to imgdata.asm (2 bytes)
+ppu_dst_addr    equ $02    ; destination address in PPU memory (2 bytes)
+run_main_loop   equ $04    ; main loop allowed to run? (boolean)
+prng            equ $05    ; pseudorandom number generator for random flag
+pad_status      equ $06    ; joypad status
+prev_pad_status equ $07    ; previous joypad status
+which_image     equ $08    ; which image is being shown
+ppu_ctrl_copy   equ $09    ; copy of ppu_ctrl
+ppu_upd_phase   equ $0a    ; PPU update phase; see above
+ppu_buf_length  equ $0b    ; length of PPU buffer
+stack_ptr       equ $0c    ; copy of stack pointer
+rle_src_ind     equ $0d    ; RLE decoder - source index
+rle_dst_ind     equ $0e    ; RLE decoder - destination index
+rle_direct      equ $0f    ; RLE decoder - direct (implied) byte
+ppu_buffer      equ $0100  ; see above ($80 bytes)
 sprite_data     equ $0200  ; OAM page ($100 bytes)
 
 ; memory-mapped registers
@@ -201,15 +202,7 @@ main_loop       ; wait until NMI routine sets flag, then clear it
                 ; ppu_upd_phase
                 jsr prep_ppu_upd
 
-                ; on phase 7, flip visible name table
-                lda ppu_upd_phase
-                cmp #7
-                bne +
-                lda ppu_ctrl_copy
-                eor #%00000001
-                sta ppu_ctrl_copy
-
-+               jmp main_loop
+                jmp main_loop
 
 ; -----------------------------------------------------------------------------
 
@@ -314,40 +307,31 @@ prep_ppu_upd    ; update PPU buffer, ppu_ctrl_copy or sprite_data according to
                 rts
                 ;
 +               jsr pal_to_buffer       ; phase 7
-                jsr set_bg_pt
+                jsr set_ppu_ctrl
                 jsr update_sprites
                 ;
 ++              rts                     ; phase 8
 
-nt_at_to_buffer ; copy one seventh of NT/AT data of current image
-                ; (up to $80 bytes) backwards to ppu_buffer according to
-                ; ppu_upd_phase (must be 0-6)
+nt_at_to_buffer ; copy one seventh of NT/AT data of current image (up to $80
+                ; bytes) to ppu_buffer according to ppu_upd_phase (must be 0-6)
 
                 ; get RLE data address
                 ldy ppu_upd_phase
                 jsr get_sect_addr       ; address -> grafix_ptr
 
-                ; decode RLE data from grafix_ptr and write it backwards to the
-                ; start of PPU buffer;
+                ; decode RLE data from grafix_ptr and write it to PPU buffer;
                 ; first byte in data: the direct (implied) byte;
                 ; other bytes:
                 ;     $80-$ff: output direct_byte    1-128 times
                 ;     $01-$7f: output following byte 1-127 times
                 ;     $00:     end of data
 
-                ; destination index
-                ldx ppu_upd_phase
-                lda decoded_lengths,x
-                tax
-                dex
-                stx rle_dst_ind
-
-                ; direct byte, source index
                 ldy #0
+                sty rle_dst_ind         ; destination index
                 lda (grafix_ptr),y
-                sta rle_direct
+                sta rle_direct          ; direct byte
                 iny
-                sty rle_src_ind
+                sty rle_src_ind         ; source index
 
 rle_loop        ldy rle_src_ind
                 lda (grafix_ptr),y
@@ -372,7 +356,7 @@ rle_loop        ldy rle_src_ind
                 sty rle_src_ind
                 ldy rle_dst_ind
 -               sta ppu_buffer,y
-                dey
+                iny
                 dex
                 bne -
                 sty rle_dst_ind
@@ -400,7 +384,8 @@ rle_end         ; PPU destination address; use non-visible NT
 
                 rts
 
-decoded_lengths hex 80 80 80 80 80 80 40  ; lengths of decoded NT/AT slices
+decoded_lengths ; lengths of decoded NT/AT slices; must be a multiple of 4
+                hex 80 80 80 80 80 80 40
 
                 ; PPU destination address within NT/AT for each slice
                 ; (we use bottom of NT and entire AT)
@@ -411,30 +396,28 @@ nt_high_invis   ; visible NT -> high byte of non-visible NT offset
                 hex 04 00
 
 pal_to_buffer   ; copy background palettes (16 bytes) of current image from
-                ; NT/AT data backwards to ppu_buffer
+                ; NT/AT data to ppu_buffer
 
                 ldy #7
                 jsr get_sect_addr       ; address -> grafix_ptr
 
-                ldy #0                  ; source index
-                ldx #(16-1)             ; destination index
+                ldy #0                  ; source/destination index
 -               lda (grafix_ptr),y
-                sta ppu_buffer,x
+                sta ppu_buffer,y
                 iny
-                dex
-                bpl -
+                cpy #16
+                bne -
 
-                ; PPU destination address and data length
-                lda #$3f
+                sty ppu_buf_length      ; data length
+
+                lda #$3f                ; PPU address
                 sta ppu_dst_addr+1
                 lda #$00
                 sta ppu_dst_addr+0
-                lda #16
-                sta ppu_buf_length
 
                 rts
 
-set_bg_pt       ; set background PT
+set_ppu_ctrl    ; set background PT and NT in ppu_ctrl_copy
 
                 ; which PT to use (0/1) -> X
                 ;
@@ -443,25 +426,23 @@ set_bg_pt       ; set background PT
                 lsr a
                 lsr a
                 tay
-                ;
                 lda which_image         ; bit index -> X
                 and #%00000111
                 tax
                 ;
                 lda pts_to_use,y        ; read byte
--               lsr a                   ; shift correct bit to LSB
+-               lsr a                   ; shift correct bit to carry
                 dex
                 bpl -
-                rol a                   ; undo last LSR
-                and #%00000001          ; clear other bits
+                lda #0                  ; carry -> X
+                rol a
                 tax
 
-                ; set background PT bit
                 lda ppu_ctrl_copy
-                and #%11101111
+                eor #%00000001          ; flip visible NT
+                and #%11101111          ; set new background PT bit
                 ora bg_pt_values,x
                 sta ppu_ctrl_copy
-
                 rts
 
 bg_pt_values    db %00000000, %00010000
@@ -547,15 +528,15 @@ nmi             pha                     ; push A, X, Y
                 bmi +
                 jsr do_oam_dma
 
-+               jsr flush_ppu_buf       ; always flush PPU buffer
-                jsr set_ppu_regs        ; always set PPU registers
-
-                lda ppu_upd_phase       ; increment phase up to 8
++               lda ppu_upd_phase       ; increment phase on phases 0-7
                 cmp #8
                 beq +
                 inc ppu_upd_phase
 
-+               sec                     ; set flag to let main loop run once
++               jsr flush_ppu_buf       ; always flush PPU buffer
+                jsr set_ppu_regs        ; always set PPU registers
+
+                sec                     ; set flag to let main loop run once
                 ror run_main_loop
 
                 pla                     ; pull Y, X, A
@@ -573,27 +554,43 @@ do_oam_dma      ; copy sprite data from main RAM to OAM
                 sta oam_dma
                 rts
 
-flush_ppu_buf   ; copy PPU buffer backwards to PPU memory and empty it;
-                ; buffer length must be $00-$80 and even
+flush_ppu_buf   ; copy PPU buffer to PPU memory and empty it;
+                ; buffer length must be a multiple of 4
 
-                ldx ppu_buf_length
+                lda ppu_buf_length
                 beq +
+
+                lsr a                   ; ppu_buf_length / 4 -> Y
+                lsr a
+                tay
 
                 lda ppu_dst_addr+1
                 sta ppu_addr
                 lda ppu_dst_addr+0
                 sta ppu_addr
 
-                dex
--               lda ppu_buffer,x        ; partially unrolled loop for speed
-                sta ppu_data
-                dex
-                lda ppu_buffer,x
-                sta ppu_data
-                dex
-                bpl -
+                tsx                     ; store actual stack pointer
+                stx stack_ptr
 
-                lda #0
+                ldx #$ff                ; set SP for reading ppu_buffer
+                txs
+
+                ; copy ppu_buffer from stack to PPU
+-               pla
+                sta ppu_data
+                pla
+                sta ppu_data
+                pla
+                sta ppu_data
+                pla
+                sta ppu_data
+                dey
+                bne -
+
+                ldx stack_ptr           ; restore actual stack pointer
+                txs
+
+                lda #0                  ; empty buffer
                 sta ppu_buf_length
 
 +               rts
