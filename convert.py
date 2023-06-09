@@ -6,9 +6,10 @@
 # - (sub)palette = 4 colors
 # - palette(s) = 8 subpalettes (4 for background, 4 for sprites)
 # - PT = pattern table (16 bytes/tile; what the tiles look like)
-# - NT = name table (1 byte/tile; which tile at each screen position)
-# - AT = attribute table (2 bits / attribute block; which subpalette for each
-#   attribute block)
+# - NT = name table (1 byte/tile; 32*30 tiles; which tile at each screen
+#        position)
+# - AT = attribute table (2 bits per attribute block; 16*16 attribute blocks
+#        but bottom row unused; which subpalette for each attribute block)
 
 import collections, itertools, os, re, sys
 from PIL import Image  # Pillow, https://python-pillow.org
@@ -17,21 +18,12 @@ IMAGE_DIR  = "img"           # read images from this path
 IMAGE_EXT  = ".png"          # read images with this extension
 TITLE_FILE = "title_screen"  # sort this image first (no extension)
 ASM_FILE   = "imgdata.asm"   # write all data except PTs in ASM6 format here
+PT_FILE    = "chr-bg.bin"    # write PT data here
 
-# write PT0/PT1 data here
-PT_FILES = ("chr-bg0.bin", "chr-bg1.bin")
 # maximum number of tiles in PT0/PT1
 PT_MAX_TILES = (256, 208)
 # images that use PT1 instead of PT0
 PT1_IMAGES = frozenset(("title_screen",))
-
-# image height in AT blocks
-# (changing this would require changing the NES program as well)
-VERT_AT_BLKS = 12
-
-# NES color number for background and unused colors; on NTSC, this is also
-# the border color; see https://www.nesdev.org/wiki/PAL_video
-NES_BG_COLOR = 0x0f  # black
 
 # optional manually-defined palettes by filename;
 # up to 4 tuples with up to 3 NES colors each (order matters);
@@ -65,6 +57,16 @@ MANUAL_SUBPALS = {
 }
 assert all(len(p) <= 4 for p in MANUAL_SUBPALS.values())
 assert all(all(len(v) <= 3 for v in p) for p in MANUAL_SUBPALS.values())
+
+# Note: changing these requires changing the NES program as well.
+# NES color for background and unused colors; also border color on NTSC
+NES_BG_COLOR = 0x0f  # black
+# image height in AT blocks
+VERT_AT_BLKS = 12
+# number of RLE-compressed NT/AT RLE data slices
+RLE_SLICE_COUNT = 6
+# uncompressed size of each NT/AT RLE data slice; last one may be smaller
+RLE_SLICE_SIZE = 140
 
 # NES master palette
 # key=index, value=(red, green, blue); source: FCEUX (fceux.pal)
@@ -242,8 +244,8 @@ def get_at_data(nesPixels, subpals):
 def get_tiles(nesPixels):
     # generate tiles as tuples of NES color indexes (64 ints)
     pixels = []
-    for ay in range(0, 24 * 8, 8):
-        for ax in range(0, 32 * 8, 8):
+    for ay in range(0, VERT_AT_BLKS * 16, 8):
+        for ax in range(0, 16 * 16, 8):
             pixels.clear()
             for py in range(8):
                 srcInd = (ay + py) * 256 + ax
@@ -261,18 +263,18 @@ def convert_tiles(nesPixels, atData, orderedSubpals):
 def encode_at_data(atData):
     # encode AT data (VERT_AT_BLKS*16 2-bit ints) into 64 bytes
 
-    # pad to 16 rows
-    atData = (16 - VERT_AT_BLKS - 1) * 16 * [0] + atData + 16 * [0]
+    # pad to 16 rows (last one unused by the NES)
+    atData = (15 - VERT_AT_BLKS) * 16 * [0] + atData + 16 * [0]
 
     atBytes = bytearray()
     for y in range(8):
         for x in range(8):
-            s = y * 32 + x * 2  # source index
+            si = (y * 16 + x) * 2  # source index
             atBytes.append(
-                atData[s]
-                | (atData[s+1] << 2)
-                | (atData[s+16] << 4)
-                | (atData[s+17] << 6)
+                atData[si]
+                | (atData[si+1] << 2)
+                | (atData[si+16] << 4)
+                | (atData[si+17] << 6)
             )
     return atBytes
 
@@ -376,7 +378,7 @@ def encode_pt_data(tiles):
                     ((tile[py*8+i] >> bp) & 1) << (7 - i) for i in range(8)
                 ))
 
-    # pad to a multiple of 16 tiles
+    # pad to a multiple of 16 tiles (256 bytes)
     paddingLength = (256 - len(ptData) % 256) % 256
     ptData.extend(paddingLength * b"\xff")
     return ptData
@@ -417,54 +419,49 @@ def get_unique_tiles(filenames, maxTiles):
 # --- generate_asm_file() and functions called by it --------------------------
 
 def rle_encode_raw(data):
-    # generate runs: (length, byte)
-    start = None  # start position of current run
-    prev = None   # previous byte
+    # generate runs: (length, byte); length = 1-127
+
+    start = -1  # start position of current run
+    prev = -1   # previous byte
+
     for (i, byte) in enumerate(data):
-        if start is None:
+        if start == -1:
             # start first run
             start = i
-        elif prev != byte:
+        elif prev != byte or i - start == 127:
             # restart run
             yield (i - start, prev)
             start = i
         prev = byte
-    if start is not None:
+    if start > -1:
         # end last run
         yield (len(data) - start, prev)
 
 def rle_encode(data):
     # generate bytes: direct_byte, run, run, ..., 0
     # 1st byte of data is the direct (implied) byte; other bytes are runs of
-    # 1/2 bytes:
-    # 0b1LLLLLLL     : output direct_byte 0bLLLLLLL+1 times (1-128)
-    # 0b0LLLLLLL 0xBB: output byte 0xBB   0bLLLLLLL   times (1-127)
-    # 0b00000000     : terminator (end of data)
-    # note: the ability to output 128-byte runs is important because there
-    # are lots of exactly 128-byte runs
+    # 1-2 bytes:
+    #     0x00     : terminator (end of data)
+    #     0x80     : (unused)
+    #     0x01-0x7f: output direct_byte    1-127 times
+    #     0x81-0xff: output following byte 1-127 times
 
-    # the direct byte (the most common byte that begins a run)
+    rawRleData = tuple(rle_encode_raw(data))
+
+    # direct byte (the most common byte that begins a run)
     directByte = collections.Counter(
-        r[1] for r in rle_encode_raw(data)
+        r[1] for r in rawRleData
     ).most_common(1)[0][0]
     yield directByte
+
     # RLE data itself
-    for (length, byte) in rle_encode_raw(data):
+    for (length, byte) in rawRleData:
         if byte == directByte:
-            if length > 128:
-                yield 0x80 | (128 - 1)
-                yield 0x80 | (length - 128 - 1)
-            else:
-                yield 0x80 | (length - 1)
+            yield length
         else:
-            if length > 127:
-                yield 127
-                yield byte
-                yield length - 127
-                yield byte
-            else:
-                yield length
-                yield byte
+            yield 0x80 | length
+            yield byte
+
     # terminator
     yield 0x00
 
@@ -477,12 +474,13 @@ def get_rle_and_pal_data(filename, uniqueTilesByPt):
     with open(path, "rb") as handle:
         handle.seek(0)
         image = Image.open(handle)
-        # RLE-compressed NT/AT data in 6 slices
+        # RLE-compressed NT/AT data in slices
         ntAtData = process_image(
             image, filename, 2, uniqueTilesByPt[filename in PT1_IMAGES]
         )
         rleData = tuple(
-            bytes(rle_encode(ntAtData[i*140:(i+1)*140])) for i in range(6)
+            bytes(rle_encode(ntAtData[i*RLE_SLICE_SIZE:(i+1)*RLE_SLICE_SIZE]))
+            for i in range(RLE_SLICE_COUNT)
         )
         # palette
         palette = bytes(itertools.chain.from_iterable(
@@ -495,10 +493,7 @@ def rle_slice_to_chunks(rleSlice):
     # human-readability
     i = 0
     while True:
-        if i == 0 or rleSlice[i] & 0x80 or rleSlice[i] == 0x00:
-            chunkLen = 1  # direct byte definition/reference or terminator
-        else:
-            chunkLen = 2  # reference to following byte
+        chunkLen = 2 if i > 0 and rleSlice[i] & 0x80 else 1
         yield rleSlice[i:i+chunkLen]
         if i > 0 and rleSlice[i] == 0x00:
             break  # terminator
@@ -569,7 +564,7 @@ def generate_asm_file(filenames, uniqueTilesByPt):
 
     for fi in range(len(filenames)):
         yield f"img{fi}_ptrs"
-        ptrs = [f"img{fi}_nt_at{si}" for si in range(6)] \
+        ptrs = [f"img{fi}_nt_at{si}" for si in range(RLE_SLICE_COUNT)] \
         + [f"img{fi}_pal", f"img{fi}_txt"]
         yield "\tdw " + ", ".join(ptrs[:4])
         yield "\tdw " + ", ".join(ptrs[4:])
@@ -577,11 +572,13 @@ def generate_asm_file(filenames, uniqueTilesByPt):
 
     totalRleSize = 0
     for (fi, filename) in enumerate(filenames):
+        yield f"\t; {filename}"
+
         (rleData, palette) = get_rle_and_pal_data(filename, uniqueTilesByPt)
         totalRleSize += sum(len(s) for s in rleData)
 
-        # RLE-compressed NT/AT data in 6 slices
-        for si in range(6):
+        # RLE-compressed NT/AT data in slices
+        for si in range(RLE_SLICE_COUNT):
             rleChunks = tuple(rle_slice_to_chunks(rleData[si]))
             yield f"img{fi}_nt_at{si}"
             for i in range(0, len(rleChunks), 13):
@@ -653,21 +650,28 @@ def main():
         palette_test(filename)
     print()
 
+    print(f"Writing background PT data to {PT_FILE}...")
+    print("Unique/new unique/total unique tile count after each file.")
     uniqueTilesByPt = []
-    for pt in range(2):
-        print(f"Writing PT{pt} data to {PT_FILES[pt]}...")
-        print("Unique/new unique/total unique tile count after each file.")
-        files = (f for f in filenames if int(f in PT1_IMAGES) == pt)
-        uniqueTilesByPt.append(get_unique_tiles(files, PT_MAX_TILES[pt]))
-        with open(PT_FILES[pt], "wb") as handle:
-            handle.seek(0)
+    with open(PT_FILE, "wb") as handle:
+        handle.seek(0)
+        for pt in range(2):
+            print(f"PT{pt}...")
+            files = (f for f in filenames if int(f in PT1_IMAGES) == pt)
+            uniqueTilesByPt.append(get_unique_tiles(files, PT_MAX_TILES[pt]))
             handle.write(encode_pt_data(uniqueTilesByPt[pt]))
-            size = handle.tell()
-        print(f"Wrote {size} bytes.")
-        print()
-
+            # pad
+            expectedSize = sum(PT_MAX_TILES[:pt+1]) * 16
+            handle.write((expectedSize - handle.tell()) * b"\xff")
+        size = handle.tell()
+    print(f"Wrote {size} bytes.")
     print(
-        "Identical background tiles in PT0 and PT1:",
+        "Free tiles in PT0/PT1:", "/".join(
+            str(PT_MAX_TILES[p] - len(uniqueTilesByPt[p])) for p in range(2)
+        )
+    )
+    print(
+        "Identical tiles in PT0 and PT1:",
         len(set(uniqueTilesByPt[0]) & set(uniqueTilesByPt[1]))
     )
     print()

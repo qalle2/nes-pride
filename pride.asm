@@ -416,9 +416,10 @@ nt_at_to_buffer ; copy one sixth of NT/AT data of current image (up to 140
                 ; decode RLE data from grafix_ptr and write it to ppu_buffer;
                 ; first byte in data: the direct (implied) byte;
                 ; other bytes:
-                ;     $80-$ff: output direct_byte    1-128 times
-                ;     $01-$7f: output following byte 1-127 times
                 ;     $00:     end of data
+                ;     $80:     (unused)
+                ;     $01-$7f: output direct_byte    1-127 times
+                ;     $81-$ff: output following byte 1-127 times
 
                 ldy #0
                 sty rle_dst_ind         ; destination index
@@ -430,18 +431,17 @@ nt_at_to_buffer ; copy one sixth of NT/AT data of current image (up to 140
 rle_loop        ldy rle_src_ind
                 lda (grafix_ptr),y
                 beq rle_end             ; terminator?
-                bpl +
+                bmi +
                 ;
                 ; use direct byte
                 iny
-                and #%01111111
-                tax
-                inx                     ; length
+                tax                     ; length
                 lda rle_direct          ; byte
                 jmp ++
                 ;
 +               ; use following byte
                 iny
+                and #%01111111
                 tax                     ; length
                 lda (grafix_ptr),y      ; byte
                 iny
@@ -613,10 +613,7 @@ get_sect_addr   ; Get address in graphics data.
 ; --- CHR ROM -----------------------------------------------------------------
 
                 base $0000
-                incbin "chr-bg0.bin"    ; PT0 - background (256 tiles)
-                pad $1000, $ff
-
-                incbin "chr-bg1.bin"    ; PT1 - background (208 tiles)
+                incbin "chr-bg.bin"     ; background (256+208 tiles)
                 pad $1d00, $ff
-                incbin "chr-spr.bin"    ; PT1 - sprites (48 tiles)
+                incbin "chr-spr.bin"    ; sprites (48 tiles)
                 pad $2000, $ff
