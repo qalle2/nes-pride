@@ -8,8 +8,8 @@
 ; - ppu_buffer: what to copy to PPU memory on next VBlank; read using PLA;
 ;     only the first ppu_buf_length bytes are used
 ; - ppu_upd_phase: how to update PPU memory:
-;     0-5: update NT/AT data (up 140 bytes/phase) to non-visible NT via PPU
-;          buffer
+;     0-5: update NT/AT data (up 140 bytes/phase) to non-visible NT via
+;          ppu_buffer
 ;     6:   update other PPU memory/registers via various buffers in main RAM;
 ;          do OAM DMA
 ;     7:   do OAM DMA (in case user toggles descriptions on/off)
@@ -24,7 +24,7 @@ prev_pad_status equ $07    ; previous joypad status
 which_image     equ $08    ; which image is being shown
 ppu_ctrl_copy   equ $09    ; copy of ppu_ctrl
 ppu_upd_phase   equ $0a    ; PPU update phase; see above
-ppu_buf_length  equ $0b    ; length of PPU buffer
+ppu_buf_length  equ $0b    ; length of ppu_buffer
 stack_ptr       equ $0c    ; copy of stack pointer
 rle_src_ind     equ $0d    ; RLE decoder - source index
 rle_dst_ind     equ $0e    ; RLE decoder - destination index
@@ -61,9 +61,97 @@ joypad2         equ $4017
                 base $c000              ; last 16 KiB of CPU address space
                 pad $e000, $ff          ; only use last 8 KiB
 
-                ; image data excluding pattern tables; automatically generated;
-                ; constants defined there: image_count, pts_to_use, image_ptrs
-                include "imgdata.asm"
+; --- Interrupt routines (here for page alignment) ----------------------------
+
+nmi             pha                     ; push A, X, Y
+                txa
+                pha
+                tya
+                pha
+
+                bit ppu_status          ; reset ppu_scroll/ppu_addr latch
+
+                lda ppu_upd_phase       ; do OAM DMA on phases 6-7
+                cmp #6
+                bmi +
+                jsr do_oam_dma
+
++               lda ppu_upd_phase       ; increment phase up to 7
+                cmp #7
+                beq +
+                inc ppu_upd_phase
+
++               jsr flush_ppu_buf
+                jsr set_ppu_regs
+
+                sec                     ; set flag to let main loop run once
+                ror run_main_loop
+
+                pla                     ; pull Y, X, A
+                tay
+                pla
+                tax
+                pla
+
+irq             rti                     ; IRQ unused
+
+do_oam_dma      ; copy sprite data from main RAM to OAM
+                lda #$00
+                sta oam_addr
+                lda #>sprite_data
+                sta oam_dma
+                rts
+
+flush_ppu_buf   ; copy ppu_buffer to PPU memory and clear it
+                ; (ppu_buf_length must be a multiple of 4)
+
+                lda ppu_buf_length
+                beq +
+
+                lsr a                   ; length / 4 -> Y
+                lsr a
+                tay
+
+                lda ppu_dst_addr+1
+                sta ppu_addr
+                lda ppu_dst_addr+0
+                sta ppu_addr
+
+                tsx                     ; store actual stack pointer
+                stx stack_ptr
+
+                ldx #$ff
+                txs
+
+-               pla
+                sta ppu_data
+                pla
+                sta ppu_data
+                pla
+                sta ppu_data
+                pla
+                sta ppu_data
+                dey
+                bne -
+
+                sty ppu_buf_length      ; clear buffer
+
+                ldx stack_ptr           ; restore actual stack pointer
+                txs
+
++               rts
+
+set_ppu_regs    lda #0                  ; horizontal scroll
+                sta ppu_scroll
+                lda #3*8                ; vertical scroll: 3 tiles up
+                sta ppu_scroll
+                lda ppu_ctrl_copy       ; use precalculated BG PT/NT numbers
+                sta ppu_ctrl
+                lda #%00011110          ; show background & sprites
+                sta ppu_mask
+                rts
+
+; --- Initialization ----------------------------------------------------------
 
 reset           ; initialize the NES;
                 ; see https://wiki.nesdev.org/w/index.php/Init_code
@@ -177,6 +265,12 @@ init_ppu_mem    ; initialize PPU memory
 set_ppu_addr    sty ppu_addr            ; Y*$100 + A -> address
                 sta ppu_addr
                 rts
+
+; --- Pregenerated image data -------------------------------------------------
+
+                ; image data excluding pattern tables; automatically generated;
+                ; constants defined there: image_count, pts_to_use, image_ptrs
+                include "imgdata.asm"
 
 ; --- Main loop ---------------------------------------------------------------
 
@@ -295,7 +389,7 @@ spr_y_pos       ; Y positions of 1st/2nd/3rd sprite row
 
 ; -----------------------------------------------------------------------------
 
-prep_ppu_upd    ; update PPU buffer, ppu_ctrl_copy or sprite_data according to
+prep_ppu_upd    ; update ppu_buffer, ppu_ctrl_copy or sprite_data according to
                 ; ppu_upd_phase
 
                 lda ppu_upd_phase
@@ -319,7 +413,7 @@ nt_at_to_buffer ; copy one sixth of NT/AT data of current image (up to 140
                 ldy ppu_upd_phase
                 jsr get_sect_addr       ; address -> grafix_ptr
 
-                ; decode RLE data from grafix_ptr and write it to PPU buffer;
+                ; decode RLE data from grafix_ptr and write it to ppu_buffer;
                 ; first byte in data: the direct (implied) byte;
                 ; other bytes:
                 ;     $80-$ff: output direct_byte    1-128 times
@@ -509,100 +603,6 @@ get_sect_addr   ; Get address in graphics data.
                 pla
                 sta grafix_ptr+0
 
-                rts
-
-; --- Interrupt routines ------------------------------------------------------
-
-                align $100, $ff         ; for speed
-
-nmi             pha                     ; push A, X, Y
-                txa
-                pha
-                tya
-                pha
-
-                bit ppu_status          ; reset ppu_scroll/ppu_addr latch
-
-                lda ppu_upd_phase       ; do OAM DMA on phases 6-7
-                cmp #6
-                bmi +
-                jsr do_oam_dma
-
-+               lda ppu_upd_phase       ; increment phase on phases 0-6
-                cmp #7
-                beq +
-                inc ppu_upd_phase
-
-+               jsr flush_ppu_buf       ; always flush PPU buffer
-                jsr set_ppu_regs        ; always set PPU registers
-
-                sec                     ; set flag to let main loop run once
-                ror run_main_loop
-
-                pla                     ; pull Y, X, A
-                tay
-                pla
-                tax
-                pla
-
-irq             rti                     ; IRQ unused
-
-do_oam_dma      ; copy sprite data from main RAM to OAM
-                lda #$00
-                sta oam_addr
-                lda #>sprite_data
-                sta oam_dma
-                rts
-
-flush_ppu_buf   ; copy PPU buffer to PPU memory and empty it;
-                ; buffer length must be a multiple of 4
-
-                lda ppu_buf_length
-                beq +
-
-                lsr a                   ; ppu_buf_length / 4 -> Y
-                lsr a
-                tay
-
-                lda ppu_dst_addr+1
-                sta ppu_addr
-                lda ppu_dst_addr+0
-                sta ppu_addr
-
-                tsx                     ; store actual stack pointer
-                stx stack_ptr
-
-                ldx #$ff                ; set SP for reading ppu_buffer
-                txs
-
-                ; copy ppu_buffer from stack to PPU
--               pla
-                sta ppu_data
-                pla
-                sta ppu_data
-                pla
-                sta ppu_data
-                pla
-                sta ppu_data
-                dey
-                bne -
-
-                ldx stack_ptr           ; restore actual stack pointer
-                txs
-
-                lda #0                  ; empty buffer
-                sta ppu_buf_length
-
-+               rts
-
-set_ppu_regs    lda #0                  ; horizontal scroll
-                sta ppu_scroll
-                lda #3*8                ; vertical scroll: 3 tiles up
-                sta ppu_scroll
-                lda ppu_ctrl_copy       ; use precalculated BG PT/NT numbers
-                sta ppu_ctrl
-                lda #%00011110          ; show background & sprites
-                sta ppu_mask
                 rts
 
 ; --- Interrupt vectors -------------------------------------------------------
