@@ -59,7 +59,8 @@ assert all(len(p) <= 4 for p in MANUAL_SUBPALS.values())
 assert all(all(len(v) <= 3 for v in p) for p in MANUAL_SUBPALS.values())
 
 # Note: changing these requires changing the NES program as well.
-# NES color for background and unused colors; also border color on NTSC
+# NES color for background and unused colors; also the border color (top &
+# bottom of NT), which is why supporting other BG colors is not useful at all
 NES_BG_COLOR = 0x0f  # black
 # image height in AT blocks
 VERT_AT_BLKS = 12
