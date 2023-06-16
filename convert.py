@@ -23,7 +23,7 @@ PT_FILE    = "chr-bg.bin"    # write PT data here
 # maximum number of tiles in PT0/PT1
 PT_MAX_TILES = (256, 208)
 # images that use PT1 instead of PT0
-PT1_IMAGES = frozenset(("title_screen",))
+PT1_IMAGES = frozenset(("furry", "title_screen",))
 
 # optional manually-defined palettes by filename;
 # up to 4 tuples with up to 3 NES colors each (order matters);
@@ -62,6 +62,13 @@ MANUAL_SUBPALS = {
         (0x17, 0x27, 0x37),  # darkish brown, lightish brown, light brown
         (0x00, 0x30, 0x37),  # gray, white, light brown
         (0x07, 0x17),        # dark brown, darkish brown
+    ),
+    # 6 colors (+ black); saves ~2 tiles
+    "furry": (
+        (0x16, 0x27),        # red-orange
+        (0x27, 0x28),        # orange-yellow
+        (0x11, 0x1b, 0x28),  # blue-green-yellow
+        (0x04, 0x11),        # purple-blue
     ),
     # 2 colors; getting these wrong would waste many tiles
     "inter-_sex": (
@@ -650,6 +657,8 @@ def main():
         sys.exit("Must have 1-255 images.")
     if TITLE_FILE not in filenames:
         sys.exit(f"Title screen image {TITLE_FILE+IMAGE_EXT} not found.")
+    if PT1_IMAGES - set(filenames):
+        sys.exit("Some files assigned for PT1 not found.")
     if set(MANUAL_SUBPALS) - set(filenames):
         sys.exit(
             "Manual subpalette definitions contain nonexistent filenames."
