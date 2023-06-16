@@ -222,7 +222,7 @@ def get_sorted_color_sets(nesPixels, printExtraInfo=False):
 
     if printExtraInfo:
         print(
-            f"{'':8}Color sets:   ", " ".join(
+            f"{'':8}Color sets:   " + " ".join(
                 "".join(f"{c:02x}" for c in sorted(s)) for s in colorSets
             )
         )
@@ -324,7 +324,7 @@ def process_image(image, filename, mode, uniqueTiles=None, extraInfo=False):
     del pngToNesIndex
 
     if extraInfo:
-        print(f"{'':8}Unique colors:", " ".join(
+        print(f"{'':8}Colors:       " + " ".join(
             format(c, "02x") for c in sorted(set(nesPixels) - {NES_BG_COLOR})
         ))
         get_sorted_color_sets(nesPixels, True)
@@ -333,7 +333,7 @@ def process_image(image, filename, mode, uniqueTiles=None, extraInfo=False):
     if filename in MANUAL_SUBPALS:
         # manually-defined
         if extraInfo:
-            print(f"{'':8}Final palette manually defined.")
+            print(f"{'':8}Palette type: manual")
         subpals = MANUAL_SUBPALS[filename]
         definedColors = set(itertools.chain.from_iterable(subpals))
         actualColors = set(nesPixels) - {NES_BG_COLOR}
@@ -350,7 +350,7 @@ def process_image(image, filename, mode, uniqueTiles=None, extraInfo=False):
     else:
         # get automatically
         if extraInfo:
-            print(f"{'':8}Getting final palette automatically.")
+            print(f"{'':8}Palette type: automatic")
         subpals = create_subpalettes(nesPixels)
         # order subpalettes, restore background color and pad
         subpals = [
@@ -390,7 +390,7 @@ def palette_test(filename):
         palette = " ".join(
             palette[i:i+4].hex() for i in range(0, len(palette), 4)
         )
-        print(f"{'':8}Final palette: {palette}")
+        print(f"{'':8}Palette:      {palette}")
 
 # --- get_unique_tiles() and functions called by it ---------------------------
 
@@ -655,6 +655,9 @@ def main():
             "Manual subpalette definitions contain nonexistent filenames."
         )
 
+    print("Images:", len(filenames))
+    print()
+
     # sort filenames without punctuation, title screen first
     filenames.sort()
     filenames.sort(key=lambda f: f.replace("_", "").replace("-", ""))
@@ -662,17 +665,15 @@ def main():
 
     print("Palette test...")
     print(
-        f"'Unique colors': hexadecimal NES colors excluding background color "
+        "'Colors': hexadecimal NES colors excluding background color "
         f"${NES_BG_COLOR:02x}."
     )
     print(
         "'Color sets': sets of hexadecimal NES colors used in AT blocks "
         "excluding background color; subsets of other sets excluded."
     )
-    print(
-        "'Final palette': 4*4 hexadecimal NES colors including background "
-        "color."
-    )
+    print("'Palette type': manually defined or automatically generated.")
+    print("'Palette': 4*4 hexadecimal NES colors including background color.")
     for filename in filenames:
         print(f"{'':4}{filename}:")
         palette_test(filename)
