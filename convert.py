@@ -267,13 +267,25 @@ def create_subpalettes(nesPixels):
 
     return subpals
 
-def get_at_data(nesPixels, subpals):
-    # generate AT data (int 0-3 for each attribute block)
-    subpals = [frozenset(s) for s in subpals]
-    yield from (
-        [i for i in range(4) if subpals[i].issuperset(s)][0]
-        for s in get_color_sets(nesPixels)
-    )
+def get_subpal_index(colorSet, subpals):
+    # Return subpalette index (int 0-3) for one attribute block.
+    # colorSet: NES colors in attribute block, including background color
+    # subpals: list of 4 lists of 4 NES colors
+    # Prefer subpalettes where the needed colors are at low indexes.
+
+    bestSubpal = -1
+    lowestScore = 999999
+
+    for (si, subpal) in enumerate(subpals):
+        try:
+            score = sum(2 ** subpal.index(c) for c in colorSet)
+        except ValueError:
+            score = 999999
+        if score < lowestScore:
+            lowestScore = score
+            bestSubpal = si
+
+    return bestSubpal
 
 def get_tiles(nesPixels):
     # generate tiles as tuples of NES color indexes (64 ints)
@@ -369,7 +381,9 @@ def process_image(image, filename, mode, uniqueTiles=None, extraInfo=False):
         return subpals
 
     # generate AT data using subpalettes
-    atData = list(get_at_data(nesPixels, subpals))
+    atData = list(
+        get_subpal_index(s, subpals) for s in get_color_sets(nesPixels)
+    )
 
     if mode == 1:
         # return set of unique tiles
