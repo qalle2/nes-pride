@@ -23,7 +23,7 @@ PT_FILE    = "chr-bg.bin"    # write PT data here
 # maximum number of tiles in PT0/PT1
 PT_MAX_TILES = (256, 208)
 # images that use PT1 instead of PT0
-PT1_IMAGES = frozenset(("furry", "title_screen",))
+PT1_IMAGES = frozenset(("title_screen",))
 
 # optional manually-defined palettes by filename;
 # up to 4 tuples with up to 3 NES colors each (order matters);
