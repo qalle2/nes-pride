@@ -11,7 +11,9 @@
 # - AT = attribute table (2 bits per attribute block; 16*16 attribute blocks
 #        but bottom row unused; which subpalette for each attribute block)
 
-import collections, itertools, os, re, sys
+import os, re, sys
+from collections import Counter
+from itertools import chain
 from PIL import Image  # Pillow, https://python-pillow.org
 
 IMAGE_DIR  = "img"           # read images from this path
@@ -102,6 +104,9 @@ RLE_SLICE_COUNT = 6
 # uncompressed size of each NT/AT RLE data slice; last one may be smaller
 RLE_SLICE_SIZE = 140
 
+# NT data size + AT data size <= storage capacity
+assert VERT_AT_BLKS * 2 * 32 + 8 * 8 <= RLE_SLICE_COUNT * RLE_SLICE_SIZE
+
 # NES master palette
 # key=index, value=(red, green, blue); source: FCEUX (fceux.pal)
 # colors omitted (hexadecimal): 0d-0e, 1d-20, 2d-2f, 3d-3f
@@ -160,14 +165,25 @@ NES_PALETTE = {
     0x3c: (0x9c, 0xfc, 0xf0),
 }
 
-# --- process_image() and functions called by it ------------------------------
+# -----------------------------------------------------------------------------
+
+def get_filenames():
+    # generate PNG filenames without extensions
+    with os.scandir(IMAGE_DIR) as dirIter:
+        for entry in dirIter:
+            (filename, extension) = os.path.splitext(entry.name)
+            if entry.is_file() and extension == IMAGE_EXT:
+                yield filename
+
+def filename_to_path(filename):
+    return os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
 
 def color_diff(rgb1, rgb2):
     # get difference (0-768) of two colors (red, green, blue)
     return sum(abs(comp[0] - comp[1]) for comp in zip(rgb1, rgb2))
 
 def closest_nes_color(rgb):
-    # get best match (NES color number) for color (red, green, blue)
+    # get best match (NES color index) for color (red, green, blue)
     minDiff = 9999
     for nesColor in sorted(NES_PALETTE):
         diff = color_diff(NES_PALETTE[nesColor], rgb)
@@ -176,35 +192,57 @@ def closest_nes_color(rgb):
             bestNesColor = nesColor
     return bestNesColor
 
-def get_palette(image):
-    # get closest NES color index for each PNG color index used in image:
-    # {pngIndex: nesColor, ...}
+def get_color_conv_table(image):
+    # return: {pngIndex: nesColorIndex, ...}
 
-    indexesUsed = [c[1] for c in image.getcolors()]
-    palette = image.getpalette()  # [R, G, B, ...]
-    palette = dict((i, tuple(palette[i*3:(i+1)*3])) for i in indexesUsed)
-    palette = dict((i, closest_nes_color(palette[i])) for i in palette)
+    # color indexes actually used in image data
+    indexesUsed = [i for (cnt, i) in image.getcolors() if cnt > 0]
+    # palette as [R, G, B, ...]; may contain unused colors
+    palette = image.getpalette()
+    # {pngIndex: nesColorIndex, ...} for used colors
+    return dict(
+        (i, closest_nes_color(palette[i*3:(i+1)*3])) for i in indexesUsed
+    )
 
-    if len(set(palette.values()) - {NES_BG_COLOR}) > 12:
-        sys.exit(f"Can only have 12 unique colors plus ${NES_BG_COLOR:02x}.")
-    if len(set(palette.values())) < len(palette):
-        sys.exit("More than one image color corresponds to same NES color.")
-    return palette
+def validate_image(image):
+    if image.width != 256:
+        sys.exit("Image width must be 256.")
+    if image.height != VERT_AT_BLKS * 16:
+        sys.exit(f"Image height must be {VERT_AT_BLKS*16}.")
+    if image.mode != "P":
+        sys.exit("Image must have a palette.")
+
+    nesColors = get_color_conv_table(image).values()
+    if len(set(nesColors) - {NES_BG_COLOR}) > 12:
+        sys.exit(
+            f"Can't have more than 12 unique colors plus ${NES_BG_COLOR:02x}."
+        )
+    if len(set(nesColors)) < len(nesColors):
+        sys.exit(
+            "More than one image color corresponds to the same NES color."
+        )
+
+def get_nes_pixels(image):
+    # return image pixels as NES color indexes
+    pngToNes = get_color_conv_table(image)  # {pngIndex: nesColorIndex, ...}
+    return tuple(pngToNes[i] for i in image.getdata())
 
 def get_color_sets(nesPixels):
-    # generate attribute blocks as sets of NES color indexes
+    # for each attribute block, generate set of NES color indexes
+    # nesPixels: image pixels as NES color indexes
+
     colors = set()
     for ay in range(0, VERT_AT_BLKS * 16, 16):
         for ax in range(0, 16 * 16, 16):
             colors.clear()
             for py in range(16):
-                srcInd = (ay + py) * 256 + ax
-                colors.update(nesPixels[srcInd:srcInd+16])
+                si = (ay + py) * 256 + ax  # source index
+                colors.update(nesPixels[si:si+16])
             yield frozenset(colors)
 
-def get_sorted_color_sets(nesPixels, printExtraInfo=False):
+def get_sorted_color_sets(nesPixels):
     # get color sets, clean up and sort
-    # printExtraInfo: print intermediate results (bool)
+    # nesPixels: image pixels as NES color indexes
 
     # get unique sets of color indexes in attribute blocks
     colorSets = {
@@ -225,21 +263,12 @@ def get_sorted_color_sets(nesPixels, printExtraInfo=False):
     # sort sets by number of colors (important) and by colors they contain
     # (for determinism)
     colorSets = sorted(colorSets, key=lambda s: sorted(s))
-    colorSets.sort(key=lambda s: len(s), reverse=True)
-
-    if printExtraInfo:
-        print(
-            f"{'':8}Color sets:   " + " ".join(
-                "".join(f"{c:02x}" for c in sorted(s)) for s in colorSets
-            )
-        )
-
-    return colorSets
+    return sorted(colorSets, key=lambda s: len(s), reverse=True)
 
 def create_subpalettes(nesPixels):
-    # nesPixels: image pixels as NES colors
+    # return a list of 4 subpalettes (sets) with up to 3 color indexes each
+    # nesPixels: image pixels as NES color indexes
     # printExtraInfo: print intermediate results (bool)
-    # return: list of 4 subpalettes (sets) with up to 3 color indexes each
 
     colorSets = get_sorted_color_sets(nesPixels)
 
@@ -267,13 +296,59 @@ def create_subpalettes(nesPixels):
 
     return subpals
 
+def get_palette(nesPixels, filename, extraInfo=False):
+    # return palette for image as a tuple of 4 tuples of NES color indexes
+    # nesPixels: image pixels as NES color indexes
+    # extraInfo: print extra info
+
+    if extraInfo:
+        print(f"{'':8}Colors:       " + ", ".join(
+            format(c, "02x") for c in sorted(set(nesPixels) - {NES_BG_COLOR})
+        ))
+        colorSets = get_sorted_color_sets(nesPixels)
+        print(f"{'':8}Color sets:   " + ", ".join(
+            "+".join(f"{c:02x}" for c in sorted(s)) for s in colorSets
+        ))
+
+    # get subpalettes
+    if filename in MANUAL_SUBPALS:
+        # manually-defined
+        if extraInfo:
+            print(f"{'':8}Palette type: manual")
+        subpals = MANUAL_SUBPALS[filename]
+        definedColors = set(chain.from_iterable(subpals))
+        actualColors = set(nesPixels) - {NES_BG_COLOR}
+        if actualColors - definedColors:
+            sys.exit("Manual subpalette definition lacks colors.")
+        if definedColors - actualColors:
+            sys.exit("Manual subpalette definition has extra colors.")
+        # pad number of subpalettes to 4
+        subpals = list(subpals) + (4 - len(subpals)) * [()]
+        # restore background colors and pad each subpalette
+        subpals = tuple(
+            tuple([NES_BG_COLOR] + list(sp) + (3 - len(sp)) * [NES_BG_COLOR])
+            for sp in subpals
+        )
+    else:
+        # get automatically
+        if extraInfo:
+            print(f"{'':8}Palette type: automatic")
+        subpals = create_subpalettes(nesPixels)
+        # order subpalettes, restore background color and pad each subpalette
+        subpals = tuple(
+            tuple([NES_BG_COLOR] + sorted(sp) + (3 - len(sp)) * [NES_BG_COLOR])
+            for sp in subpals
+        )
+
+    return subpals
+
 def get_subpal_index(colorSet, subpals):
     # Return subpalette index (int 0-3) for one attribute block.
-    # colorSet: NES colors in attribute block, including background color
-    # subpals: list of 4 lists of 4 NES colors
     # Prefer subpalettes where the needed colors are at low indexes.
+    # colorSet: unique NES color indexes in attribute block (including
+    #           background color)
+    # subpals: list of 4 lists of 4 NES colors
 
-    bestSubpal = -1
     lowestScore = 999999
 
     for (si, subpal) in enumerate(subpals):
@@ -288,8 +363,11 @@ def get_subpal_index(colorSet, subpals):
     return bestSubpal
 
 def get_tiles(nesPixels):
-    # generate tiles as tuples of NES color indexes (64 ints)
+    # generate each tile as NES color indexes (a tuple of 64 ints)
+    # nesPixels: image pixels as NES color indexes
+
     pixels = []
+
     for ay in range(0, VERT_AT_BLKS * 16, 8):
         for ax in range(0, 16 * 16, 8):
             pixels.clear()
@@ -298,122 +376,61 @@ def get_tiles(nesPixels):
                 pixels.extend(nesPixels[srcInd:srcInd+8])
             yield tuple(pixels)
 
-def convert_tiles(nesPixels, atData, orderedSubpals):
+def convert_tiles(nesPixels, atData, subpals):
     # generate tiles as tuples of 64 2-bit ints
+    # nesPixels: image pixels as NES color indexes
+    # subpals: a tuple of 4 tuples of 4 NES color indexes
+
     for (i, tile) in enumerate(get_tiles(nesPixels)):
         # get subpalette for this tile (bits: YYYYyXXXXx -> YYYYXXXX)
         subpal = atData[(i >> 2) & 0b1111_0000 | (i >> 1) & 0b1111]
         # convert NES color index to subpalette index
-        yield tuple(orderedSubpals[subpal].index(i) for i in tile)
+        yield tuple(subpals[subpal].index(i) for i in tile)
 
-def encode_at_data(atData):
-    # encode AT data (VERT_AT_BLKS*16 2-bit ints) into 64 bytes
+def get_sorted_tiles(filenames, maxTiles):
+    # return a list of unique tiles in all images in this PT
+    # (each tile is a tuple of 64 2-bit ints)
+    # filenames: filenames in this PT
+    # maxTiles: maximum number of unique tiles in this PT
 
-    # pad to 16 rows (last one unused by the NES)
-    atData = (15 - VERT_AT_BLKS) * 16 * [0] + atData + 16 * [0]
+    # make sure we have a blank tile for visible unused area
+    allUniqueTiles = {tuple(64 * [0])}
 
-    atBytes = bytearray()
-    for y in range(8):
-        for x in range(8):
-            si = (y * 16 + x) * 2  # source index
-            atBytes.append(
-                atData[si]
-                | (atData[si+1] << 2)
-                | (atData[si+16] << 4)
-                | (atData[si+17] << 6)
+    for filename in filenames:
+        # get pixels as NES color indexes
+        with open(filename_to_path(filename), "rb") as handle:
+            handle.seek(0)
+            nesPixels = get_nes_pixels(Image.open(handle))
+
+        # get unique tiles
+        subpals = get_palette(nesPixels, filename)  # 4*4 NES color indexes
+        atData = [
+            get_subpal_index(s, subpals) for s in get_color_sets(nesPixels)
+        ]
+        uniqueTiles = set(convert_tiles(nesPixels, atData, subpals))
+        del subpals
+        del atData
+
+        if any(any(t.count(c) == 1 for c in range(4)) for t in uniqueTiles):
+            print(
+                f"Warning: {filename} has a tile with only one pixel of "
+                "some color; consider optimizing.", file=sys.stderr
             )
-    return atBytes
-
-def process_image(image, filename, mode, uniqueTiles=None, extraInfo=False):
-    # If mode=0: return NES palette for image (ignore uniqueTiles arg).
-    # If mode=1: return set of unique tiles   (ignore uniqueTiles arg).
-    # If mode=2: return NT & AT data using uniqueTiles arg.
-    # extraInfo: print extra palette info (usually used with mode 0 only)
-
-    if image.width != 256:
-        sys.exit("Image width must be 256.")
-    if image.height != VERT_AT_BLKS * 16:
-        sys.exit(f"Image height must be {VERT_AT_BLKS*16}.")
-    if image.mode != "P":
-        sys.exit("Image must have a palette.")
-
-    # read pixels, convert into NES colors
-    pngToNesIndex = get_palette(image)  # {pngIndex: nesColor, ...}
-    nesPixels = [pngToNesIndex[i] for i in image.getdata()]
-    del pngToNesIndex
-
-    if extraInfo:
-        print(f"{'':8}Colors:       " + " ".join(
-            format(c, "02x") for c in sorted(set(nesPixels) - {NES_BG_COLOR})
-        ))
-        get_sorted_color_sets(nesPixels, True)
-
-    # get subpalettes
-    if filename in MANUAL_SUBPALS:
-        # manually-defined
-        if extraInfo:
-            print(f"{'':8}Palette type: manual")
-        subpals = MANUAL_SUBPALS[filename]
-        definedColors = set(itertools.chain.from_iterable(subpals))
-        actualColors = set(nesPixels) - {NES_BG_COLOR}
-        if actualColors - definedColors:
-            sys.exit("Manual subpalette definition lacks colors.")
-        if definedColors - actualColors:
-            sys.exit("Manual subpalette definition has extra colors.")
-        # already ordered; restore background color and pad
-        subpals = list(subpals) + (4 - len(subpals)) * [()]
-        subpals = [
-            [NES_BG_COLOR] + list(sp) + (3 - len(sp)) * [NES_BG_COLOR]
-            for sp in subpals
-        ]
-    else:
-        # get automatically
-        if extraInfo:
-            print(f"{'':8}Palette type: automatic")
-        subpals = create_subpalettes(nesPixels)
-        # order subpalettes, restore background color and pad
-        subpals = [
-            [NES_BG_COLOR] + sorted(sp) + (3 - len(sp)) * [NES_BG_COLOR]
-            for sp in subpals
-        ]
-
-    if mode == 0:
-        return subpals
-
-    # generate AT data using subpalettes
-    atData = list(
-        get_subpal_index(s, subpals) for s in get_color_sets(nesPixels)
-    )
-
-    if mode == 1:
-        # return set of unique tiles
-        return set(convert_tiles(nesPixels, atData, subpals))
-
-    # get NT data using predetermined list of unique tiles
-    ntData = bytes(
-        uniqueTiles.index(tile) for tile in
-        convert_tiles(nesPixels, atData, subpals)
-    )
-
-    return ntData + encode_at_data(atData)
-
-# --- palette_test() ----------------------------------------------------------
-
-def palette_test(filename):
-    # just convert image palette; print intermediate and final results but
-    # don't store them
-    path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
-    with open(path, "rb") as handle:
-        handle.seek(0)
-        palette = bytes(itertools.chain.from_iterable(
-            process_image(Image.open(handle), filename, 0, None, True)
-        ))
-        palette = " ".join(
-            palette[i:i+4].hex() for i in range(0, len(palette), 4)
+        oldCnt = len(allUniqueTiles)
+        allUniqueTiles.update(uniqueTiles)
+        print(
+            f"{'':4}{filename:26}: "
+            f"{len(uniqueTiles):3} "
+            f"{len(allUniqueTiles)-oldCnt:3} "
+            f"{len(allUniqueTiles):3}"
         )
-        print(f"{'':8}Palette:      {palette}")
+        if len(allUniqueTiles) > maxTiles:
+            sys.exit(f"Error: more than {maxTiles} unique tiles total.")
 
-# --- get_unique_tiles() and functions called by it ---------------------------
+    # sort by pixels, by unique colors and by number of unique colors
+    allUniqueTiles = sorted(allUniqueTiles)
+    allUniqueTiles.sort(key=lambda t: sorted(set(t)))
+    return sorted(allUniqueTiles, key=lambda t: len(set(t)))
 
 def encode_pt_data(tiles):
     # return PT data for all images as bytes; each tile is 64 ints
@@ -431,41 +448,62 @@ def encode_pt_data(tiles):
     ptData.extend(paddingLength * b"\xff")
     return ptData
 
-def get_unique_tiles(filenames, maxTiles):
-    # return a list of unique tiles in all images
-    # (each tile is a tuple of 64 2-bit ints)
+def write_asm_preamble(filenames, handle):
+    # write ASM6-compatible assembly code for table of contents etc.
+    # handle: destination file handle
 
-    # make sure we have a blank tile for visible unused area
-    uniqueTiles = {tuple(64 * [0])}
+    print(
+        "; Image data excluding pattern tables. Generated by convert.py.",
+        file=handle
+    )
+    print("", file=handle)
 
-    for filename in filenames:
-        path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
-        with open(path, "rb") as handle:
-            handle.seek(0)
-            tiles = process_image(Image.open(handle), filename, 1)
-            if any(any(t.count(c) == 1 for c in range(4)) for t in tiles):
-                print(
-                    f"Warning: {filename} has a tile with only one pixel of "
-                    "some color; consider optimizing.", file=sys.stderr
-                )
-            oldCnt = len(uniqueTiles)
-            uniqueTiles.update(tiles)
-            print(
-                f"{'':4}{filename:26}: "
-                f"{len(tiles):3} "
-                f"{len(uniqueTiles)-oldCnt:3} "
-                f"{len(uniqueTiles):3}"
+    print("image_count equ " + str(len(filenames)), file=handle)
+    print("", file=handle)
+
+    # PT to use (least significant bit first)
+    ptBytes = bytes(
+        sum(
+            1 << i for (i, f) in enumerate(filenames[firstIndex:firstIndex+8])
+            if f in PT1_IMAGES
+        )
+        for firstIndex in range(0, len(filenames), 8)
+    )
+    print("pts_to_use", file=handle)
+    print("\tdb " + ", ".join(f"%{b:08b}" for b in ptBytes), file=handle)
+    print("", file=handle)
+
+    print("image_ptrs", file=handle)
+    ptrs = [f"img{i}_ptrs" for i in range(len(filenames))]
+    for i in range(0, len(ptrs), 5):
+        print("\tdw " + ", ".join(ptrs[i:i+5]), file=handle)
+    print("", file=handle)
+
+    for fi in range(len(filenames)):
+        print(f"img{fi}_ptrs", file=handle)
+        ptrs = [f"img{fi}_nt_at{si}" for si in range(RLE_SLICE_COUNT)] \
+        + [f"img{fi}_pal", f"img{fi}_txt"]
+        print("\tdw " + ", ".join(ptrs[:4]), file=handle)
+        print("\tdw " + ", ".join(ptrs[4:]), file=handle)
+    print("", file=handle)
+
+def encode_at_data(atData):
+    # pad AT data and generate it as 64 bytes (ints)
+    # atData: VERT_AT_BLKS*16 2-bit ints
+
+    # pad to 16 rows (last one unused by the NES)
+    atData = (15 - VERT_AT_BLKS) * 16 * [0] + atData + 16 * [0]
+
+    atBytes = bytearray()
+    for y in range(8):
+        for x in range(8):
+            si = (y * 16 + x) * 2  # source index
+            yield (
+                atData[si]
+                | (atData[si+ 1] << 2)
+                | (atData[si+16] << 4)
+                | (atData[si+17] << 6)
             )
-            if len(uniqueTiles) > maxTiles:
-                sys.exit(f"Error: more than {maxTiles} unique tiles total.")
-
-    # sort by pixels, by which colors are used and by number of colors
-    uniqueTiles = sorted(uniqueTiles)
-    uniqueTiles.sort(key=lambda t: sorted(set(t)))
-    uniqueTiles.sort(key=lambda t: len(set(t)))
-    return uniqueTiles
-
-# --- generate_asm_file() and functions called by it --------------------------
 
 def rle_encode_raw(data):
     # generate runs: (length, byte); length = 1-127
@@ -498,9 +536,7 @@ def rle_encode(data):
     rawRleData = tuple(rle_encode_raw(data))
 
     # direct byte (the most common byte that begins a run)
-    directByte = collections.Counter(
-        r[1] for r in rawRleData
-    ).most_common(1)[0][0]
+    directByte = Counter(r[1] for r in rawRleData).most_common(1)[0][0]
     yield directByte
 
     # RLE data itself
@@ -514,28 +550,19 @@ def rle_encode(data):
     # terminator
     yield 0x00
 
-def get_rle_and_pal_data(filename, uniqueTilesByPt):
-    # get RLE-compressed NT/AT data and NES palette from file
-    # uniqueTilesByPt: unique tiles in PT0/PT1
-    # return: (RLE data as a tuple of bytes, palette as bytes)
+def generate_rle_slices(nesPixels, subpals, uniqueTiles):
+    # generate RLE-compressed NT/AT data in slices
 
-    path = os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
-    with open(path, "rb") as handle:
-        handle.seek(0)
-        image = Image.open(handle)
-        # RLE-compressed NT/AT data in slices
-        ntAtData = process_image(
-            image, filename, 2, uniqueTilesByPt[filename in PT1_IMAGES]
-        )
-        rleData = tuple(
-            bytes(rle_encode(ntAtData[i*RLE_SLICE_SIZE:(i+1)*RLE_SLICE_SIZE]))
-            for i in range(RLE_SLICE_COUNT)
-        )
-        # palette
-        palette = bytes(itertools.chain.from_iterable(
-            process_image(image, filename, 0)
+    atData = [get_subpal_index(s, subpals) for s in get_color_sets(nesPixels)]
+    ntAtData = bytes(
+        uniqueTiles.index(tile) for tile in
+        convert_tiles(nesPixels, atData, subpals)
+    ) + bytes(encode_at_data(atData))
+
+    for si in range(RLE_SLICE_COUNT):
+        yield bytes(rle_encode(
+            ntAtData[si*RLE_SLICE_SIZE:(si+1)*RLE_SLICE_SIZE]
         ))
-    return(rleData, palette)
 
 def rle_slice_to_chunks(rleSlice):
     # generate RLE slice (bytes) as chunks (1 or 2 bytes each) for
@@ -571,8 +598,8 @@ def filename_to_descr(filename):
     lines = (3 - len(lines)) * [""] + lines
     return "".join(l.rjust(8) for l in lines)
 
-def char_to_tile_number(char):
-    # convert character into NES tile number
+def char_to_tile_index(char):
+    # convert character into NES tile index
     cp = ord(char)
     if cp == ord(" "):
         return 0x00
@@ -584,85 +611,56 @@ def char_to_tile_number(char):
         return 0xdb + cp - ord("a")
     sys.exit("Unknown character.")
 
-def generate_asm_file(filenames, uniqueTilesByPt):
-    # uniqueTilesByPt: unique tiles in PT0/PT1
+def write_asm_for_image(fileIndex, filename, uniqueTiles, dstHnd):
+    # write ASM6-compatible assembly code for one image, return RLE data size
+    # fileIndex: filename index
+    # uniqueTiles: unique tiles in correct PT
+    # dstHnd: destination file handle
 
-    yield "; Image data excluding pattern tables. Generated by convert.py."
-    yield ""
+    print(f"\t; {filename}", file=dstHnd)
 
-    yield "image_count equ " + str(len(filenames))
-    yield ""
+    # get pixels as NES color indexes
+    with open(filename_to_path(filename), "rb") as srcHnd:
+        srcHnd.seek(0)
+        nesPixels = get_nes_pixels(Image.open(srcHnd))
 
-    # PT to use (least significant bit first)
-    ptBytes = bytes(
-        sum(
-            1 << i for (i, f) in enumerate(filenames[firstIndex:firstIndex+8])
-            if f in PT1_IMAGES
-        )
-        for firstIndex in range(0, len(filenames), 8)
+    subpals = get_palette(nesPixels, filename)  # 4*4 NES color indexes
+
+    # RLE-compressed NT/AT data in slices
+    rleDataSize = 0
+    for (si, rleSlice) in enumerate(generate_rle_slices(
+        nesPixels, subpals, uniqueTiles
+    )):
+        rleDataSize += len(rleSlice)
+        rleChunks = tuple(rle_slice_to_chunks(rleSlice))
+        print(f"img{fileIndex}_nt_at{si}", file=dstHnd)
+        for i in range(0, len(rleChunks), 13):
+            print(
+                "\thex " + " ".join(c.hex() for c in rleChunks[i:i+13]),
+                file=dstHnd
+            )
+
+    # palette
+    palette = bytes(chain.from_iterable(subpals))
+    palette = " ".join(
+        palette[i:i+4].hex() for i in range(0, len(palette), 4)
     )
-    yield "pts_to_use"
-    yield "\tdb " + ", ".join(f"%{b:08b}" for b in ptBytes)
-    yield ""
+    print(f"img{fileIndex}_pal", file=dstHnd)
+    print(f"\thex {palette}", file=dstHnd)
 
-    yield "image_ptrs"
-    ptrs = [f"img{i}_ptrs" for i in range(len(filenames))]
-    for i in range(0, len(ptrs), 5):
-        yield "\tdw " + ", ".join(ptrs[i:i+5])
-    yield ""
-
-    for fi in range(len(filenames)):
-        yield f"img{fi}_ptrs"
-        ptrs = [f"img{fi}_nt_at{si}" for si in range(RLE_SLICE_COUNT)] \
-        + [f"img{fi}_pal", f"img{fi}_txt"]
-        yield "\tdw " + ", ".join(ptrs[:4])
-        yield "\tdw " + ", ".join(ptrs[4:])
-    yield ""
-
-    totalRleSize = 0
-    for (fi, filename) in enumerate(filenames):
-        yield f"\t; {filename}"
-
-        (rleData, palette) = get_rle_and_pal_data(filename, uniqueTilesByPt)
-        totalRleSize += sum(len(s) for s in rleData)
-
-        # RLE-compressed NT/AT data in slices
-        for si in range(RLE_SLICE_COUNT):
-            rleChunks = tuple(rle_slice_to_chunks(rleData[si]))
-            yield f"img{fi}_nt_at{si}"
-            for i in range(0, len(rleChunks), 13):
-                yield "\thex " + " ".join(c.hex() for c in rleChunks[i:i+13])
+    # description
+    descr = filename_to_descr(filename).lstrip(" ")
+    descr = bytes(char_to_tile_index(c) for c in descr)
+    print(f"img{fileIndex}_txt", file=dstHnd)
+    print(f"\tdb {len(descr)}", file=dstHnd)
+    for i in range(0, len(descr), 22):
         print(
-            f"{'':4}{filename:26}:", format(sum(len(s) for s in rleData), "3")
+            f"\thex " + " ".join(f"{b:02x}" for b in descr[i:i+22]),
+            file=dstHnd
         )
+    print("", file=dstHnd)
 
-        # palette
-        palette = " ".join(
-            palette[i:i+4].hex() for i in range(0, len(palette), 4)
-        )
-        yield f"img{fi}_pal"
-        yield f"\thex {palette}"
-
-        # description
-        descr = filename_to_descr(filename).lstrip(" ")
-        descr = bytes(char_to_tile_number(c) for c in descr)
-        yield f"img{fi}_txt"
-        yield f"\tdb {len(descr)}"
-        for i in range(0, len(descr), 22):
-            yield f"\thex " + " ".join(f"{b:02x}" for b in descr[i:i+22])
-        yield ""
-
-    print("Total compressed NT/AT data size:", totalRleSize)
-
-# -----------------------------------------------------------------------------
-
-def get_filenames():
-    # generate PNG filenames without extensions
-    with os.scandir(IMAGE_DIR) as dirIter:
-        for entry in dirIter:
-            (filename, extension) = os.path.splitext(entry.name)
-            if entry.is_file() and extension == IMAGE_EXT:
-                yield filename
+    return rleDataSize
 
 def main():
     # get filenames
@@ -684,7 +682,7 @@ def main():
     # sort filenames without punctuation, title screen first
     filenames.sort()
     filenames.sort(key=lambda f: f.replace("_", "").replace("-", ""))
-    filenames.sort(key=lambda f: f != TITLE_FILE)
+    filenames = tuple(sorted(filenames, key=lambda f: f != TITLE_FILE))
 
     print("Palette test...")
     print(
@@ -695,11 +693,29 @@ def main():
         "'Color sets': sets of hexadecimal NES colors used in AT blocks "
         "excluding background color; subsets of other sets excluded."
     )
-    print("'Palette type': manually defined or automatically generated.")
+    print(
+        "'Palette type': manual = predefined, automatic = automatically "
+        "generated."
+    )
     print("'Palette': 4*4 hexadecimal NES colors including background color.")
     for filename in filenames:
         print(f"{'':4}{filename}:")
-        palette_test(filename)
+
+        # validate image, get pixels as NES color indexes
+        with open(filename_to_path(filename), "rb") as handle:
+            handle.seek(0)
+            image = Image.open(handle)
+            validate_image(image)
+            nesPixels = get_nes_pixels(image)
+
+        palette = bytes(chain.from_iterable(
+            get_palette(nesPixels, filename, True)
+        ))
+        palette = ", ".join(
+            "+".join(f"{b:02x}" for b in palette[i:i+4])
+            for i in range(0, len(palette), 4)
+        )
+        print(f"{'':8}Palette:      {palette}")
     print()
 
     print(f"Writing background PT data to {PT_FILE}...")
@@ -709,8 +725,10 @@ def main():
         handle.seek(0)
         for pt in range(2):
             print(f"PT{pt}...")
-            files = (f for f in filenames if int(f in PT1_IMAGES) == pt)
-            uniqueTilesByPt.append(get_unique_tiles(files, PT_MAX_TILES[pt]))
+            ptFilenames = [f for f in filenames if int(f in PT1_IMAGES) == pt]
+            uniqueTilesByPt.append(get_sorted_tiles(
+                ptFilenames, PT_MAX_TILES[pt]
+            ))
             handle.write(encode_pt_data(uniqueTilesByPt[pt]))
             # pad
             expectedSize = sum(PT_MAX_TILES[:pt+1]) * 16
@@ -730,10 +748,18 @@ def main():
 
     print(f"Writing NT/AT/PT number/palette/description data to {ASM_FILE}...")
     print("Compressed NT/AT data size after each file.")
-    with open(ASM_FILE, "wt", encoding="ascii") as handle:
-        handle.seek(0)
-        for line in generate_asm_file(filenames, uniqueTilesByPt):
-            print(line, file=handle)
+    totalRleDataSize = 0
+    with open(ASM_FILE, "wt", encoding="ascii") as dstHnd:
+        dstHnd.seek(0)
+        write_asm_preamble(filenames, dstHnd)
+        for (fi, filename) in enumerate(filenames):
+            rleDataSize = write_asm_for_image(
+                fi, filename, uniqueTilesByPt[filename in PT1_IMAGES], dstHnd
+            )
+            totalRleDataSize += rleDataSize
+            print(f"{'':4}{filename:26}: {rleDataSize:3}")
+
+    print("Total compressed NT/AT data size:", totalRleDataSize)
     print()
 
 main()
