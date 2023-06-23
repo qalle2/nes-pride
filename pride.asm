@@ -59,7 +59,6 @@ joypad2         equ $4017
 ; --- Start of PRG ROM --------------------------------------------------------
 
                 base $c000              ; last 16 KiB of CPU address space
-                pad $e000, $ff          ; only use last 8 KiB
 
 ; --- Interrupt routines (here for page alignment) ----------------------------
 

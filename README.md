@@ -1,5 +1,5 @@
 # Qalle's Pride Flag Show
-Browse 38 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
+Browse 43 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
 
 ![screenshot](snap1.png)
 ![screenshot](snap2.png)
@@ -70,7 +70,7 @@ However, you need to have Python and ASM6 installed and may need to know some Py
 
 ## Technical info on the NES program
 * mapper: NROM
-* PRG ROM: 8 KiB
+* PRG ROM: 16 KiB
 * CHR ROM: 8 KiB
 * name table mirroring: vertical
 * pattern table 0: background (most flag images)
@@ -96,6 +96,7 @@ However, you need to have Python and ASM6 installed and may need to know some Py
 * [Demigender - LGBTQIA+ Wiki](https://lgbtqia.fandom.com/wiki/Demigender)
 * [Demigirl Pride Flag - Wikipedia](https://en.wikipedia.org/wiki/File:Demigirl_Pride-Flag.png)
 * [Demiguy Pride Flag - Wikipedia](https://en.wikipedia.org/wiki/File:Demiguy_Pride-Flag.png)
+* [Furry LGBT Pride Flags (Series 1) - Inanimorphs](https://www.inanimorphs.com/product-page/furry-lgbt-pride-flags-series-1)
 * [Furry Pride Flag - Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Furry_Pride_Flag.png)
 * [Omnisexual - LGBTQIA+ Wiki](https://lgbtqia.fandom.com/wiki/Omnisexual)
 * [Pride flag - Wikipedia](https://en.wikipedia.org/wiki/Pride_flag)
