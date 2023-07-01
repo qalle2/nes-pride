@@ -1,5 +1,5 @@
 # Qalle's Pride Flag Show
-Browse 43 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
+Browse 45 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
 
 ![screenshot](snap1.png)
 ![screenshot](snap2.png)
@@ -90,12 +90,14 @@ However, you need to have Python and ASM6 installed and may need to know some Py
 ## Sources of flags
 * [Androgyne - LGBTQIA+ Wiki](https://lgbtqia.fandom.com/wiki/Androgyne)
 * [Aromantic Asexual - LGBTQIA+ Wiki](https://lgbtqia.fandom.com/wiki/Aromantic_asexual)
+* [Asexual Furry Pride Fandom Flag - Amazon](https://www.amazon.com/Asexual-Furry-Pride-Fandom-Flag/dp/B07F1K57P1) (black pawprint)
 * [Autism pride flag - Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Autism_pride_flag.svg) (vertical stripes)
 * [Autistic Pride Flag - Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Autistic_Pride_Flag.png) (no stripes)
 * [The Autistic Pride Flag - Wikimedia Commons](https://commons.wikimedia.org/wiki/File:The_Autistic_Pride_Flag.png) (horizontal stripes)
 * [Demigender - LGBTQIA+ Wiki](https://lgbtqia.fandom.com/wiki/Demigender)
 * [Demigirl Pride Flag - Wikipedia](https://en.wikipedia.org/wiki/File:Demigirl_Pride-Flag.png)
 * [Demiguy Pride Flag - Wikipedia](https://en.wikipedia.org/wiki/File:Demiguy_Pride-Flag.png)
+* [Furry Bisexual Pride Flag Lgbt](https://www.wackyprint.com/store/activism/lgbt/furry-bisexual-pride-flag-lgbt-colors-vibrant-bright) (black pawprint)
 * [Furry LGBT Pride Flags (Series 1) - Inanimorphs](https://www.inanimorphs.com/product-page/furry-lgbt-pride-flags-series-1)
 * [Furry Pride Flag - Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Furry_Pride_Flag.png)
 * [Omnisexual - LGBTQIA+ Wiki](https://lgbtqia.fandom.com/wiki/Omnisexual)

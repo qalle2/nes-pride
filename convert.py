@@ -43,6 +43,8 @@ PT_FILE    = "chr-bg.bin"    # write PT data here
 
 PT_MAX_TILES = (256, 208)  # maximum number of tiles in PT0/PT1
 PT1_IMAGES = frozenset([  # images that use PT1 instead of PT0
+    "asexual_furry2",
+    "bisexual_furry2",
     "rainbow_progress_intersex",
     "title_screen",
 ])
@@ -59,10 +61,16 @@ MANUAL_SUBPALS = {
         (0x30, 0x27),        # white, yellow
         (0x30, 0x19, 0x12)   # white, green, blue
     ),
-    # 3 colors
+    # 3 colors (+ black)
     "asexual_furry": (
         (0x30, 0x14, 0x00),  # white, purple, gray
         (0x30, 0x00),        # white, gray
+    ),
+    # 3 colors (+ black)
+    "asexual_furry2": (
+        (0x00,),            # gray
+        (0x30,),            # white
+        (0x14,),            # purple
     ),
     # 7 colors
     "autism": (
@@ -96,6 +104,12 @@ MANUAL_SUBPALS = {
         (0x30, 0x13, 0x12),  # white-purple-blue
         (0x30, 0x15),        # white-pink
         (0x30, 0x12),        # white-blue
+    ),
+    # 3 colors (+ black)
+    "bisexual_furry2": (
+        (0x15, 0x13),       # pink-purple
+        (0x13, 0x12),       # purple-blue
+        (0x12,),            # blue
     ),
     # 2 colors; getting these wrong would waste many tiles
     "inter-_sex": (
