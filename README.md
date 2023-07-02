@@ -1,5 +1,5 @@
 # Qalle's Pride Flag Show
-Browse 45 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
+Browse 48 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
 
 ![screenshot](snap1.png)
 ![screenshot](snap2.png)
@@ -88,22 +88,25 @@ However, you need to have Python and ASM6 installed and may need to know some Py
   * for speed, all PPU memory updates (VRAM/palette) go through a buffer on the stack page (can be read quickly with PLA)
 
 ## Sources of flags
-* [Androgyne - LGBTQIA+ Wiki](https://lgbtqia.fandom.com/wiki/Androgyne)
-* [Aromantic Asexual - LGBTQIA+ Wiki](https://lgbtqia.fandom.com/wiki/Aromantic_asexual)
-* [Asexual Furry Pride Fandom Flag - Amazon](https://www.amazon.com/Asexual-Furry-Pride-Fandom-Flag/dp/B07F1K57P1) (black pawprint)
-* [Autism pride flag - Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Autism_pride_flag.svg) (vertical stripes)
-* [Autistic Pride Flag - Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Autistic_Pride_Flag.png) (no stripes)
-* [The Autistic Pride Flag - Wikimedia Commons](https://commons.wikimedia.org/wiki/File:The_Autistic_Pride_Flag.png) (horizontal stripes)
-* [Demigender - LGBTQIA+ Wiki](https://lgbtqia.fandom.com/wiki/Demigender)
-* [Demigirl Pride Flag - Wikipedia](https://en.wikipedia.org/wiki/File:Demigirl_Pride-Flag.png)
-* [Demiguy Pride Flag - Wikipedia](https://en.wikipedia.org/wiki/File:Demiguy_Pride-Flag.png)
+* [Androgyne](https://lgbtqia.fandom.com/wiki/Androgyne) - LGBTQIA+ Wiki
+* [Aromantic Asexual](https://lgbtqia.fandom.com/wiki/Aromantic_asexual) - LGBTQIA+ Wiki
+* [Asexual Furry Pride Fandom Flag](https://www.amazon.com/Asexual-Furry-Pride-Fandom-Flag/dp/B07F1K57P1) (black pawprint) - Amazon
+* [Autism pride flag](https://commons.wikimedia.org/wiki/File:Autism_pride_flag.svg) (vertical stripes) - Wikimedia Commons
+* [Autistic Pride Flag](https://commons.wikimedia.org/wiki/File:Autistic_Pride_Flag.png) (no stripes) - Wikimedia Commons
+* [The Autistic Pride Flag](https://commons.wikimedia.org/wiki/File:The_Autistic_Pride_Flag.png) (horizontal stripes) - Wikimedia Commons
+* [Demigender](https://lgbtqia.fandom.com/wiki/Demigender) - LGBTQIA+ Wiki
+* [Demigirl Pride Flag](https://en.wikipedia.org/wiki/File:Demigirl_Pride-Flag.png) - Wikipedia
+* [Demiguy Pride Flag](https://en.wikipedia.org/wiki/File:Demiguy_Pride-Flag.png) - Wikipedia
 * [Furry Bisexual Pride Flag Lgbt](https://www.wackyprint.com/store/activism/lgbt/furry-bisexual-pride-flag-lgbt-colors-vibrant-bright) (black pawprint)
-* [Furry LGBT Pride Flags (Series 1) - Inanimorphs](https://www.inanimorphs.com/product-page/furry-lgbt-pride-flags-series-1)
-* [Furry Pride Flag - Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Furry_Pride_Flag.png)
-* [Omnisexual - LGBTQIA+ Wiki](https://lgbtqia.fandom.com/wiki/Omnisexual)
-* [Pride flag - Wikipedia](https://en.wikipedia.org/wiki/Pride_flag)
-* [Queer Pride Flag - Queer in the World](https://queerintheworld.com/queer-pride-flag/)
-* [Rainbow flag (LGBT) - Wikipedia](https://en.wikipedia.org/wiki/Rainbow_flag_%28LGBT%29)
-* [Sapphic - LGBTQIA+ Wiki](https://lgbtqia.fandom.com/wiki/Sapphic)
+* [Furry LGBT Pride Flags (Series 1)](https://www.inanimorphs.com/product-page/furry-lgbt-pride-flags-series-1) - Inanimorphs
+* [Furry Pride Flag](https://commons.wikimedia.org/wiki/File:Furry_Pride_Flag.png) - Wikimedia Commons
+* [Omnisexual](https://lgbtqia.fandom.com/wiki/Omnisexual) - LGBTQIA+ Wiki
+* [Pansexual Furry Pride Fandom Paw Flag](https://www.amazon.com/Pansexual-Furry-Pride-Fandom-Flag/dp/B07F1X4G6P) (black pawprint)
+* [Pride flag](https://en.wikipedia.org/wiki/Pride_flag) - Wikipedia
+* [Queer Pride Flag](https://queerintheworld.com/queer-pride-flag/) - Queer in the World
+* [Rainbow flag (LGBT)](https://en.wikipedia.org/wiki/Rainbow_flag_%28LGBT%29) - Wikipedia
+* [Sapphic](https://lgbtqia.fandom.com/wiki/Sapphic) - LGBTQIA+ Wiki
+* [Transgender Furry Pride Fandom Paw Flag](https://www.amazon.com/Transgender-Furry-Pride-Fandom-Flag/dp/B07F1Y36D2)
+* [Visually Safe Disability Pride Flag](https://commons.wikimedia.org/wiki/File:Visually_Safe_Disability_Pride_Flag.svg) - Wikimedia Commons
 
 The license of this project does not apply to the flag images (I guess).

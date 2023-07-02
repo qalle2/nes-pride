@@ -43,8 +43,12 @@ PT_FILE    = "chr-bg.bin"    # write PT data here
 
 PT_MAX_TILES = (256, 208)  # maximum number of tiles in PT0/PT1
 PT1_IMAGES = frozenset([  # images that use PT1 instead of PT0
+    # black pawprint
     "asexual_furry2",
     "bisexual_furry2",
+    "pan-_sexual_furry2",
+    "trans-_gender_furry2",
+    # other
     "rainbow_progress_intersex",
     "title_screen",
 ])
@@ -54,23 +58,12 @@ PT1_IMAGES = frozenset([  # images that use PT1 instead of PT0
 # must have exactly the same colors as the image, minus NES_BG_COLOR;
 # these reduce the number of unique tiles a little
 MANUAL_SUBPALS = {
-    # 7 colors (+ black)
-    "title_screen": (
-        (0x21, 0x30, 0x13),  # cyan, white, purple
-        (0x30, 0x15),        # white, red
-        (0x30, 0x27),        # white, yellow
-        (0x30, 0x19, 0x12)   # white, green, blue
-    ),
-    # 3 colors (+ black)
-    "asexual_furry": (
+    # --- PT0 ---
+
+    # 3 colors + black
+    "asexual_furry1": (
         (0x30, 0x14, 0x00),  # white, purple, gray
         (0x30, 0x00),        # white, gray
-    ),
-    # 3 colors (+ black)
-    "asexual_furry2": (
-        (0x00,),            # gray
-        (0x30,),            # white
-        (0x14,),            # purple
     ),
     # 7 colors
     "autism": (
@@ -92,36 +85,37 @@ MANUAL_SUBPALS = {
         (0x12, 0x30),        # blue, white
         (0x16, 0x1a, 0x12),  # red, green, blue
     ),
-    # 6 colors (+ black); saves ~3 tiles
+    # 6 colors + black; saves ~3 tiles
     "bear": (
         (0x17, 0x27, 0x37),  # darkish brown, lightish brown, light brown
         (0x00, 0x30, 0x37),  # gray, white, light brown
         (0x07, 0x17),        # dark brown, darkish brown
     ),
     # 4 colors; saves ~24 tiles
-    "bisexual_furry": (
+    "bisexual_furry1": (
         (0x30, 0x13, 0x15),  # white-purple-pink
         (0x30, 0x13, 0x12),  # white-purple-blue
         (0x30, 0x15),        # white-pink
         (0x30, 0x12),        # white-blue
     ),
-    # 3 colors (+ black)
-    "bisexual_furry2": (
-        (0x15, 0x13),       # pink-purple
-        (0x13, 0x12),       # purple-blue
-        (0x12,),            # blue
+    # 5 colors + black
+    "dis-_ability": (
+        (0x2a, 0x21),        # green-blue
+        (0x21, 0x30),        # blue-white
+        (0x30, 0x28),        # white-yellow
+        (0x28, 0x26),        # yellow-red
     ),
     # 2 colors; getting these wrong would waste many tiles
     "inter-_sex": (
         (0x28, 0x04),        # yellow, purple
     ),
     # 4 colors; saves ~18 tiles
-    "pan-_sexual_furry": (
+    "pan-_sexual_furry1": (
         (0x30, 0x15, 0x21),  # white-pink-cyan
         (0x30, 0x21),        # white-cyan
         (0x30, 0x28),        # white-yellow
     ),
-    # 6 colors (+ black); saves ~2 tiles
+    # 6 colors + black; saves ~2 tiles
     "rainbow_furry1": (
         (0x16, 0x27),        # red-orange
         (0x27, 0x28),        # orange-yellow
@@ -140,11 +134,45 @@ MANUAL_SUBPALS = {
         (0x25,),             # pink
         (0x30, 0x13, 0x27),  # white, purple, yellow
     ),
-    # 3 colors: 21=cyan, 25=pink, 30=white
-    "trans-_gender_furry": (
+    # 3 colors
+    "trans-_gender_furry1": (
         (0x30, 0x21, 0x25),  # white, cyan, pink
         (0x30, 0x25),        # white, pink
         (0x21, 0x25),        # cyan, pink
+    ),
+
+    # --- PT1 ---
+
+    # 3 colors + black
+    "asexual_furry2": (
+        (0x00,),             # gray
+        (0x30,),             # white
+        (0x14,),             # purple
+    ),
+    # 3 colors + black
+    "bisexual_furry2": (
+        (0x13, 0x15),        # purple-pink
+        (0x13, 0x12),        # purple-blue
+        (0x15,),             # pink
+        (0x12,),             # blue
+    ),
+    # 3 colors + black
+    "pan-_sexual_furry2": (
+        (0x15,),             # red
+        (0x28,),             # yellow
+        (0x21,),             # blue
+    ),
+    # 7 colors + black
+    "title_screen": (
+        (0x21, 0x30, 0x13),  # cyan, white, purple
+        (0x30, 0x15),        # white, red
+        (0x30, 0x27),        # white, yellow
+        (0x30, 0x19, 0x12)   # white, green, blue
+    ),
+    # 3 colors + black
+    "trans-_gender_furry2": (
+        (0x30, 0x25),        # white, pink
+        (0x25, 0x21),        # pink, cyan
     ),
 }
 assert all(1 <= len(p) <= 4                 for p in MANUAL_SUBPALS.values())
