@@ -612,7 +612,7 @@ get_sect_addr   ; Get address in graphics data.
 ; --- CHR ROM -----------------------------------------------------------------
 
                 base $0000
-                incbin "chr-bg.bin"     ; background (256+208 tiles)
-                pad $1d00, $ff
-                incbin "chr-spr.bin"    ; sprites (48 tiles)
+                incbin "chr-bg.bin"     ; background (256+224 tiles)
+                pad $1e00, $ff
+                incbin "chr-spr.bin"    ; sprites (32 tiles)
                 pad $2000, $ff

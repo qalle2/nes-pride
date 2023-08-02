@@ -41,7 +41,7 @@ TITLE_FILE = "title_screen"  # sort this image first (no extension)
 ASM_FILE   = "imgdata.asm"   # write all data except PTs in ASM6 format here
 PT_FILE    = "chr-bg.bin"    # write PT data here
 
-PT_MAX_TILES = (256, 208)  # maximum number of tiles in PT0/PT1
+PT_MAX_TILES = (256, 224)  # maximum number of tiles in PT0/PT1
 PT1_IMAGES = frozenset([  # images that use PT1 instead of PT0
     # black pawprint
     "asexual_furry2",
@@ -49,7 +49,9 @@ PT1_IMAGES = frozenset([  # images that use PT1 instead of PT0
     "pan-_sexual_furry2",
     "trans-_gender_furry2",
     # other
+    "poly-_amory",
     "rainbow_progress_intersex",
+    "sapphic",
     "title_screen",
 ])
 
@@ -109,6 +111,11 @@ MANUAL_SUBPALS = {
     "inter-_sex": (
         (0x28, 0x04),        # yellow, purple
     ),
+    # 3 colors + black
+    "otherkin": (
+        (0x30,),             # white
+        (0x1b, 0x03),        # green, purple
+    ),
     # 4 colors; saves ~18 tiles
     "pan-_sexual_furry1": (
         (0x30, 0x15, 0x21),  # white-pink-cyan
@@ -128,11 +135,6 @@ MANUAL_SUBPALS = {
         (0x30, 0x04, 0x12),  # white-purple-blue
         (0x30, 0x16, 0x28),  # white-red-yellow
         (0x30, 0x19),        # white-green
-    ),
-    # 4 colors; saves ~3 tiles
-    "sapphic": (
-        (0x25,),             # pink
-        (0x30, 0x13, 0x27),  # white, purple, yellow
     ),
     # 3 colors
     "trans-_gender_furry1": (
@@ -161,6 +163,11 @@ MANUAL_SUBPALS = {
         (0x15,),             # red
         (0x28,),             # yellow
         (0x21,),             # blue
+    ),
+    # 4 colors; saves ~3 tiles
+    "sapphic": (
+        (0x25,),             # pink
+        (0x30, 0x13, 0x27),  # white, purple, yellow
     ),
     # 7 colors + black
     "title_screen": (
@@ -650,15 +657,21 @@ def filename_to_descr(filename):
 
 def char_to_tile_index(char):
     # convert character into NES tile index
-    cp = ord(char)
-    if cp == ord(" "):
+    if char == " ":
         return 0x00
-    if cp == ord("-"):
-        return 0xd0
-    if ord("0") <= cp <= ord("9"):
-        return 0xd1 + cp - ord("0")
-    if ord("a") <= cp <= ord("z"):
-        return 0xdb + cp - ord("a")
+    if char == "-":
+        return 0xe0
+    if char == "1":
+        return 0xe1
+    if char == "2":
+        return 0xe2
+    cp = ord(char)
+    if ord("5") <= cp <= ord("8"):
+        return 0xe3 + cp - ord("5")
+    if ord("a") <= cp <= ord("i"):
+        return 0xe7 + cp - ord("a")
+    if ord("k") <= cp <= ord("y"):
+        return 0xf0 + cp - ord("k")
     sys.exit("Unknown character.")
 
 def write_asm_for_image(fileIndex, filename, uniqueTiles, subpals, dstHnd):

@@ -1,5 +1,5 @@
 # Qalle's Pride Flag Show
-Browse 48 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
+Browse 49 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
 
 ![screenshot](snap1.png)
 ![screenshot](snap2.png)
@@ -44,18 +44,19 @@ Other (gzip compressed):
 * start button: toggle flag descriptions on or off
 
 ## How to add new flags
-You can add flags of your own to the NES program without programming skills.
-However, you need to have Python and ASM6 installed and may need to know some Python if things go wrong.
-1. Open your flag image in an image editor (e.g. GIMP).
-2. Resize the image to 256&times;192 pixels.
-3. Convert the image into indexed color (so it has a palette).
-4. Because of NES hardware limitations, the colors need to be optimized manually and the pixels may need to be edited as well. This is tricky, but follow these rules:
+You can add flags of your own to the NES program.
+You need to have Python and ASM6 installed and may need to know some Python if things go wrong.
+1. Delete some existing flags. (There are no free tiles at the moment.) If this causes `convert.py` to complain about missing files, delete references to them.
+2. Open your flag image in an image editor (e.g. GIMP).
+3. Resize the image to 256&times;192 pixels.
+4. Convert the image into indexed color (so it has a palette).
+5. Because of NES hardware limitations, the colors need to be optimized manually and the pixels may need to be edited as well. This is tricky, but follow these rules:
    * No more than 12 unique colors in addition to black.
    * All unique colors should be clearly distinct from each other. (Try copying colors from existing flags.)
    * Put a 16&times;16-pixel grid on the image (in GIMP, Image &rarr; Configure Grid&hellip; and View &rarr; Show Grid).
    * No grid square can have more than three distinct colors in addition to black.
    * In all grid squares combined, you can't use more than four unique sets of three distinct colors in addition to black.
-5. Save the image in PNG format under the `img` directory. The filename before the extension (`.png`) is important:
+6. Save the image in PNG format under the `img` directory. The filename before the extension (`.png`) is important:
    * It will be the flag description text (up to 8&times;3 characters) inside the NES program.
    * 24 characters or less.
    * Only `a`&ndash;`z`, `0`&ndash;`9`, hyphen (`-`) and underscore (`_`) are allowed.
@@ -63,10 +64,10 @@ However, you need to have Python and ASM6 installed and may need to know some Py
    * No more than two underscores.
    * No more than eight consecutive non-underscore characters.
    * See the existing filenames for examples.
-6. Run `python3 convert.py`. It should not print any errors. However, the palette creation algorithm isn't very smart, so if you're sure you followed step 4 correctly and the program still complains, you can define the palette manually: edit `MANUAL_SUBPALS` in `convert.py`. The output just before the error message and `NES_PALETTE` in `convert.py` will be helpful.
-7. Extract `chr-spr.bin` from the `.gz` file. (Use e.g. `gunzip` on Linux or 7-Zip on Windows.)
-8. Assemble: `asm6 pride.asm pride.nes` &ndash; again, it should not print any errors.
-9. Run `pride.nes` on an NES emulator (e.g. FCEUX, Nestopia, Mednafen).
+7. Run `python3 convert.py`. It should not print any errors. However, the palette creation algorithm isn't very smart, so if you're sure you followed step 4 correctly and the program still complains, you can define the palette manually: edit `MANUAL_SUBPALS` in `convert.py`. The output just before the error message and `NES_PALETTE` in `convert.py` will be helpful.
+8. Extract `chr-spr.bin` from the `.gz` file. (Use e.g. `gunzip` on Linux or 7-Zip on Windows.)
+9. Assemble: `asm6 pride.asm pride.nes` &ndash; again, it should not print any errors.
+10. Run `pride.nes` on an NES emulator (e.g. FCEUX, Nestopia, Mednafen).
 
 ## Technical info on the NES program
 * mapper: NROM
@@ -74,8 +75,8 @@ However, you need to have Python and ASM6 installed and may need to know some Py
 * CHR ROM: 8 KiB
 * name table mirroring: vertical
 * pattern table 0: background (most flag images)
-* pattern table 1 &ndash; first 208 tiles: background (some flag images)
-* pattern table 1 &ndash; last 48 tiles: sprites (flag descriptions)
+* pattern table 1 &ndash; first 224 tiles: background (some flag images)
+* pattern table 1 &ndash; last 32 tiles: sprites (flag descriptions)
 * each image has its own background palettes (black and 4&times;3 other colors)
 * flag images are 256&times;192 pixels (32&times;24 tiles or 16&times;12 attribute blocks)
 * flag images are shown at the bottom of a name/attribute table
@@ -100,6 +101,7 @@ However, you need to have Python and ASM6 installed and may need to know some Py
 * [Furry Bisexual Pride Flag Lgbt](https://www.wackyprint.com/store/activism/lgbt/furry-bisexual-pride-flag-lgbt-colors-vibrant-bright) (black pawprint)
 * [Furry LGBT Pride Flags (Series 1)](https://www.inanimorphs.com/product-page/furry-lgbt-pride-flags-series-1) - Inanimorphs
 * [Furry Pride Flag](https://commons.wikimedia.org/wiki/File:Furry_Pride_Flag.png) - Wikimedia Commons
+* [Nonhuman Unity Flag](https://en.wikipedia.org/wiki/File:Nonhuman_Unity_Flag.svg) (otherkin) - Wikimedia Commons
 * [Omnisexual](https://lgbtqia.fandom.com/wiki/Omnisexual) - LGBTQIA+ Wiki
 * [Pansexual Furry Pride Fandom Paw Flag](https://www.amazon.com/Pansexual-Furry-Pride-Fandom-Flag/dp/B07F1X4G6P) (black pawprint)
 * [Pride flag](https://en.wikipedia.org/wiki/Pride_flag) - Wikipedia
