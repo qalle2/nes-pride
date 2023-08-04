@@ -29,6 +29,7 @@ stack_ptr       equ $0c    ; copy of stack pointer
 rle_src_ind     equ $0d    ; RLE decoder - source index
 rle_dst_ind     equ $0e    ; RLE decoder - destination index
 rle_direct      equ $0f    ; RLE decoder - direct (implied) byte
+chr_bank        equ $10    ; CHR bank to switch to
 ppu_buffer      equ $0100  ; see above (140 bytes)
 sprite_data     equ $0200  ; OAM page ($100 bytes)
 
@@ -52,8 +53,8 @@ joypad2         equ $4017
                 ;
                 base $0000
                 db "NES", $1a            ; file id
-                db 1, 1                  ; 16 KiB PRG ROM, 8 KiB CHR ROM
-                db %00000001, %00000000  ; NROM mapper, vertical mirroring
+                db 1, 4                  ; 16 KiB PRG ROM, 32 KiB CHR ROM
+                db %00110001, %00000000  ; CNROM (mapper 3), vertical mirroring
                 pad $0010, $00           ; unused
 
 ; --- Start of PRG ROM --------------------------------------------------------
@@ -81,7 +82,7 @@ nmi             pha                     ; push A, X, Y
                 inc ppu_upd_phase
 
 +               jsr flush_ppu_buf
-                jsr set_ppu_regs
+                jsr set_ppu_regs        ; set PPU registers and CHR bank
 
                 sec                     ; set flag to let main loop run once
                 ror run_main_loop
@@ -140,7 +141,9 @@ flush_ppu_buf   ; copy ppu_buffer to PPU memory and clear it
 
 +               rts
 
-set_ppu_regs    lda #0                  ; horizontal scroll
+set_ppu_regs    ; set PPU registers and CHR bank
+                ;
+                lda #0                  ; horizontal scroll
                 sta ppu_scroll
                 lda #3*8                ; vertical scroll: 3 tiles up
                 sta ppu_scroll
@@ -148,7 +151,15 @@ set_ppu_regs    lda #0                  ; horizontal scroll
                 sta ppu_ctrl
                 lda #%00011110          ; show background & sprites
                 sta ppu_mask
+                ;
+                ; note: mapper has bus conflicts
+                lda chr_bank
+                tax
+                sta bank_numbers,x
+                ;
                 rts
+
+bank_numbers    db 0, 1, 2, 3           ; CHR bank numbers
 
 ; --- Initialization ----------------------------------------------------------
 
@@ -173,7 +184,8 @@ reset           ; initialize the NES;
 
                 jsr wait_vbl_start      ; wait until next VBlank starts
                 jsr init_ppu_mem        ; initialize PPU memory
-                jsr set_ppu_regs        ; set PPU registers
+                jsr set_ppu_regs        ; set PPU registers and CHR bank
+
                 jmp main_loop           ; start main loop
 
 wait_vbl_start  bit ppu_status          ; wait until next VBlank starts
@@ -268,7 +280,7 @@ set_ppu_addr    sty ppu_addr            ; Y*$100 + A -> address
 ; --- Pregenerated image data -------------------------------------------------
 
                 ; image data excluding pattern tables; automatically generated;
-                ; constants defined there: image_count, pts_to_use, image_ptrs
+                ; constants defined there: image_count, image_ptrs
                 include "imgdata.asm"
 
 ; --- Main loop ---------------------------------------------------------------
@@ -491,7 +503,7 @@ nt_high_invis   ; visible NT -> high byte of non-visible NT offset
 pal_to_buffer   ; copy background palettes (16 bytes) of current image from
                 ; NT/AT data to ppu_buffer
 
-                ldy #6
+                ldy #7
                 jsr get_sect_addr       ; address -> grafix_ptr
 
                 ldy #0                  ; source/destination index
@@ -510,25 +522,19 @@ pal_to_buffer   ; copy background palettes (16 bytes) of current image from
 
                 rts
 
-set_ppu_ctrl    ; set background PT and NT in ppu_ctrl_copy
+set_ppu_ctrl    ; set CHR bank, background PT and NT in chr_bank and
+                ; ppu_ctrl_copy
 
-                ; which PT to use (0/1) -> X
-                ;
-                lda which_image         ; byte index -> Y
+                ; get CHR bank & PT to use (bits %BBP); %BB -> chr_bank,
+                ; %P -> X
+                ldy #6
+                jsr get_sect_addr       ; address -> grafix_ptr
+                ldy #0
+                lda (grafix_ptr),y
                 lsr a
-                lsr a
-                lsr a
-                tay
-                lda which_image         ; bit index -> X
-                and #%00000111
-                tax
-                ;
-                lda pts_to_use,y        ; read byte
--               lsr a                   ; shift correct bit to carry
-                dex
-                bpl -
-                lda #0                  ; carry -> X
+                sta chr_bank
                 rol a
+                and #%00000001
                 tax
 
                 lda ppu_ctrl_copy
@@ -543,7 +549,7 @@ bg_pt_values    db %00000000, %00010000
 update_sprites  ; update tiles of description sprites
 
                 ; get description address
-                ldy #7
+                ldy #8
                 jsr get_sect_addr       ; address -> grafix_ptr
 
                 ; 1st byte = length
@@ -578,7 +584,7 @@ update_sprites  ; update tiles of description sprites
 
 get_sect_addr   ; Get address in graphics data.
                 ; in: which_image, Y = which section (0-5 = NT/AT slice,
-                ;     6 = palette, 7 = description)
+                ;     6 = PT to use, 7 = palette, 8 = description)
                 ; out: grafix_ptr
 
                 ; get image address
@@ -611,8 +617,32 @@ get_sect_addr   ; Get address in graphics data.
 
 ; --- CHR ROM -----------------------------------------------------------------
 
+                ; For each bank:
+                ; - background (256+208 tiles, different in each bank)
+                ; - sprites (48 tiles, same in each bank)
+
                 base $0000
-                incbin "chr-bg.bin"     ; background (256+224 tiles)
-                pad $1e00, $ff
-                incbin "chr-spr.bin"    ; sprites (32 tiles)
+
+                ; bank 0
+                incbin "chr-bg0.bin"
+                pad $1d00, $ff
+                incbin "chr-spr.bin"
                 pad $2000, $ff
+
+                ; bank 1
+                incbin "chr-bg1.bin"
+                pad $3d00, $ff
+                incbin "chr-spr.bin"
+                pad $4000, $ff
+
+                ; bank 2
+                incbin "chr-bg2.bin"
+                pad $5d00, $ff
+                incbin "chr-spr.bin"
+                pad $6000, $ff
+
+                ; bank 3
+                incbin "chr-bg3.bin"
+                pad $7d00, $ff
+                incbin "chr-spr.bin"
+                pad $8000, $ff

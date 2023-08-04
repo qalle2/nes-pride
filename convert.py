@@ -1,6 +1,6 @@
 # convert images of pride flags into NES-compatible format
 
-# NES graphics glossary (assuming no enhanced cartridge or raster effects):
+# NES graphics glossary (assuming NROM/CNROM and no raster effects):
 #
 # Palettes:
 # - master palette: 64 colors (not all different)
@@ -11,12 +11,12 @@
 # Background & sprite graphics:
 # - tile = 8*8 pixels, 2 bits/pixel
 # - PT = pattern table; pixel data (16 bytes/tile) for 256 tiles
-# - CHR ROM/RAM = all PTs; stored on cartridge
+# - CHR ROM = all PTs (NROM has 2, CNROM has 8); stored on cartridge
 #
-# Background (non-sprite) graphics:
+# Background graphics:
 # - screen = NT + AT = 256*240 pixels = 32*30 tiles = 16*15 attribute blocks
 #        (not all visible without scrolling)
-# - VRAM = 2 screens; separate chip inside the NES
+# - VRAM = 2 screens; separate RAM chip inside the NES
 # - NT = name table; 1 PT index (byte) for each tile position on screen; can't
 #        have tiles from more than one PT at the same time
 # - attribute block = 2*2 tiles
@@ -39,33 +39,105 @@ IMAGE_DIR  = "img"           # read images from this path
 IMAGE_EXT  = ".png"          # read images with this extension
 TITLE_FILE = "title_screen"  # sort this image first (no extension)
 ASM_FILE   = "imgdata.asm"   # write all data except PTs in ASM6 format here
-PT_FILE    = "chr-bg.bin"    # write PT data here
 
-PT_MAX_TILES = (256, 224)  # maximum number of tiles in PT0/PT1
-PT1_IMAGES = frozenset([  # images that use PT1 instead of PT0
-    # black pawprint
-    "asexual_furry2",
-    "bisexual_furry2",
-    "pan-_sexual_furry2",
-    "trans-_gender_furry2",
-    # other
-    "poly-_amory",
-    "rainbow_progress_intersex",
-    "sapphic",
-    "title_screen",
-])
+BANK_COUNT = 4  # number of CHR banks
+
+# write PT data here (1 file = 1 bank = 2 PTs)
+PT_FILES = ("chr-bg0.bin", "chr-bg1.bin", "chr-bg2.bin", "chr-bg3.bin")
+
+# maximum number of tiles in PT0/PT1 in each bank
+PT_MAX_TILES = (256, 208)
+
+# which PT to store each image in (0-7); grouped by similarity
+IMAGE_PTS = {
+    # simple flags (11 or fewer distinct tiles each)
+    "agender":             0,
+    "andro-_gyne":         0,
+    "a-_romantic":         0,
+    "a-_romantic_asexual": 0,
+    "asexual":             0,
+    "bigender":            0,
+    "bisexual":            0,
+    "demi-_fluid":         0,
+    "demi-_flux":          0,
+    "demi-_gender":        0,
+    "demigirl":            0,
+    "demiguy":             0,
+    "demi-_sexual":        0,
+    "dis-_ability":        0,
+    "gay_men":             0,
+    "gender-_fluid":       0,
+    "gender-_queer":       0,
+    "lesbian_5stripes":    0,
+    "lesbian_7stripes":    0,
+    "non-_binary":         0,
+    "omni-_sexual":        0,
+    "pan-_sexual":         0,
+    "poly-_amory":         0,
+    "poly-_sexual":        0,
+    "queer":               0,
+    "rainbow_6stripes":    0,
+    "rainbow_7stripes":    0,
+    "rainbow_8stripes":    0,
+    "trans-_gender":       0,
+
+    # other rainbow, intersex
+    "inter-_sex":                1,
+    "rainbow_progress":          1,
+    "rainbow_progress_intersex": 1,
+
+    # furry, autism
+    "asexual_furry1":       2,
+    "asexual_furry2":       2,
+    "autism":               2,
+    "autism_hstripes":      2,
+    "autism_vstripes":      2,
+    "bisexual_furry1":      2,
+    "bisexual_furry2":      2,
+    "pan-_sexual_furry1":   2,
+    "pan-_sexual_furry2":   2,
+    "rainbow_furry1":       2,
+    "rainbow_furry2":       2,
+    "trans-_gender_furry1": 2,
+    "trans-_gender_furry2": 2,
+
+    # misc
+    "bear":     3,
+    "leather":  3,
+    "otherkin": 3,
+    "sapphic":  3,
+
+    # title screen
+    "title_screen": 7,
+}
 
 # optional manually-defined palettes by filename;
 # up to 4 tuples with up to 3 NES colors each (no NES_BG_COLOR);
 # must have exactly the same colors as the image, minus NES_BG_COLOR;
-# these reduce the number of unique tiles a little
+# these reduce the number of unique tiles a little;
+# we want colors that occur in many unique tiles to be in low indexes within
+# subpalettes to increase the likelihood of duplicates;
+# same grouping of flags as above
 MANUAL_SUBPALS = {
-    # --- PT0 ---
+    # --- Other rainbow, intersex ---
+
+    # 2 colors
+    "inter-_sex": (
+        (0x28, 0x04),  # yellow, purple
+    ),
+
+    # --- Furry, autism ---
 
     # 3 colors + black
     "asexual_furry1": (
         (0x30, 0x14, 0x00),  # white, purple, gray
         (0x30, 0x00),        # white, gray
+    ),
+    # 3 colors + black
+    "asexual_furry2": (
+        (0x00,),             # gray
+        (0x30,),             # white
+        (0x14,),             # purple
     ),
     # 7 colors
     "autism": (
@@ -80,56 +152,47 @@ MANUAL_SUBPALS = {
         (0x28, 0x30),        # yellow, white
         (0x28, 0x2a, 0x1a),  # yellow, light green, dark green
     ),
-    # 4 colors; saves ~14 tiles
+    # 4 colors
     "autism_vstripes": (
         (0x16, 0x30),        # red, white
         (0x1a, 0x30),        # green, white
         (0x12, 0x30),        # blue, white
         (0x16, 0x1a, 0x12),  # red, green, blue
     ),
-    # 6 colors + black; saves ~3 tiles
-    "bear": (
-        (0x17, 0x27, 0x37),  # darkish brown, lightish brown, light brown
-        (0x00, 0x30, 0x37),  # gray, white, light brown
-        (0x07, 0x17),        # dark brown, darkish brown
-    ),
-    # 4 colors; saves ~24 tiles
+    # 4 colors
     "bisexual_furry1": (
         (0x30, 0x13, 0x15),  # white-purple-pink
         (0x30, 0x13, 0x12),  # white-purple-blue
         (0x30, 0x15),        # white-pink
         (0x30, 0x12),        # white-blue
     ),
-    # 5 colors + black
-    "dis-_ability": (
-        (0x2a, 0x21),        # green-blue
-        (0x21, 0x30),        # blue-white
-        (0x30, 0x28),        # white-yellow
-        (0x28, 0x26),        # yellow-red
-    ),
-    # 2 colors; getting these wrong would waste many tiles
-    "inter-_sex": (
-        (0x28, 0x04),        # yellow, purple
-    ),
     # 3 colors + black
-    "otherkin": (
-        (0x30,),             # white
-        (0x1b, 0x03),        # green, purple
+    "bisexual_furry2": (
+        (0x13, 0x15),        # purple-pink
+        (0x13, 0x12),        # purple-blue
+        (0x15,),             # pink
+        (0x12,),             # blue
     ),
-    # 4 colors; saves ~18 tiles
+    # 4 colors
     "pan-_sexual_furry1": (
         (0x30, 0x15, 0x21),  # white-pink-cyan
         (0x30, 0x21),        # white-cyan
         (0x30, 0x28),        # white-yellow
     ),
-    # 6 colors + black; saves ~2 tiles
+    # 3 colors + black
+    "pan-_sexual_furry2": (
+        (0x15,),             # red
+        (0x28,),             # yellow
+        (0x21,),             # blue
+    ),
+    # 6 colors + black
     "rainbow_furry1": (
         (0x16, 0x27),        # red-orange
         (0x27, 0x28),        # orange-yellow
         (0x11, 0x1b, 0x28),  # blue-green-yellow
         (0x04, 0x11),        # purple-blue
     ),
-    # 7 colors; saves ~14 tiles
+    # 7 colors
     "rainbow_furry2": (
         (0x30, 0x04, 0x27),  # white-purple-orange
         (0x30, 0x04, 0x12),  # white-purple-blue
@@ -142,44 +205,39 @@ MANUAL_SUBPALS = {
         (0x30, 0x25),        # white, pink
         (0x21, 0x25),        # cyan, pink
     ),
-
-    # --- PT1 ---
-
     # 3 colors + black
-    "asexual_furry2": (
-        (0x00,),             # gray
+    "trans-_gender_furry2": (
+        (0x30, 0x25),        # white, pink
+        (0x25, 0x21),        # pink, cyan
+    ),
+
+    # --- Misc ---
+
+    # 6 colors + black
+    "bear": (
+        (0x17, 0x27, 0x37),  # darkish brown, lightish brown, light brown
+        (0x00, 0x30, 0x37),  # gray, white, light brown
+        (0x07, 0x17),        # dark brown, darkish brown
+    ),
+    # 3 colors + black
+    "otherkin": (
         (0x30,),             # white
-        (0x14,),             # purple
+        (0x1b, 0x03),        # green, purple
     ),
-    # 3 colors + black
-    "bisexual_furry2": (
-        (0x13, 0x15),        # purple-pink
-        (0x13, 0x12),        # purple-blue
-        (0x15,),             # pink
-        (0x12,),             # blue
-    ),
-    # 3 colors + black
-    "pan-_sexual_furry2": (
-        (0x15,),             # red
-        (0x28,),             # yellow
-        (0x21,),             # blue
-    ),
-    # 4 colors; saves ~3 tiles
+    # 4 colors
     "sapphic": (
         (0x25,),             # pink
         (0x30, 0x13, 0x27),  # white, purple, yellow
     ),
+
+    # --- Title screen ---
+
     # 7 colors + black
     "title_screen": (
         (0x21, 0x30, 0x13),  # cyan, white, purple
         (0x30, 0x15),        # white, red
         (0x30, 0x27),        # white, yellow
         (0x30, 0x19, 0x12)   # white, green, blue
-    ),
-    # 3 colors + black
-    "trans-_gender_furry2": (
-        (0x30, 0x25),        # white, pink
-        (0x25, 0x21),        # pink, cyan
     ),
 }
 assert all(1 <= len(p) <= 4                 for p in MANUAL_SUBPALS.values())
@@ -365,8 +423,8 @@ def create_subpalettes(nesPixels):
     # printExtraInfo: print intermediate results (bool)
 
     colorSets = get_sorted_color_sets(nesPixels)
-
     subpals = [set() for i in range(4)]
+
     for colorSet in colorSets:
         # get maximum number of common colors with a subpalette in which
         # the new colors fit
@@ -518,18 +576,6 @@ def write_asm_preamble(filenames, handle):
     print("image_count equ " + str(len(filenames)), file=handle)
     print("", file=handle)
 
-    # PT to use (least significant bit first)
-    ptBytes = bytes(
-        sum(
-            1 << i for (i, f) in enumerate(filenames[firstIndex:firstIndex+8])
-            if f in PT1_IMAGES
-        )
-        for firstIndex in range(0, len(filenames), 8)
-    )
-    print("pts_to_use", file=handle)
-    print("\tdb " + ", ".join(f"%{b:08b}" for b in ptBytes), file=handle)
-    print("", file=handle)
-
     print("image_ptrs", file=handle)
     ptrs = [f"img{i}_ptrs" for i in range(len(filenames))]
     for i in range(0, len(ptrs), 5):
@@ -538,10 +584,13 @@ def write_asm_preamble(filenames, handle):
 
     for fi in range(len(filenames)):
         print(f"img{fi}_ptrs", file=handle)
-        ptrs = [f"img{fi}_nt_at{si}" for si in range(RLE_SLICE_COUNT)] \
-        + [f"img{fi}_pal", f"img{fi}_txt"]
-        print("\tdw " + ", ".join(ptrs[:4]), file=handle)
-        print("\tdw " + ", ".join(ptrs[4:]), file=handle)
+        ptrs = (
+            [f"img{fi}_nt_at{si}" for si in range(RLE_SLICE_COUNT)]
+            + [f"img{fi}_pt"]
+            + [f"img{fi}_pal", f"img{fi}_txt"]
+        )
+        for pi in range(0, len(ptrs), 4):
+            print("\tdw " + ", ".join(ptrs[pi:pi+4]), file=handle)
     print("", file=handle)
 
 def encode_at_data(atData):
@@ -660,18 +709,12 @@ def char_to_tile_index(char):
     if char == " ":
         return 0x00
     if char == "-":
-        return 0xe0
-    if char == "1":
-        return 0xe1
-    if char == "2":
-        return 0xe2
+        return 0xd0
     cp = ord(char)
-    if ord("5") <= cp <= ord("8"):
-        return 0xe3 + cp - ord("5")
-    if ord("a") <= cp <= ord("i"):
-        return 0xe7 + cp - ord("a")
-    if ord("k") <= cp <= ord("y"):
-        return 0xf0 + cp - ord("k")
+    if ord("0") <= cp <= ord("9"):
+        return 0xd1 + cp - ord("0")
+    if ord("a") <= cp <= ord("z"):
+        return 0xdb + cp - ord("a")
     sys.exit("Unknown character.")
 
 def write_asm_for_image(fileIndex, filename, uniqueTiles, subpals, dstHnd):
@@ -701,6 +744,10 @@ def write_asm_for_image(fileIndex, filename, uniqueTiles, subpals, dstHnd):
                 "\thex " + " ".join(c.hex() for c in rleChunks[i:i+13]),
                 file=dstHnd
             )
+
+    # PT to use
+    print(f"img{fileIndex}_pt", file=dstHnd)
+    print(f"\tdb {IMAGE_PTS[filename]}", file=dstHnd)
 
     # palette
     palette = bytes(chain.from_iterable(subpals))
@@ -733,8 +780,10 @@ def main():
         sys.exit("Must have 1-255 images.")
     if TITLE_FILE not in filenames:
         sys.exit(f"Title screen image {TITLE_FILE+IMAGE_EXT} not found.")
-    if PT1_IMAGES - set(filenames):
-        sys.exit("Some files assigned for PT1 not found.")
+    if set(IMAGE_PTS) - set(filenames):
+        sys.exit("Some files in IMAGE_PTS not found.")
+    if set(filenames) - set(IMAGE_PTS):
+        sys.exit("IMAGE_PTS contains nonexistent files.")
     if set(MANUAL_SUBPALS) - set(filenames):
         sys.exit(
             "Manual subpalette definitions contain nonexistent filenames."
@@ -784,14 +833,12 @@ def main():
     print("Unique/new unique/total unique tile count after each file.")
     uniqueTilesByPt = []
 
-    for pt in range(2):
-        print(f"PT{pt}...")
+    for pt in range(BANK_COUNT * 2):
+        print(f"PT {pt}...")
         # must have a blank tile for visible unused area
         ptUniqueTiles = {tuple(64 * [0])}
 
-        for filename in (
-            f for f in filenames if int(f in PT1_IMAGES) == pt
-        ):
+        for filename in (f for f in filenames if IMAGE_PTS[f] == pt):
             # get unique tiles as tuples of 64 2-bit ints
             with open(filename_to_path(filename), "rb") as handle:
                 handle.seek(0)
@@ -821,9 +868,9 @@ def main():
                     f"Warning: image has a tile with only one pixel of "
                     "some color; consider optimizing.", file=sys.stderr
                 )
-            if len(ptUniqueTiles) > PT_MAX_TILES[pt]:
+            if len(ptUniqueTiles) > PT_MAX_TILES[pt%2]:
                 sys.exit(
-                    f"Error: more than {PT_MAX_TILES[pt]} unique tiles "
+                    f"Error: more than {PT_MAX_TILES[pt%2]} unique tiles "
                     "total."
                 )
 
@@ -834,25 +881,30 @@ def main():
 
         uniqueTilesByPt.append(ptUniqueTiles)
 
-    print(
-        "Free tiles in PT0/PT1:", "/".join(
-            str(PT_MAX_TILES[p] - len(uniqueTilesByPt[p])) for p in range(2)
-        )
-    )
-    print(
-        "Identical tiles in PT0 and PT1:",
-        len(set(uniqueTilesByPt[0]) & set(uniqueTilesByPt[1]))
-    )
+    print("Used tiles in PT0-PT7:", "/".join(
+        format(len(uniqueTilesByPt[p]), "3")
+        for p in range(BANK_COUNT * 2)
+    ))
+    print("Free tiles in PT0-PT7:", "/".join(
+        format(PT_MAX_TILES[p%2] - len(uniqueTilesByPt[p]), "3")
+        for p in range(BANK_COUNT * 2)
+    ))
 
-    print(f"Writing {PT_FILE}...")
-    with open(PT_FILE, "wb") as handle:
-        handle.seek(0)
-        for pt in range(2):
-            handle.write(bytes(encode_pt_data(uniqueTilesByPt[pt])))
-            # pad
-            expectedSize = sum(PT_MAX_TILES[:pt+1]) * 16
-            handle.write((expectedSize - handle.tell()) * b"\xff")
-        print(f"Wrote {handle.tell()} bytes.")
+    allTiles = tuple(chain.from_iterable(uniqueTilesByPt))
+    print("Globally unique tiles      :", len(set(allTiles)))
+    print("Total used tiles           :", len(allTiles))
+    print("Tiles wasted by duplication:", len(allTiles) - len(set(allTiles)))
+
+    for bank in range(BANK_COUNT):
+        print(f"Writing {PT_FILES[bank]}...")
+        with open(PT_FILES[bank], "wb") as handle:
+            handle.seek(0)
+            for pt in range(2):
+                handle.write(bytes(encode_pt_data(uniqueTilesByPt[bank*2+pt])))
+                # pad
+                expectedSize = sum(PT_MAX_TILES[:pt%2+1]) * 16
+                handle.write((expectedSize - handle.tell()) * b"\xff")
+            print(f"Wrote {handle.tell()} bytes.")
     print()
 
     print(f"Writing NT/AT/PT number/palette/description data to {ASM_FILE}...")
@@ -864,7 +916,7 @@ def main():
         write_asm_preamble(filenames, handle)
         for (fi, filename) in enumerate(filenames):
             rleSize = write_asm_for_image(
-                fi, filename, uniqueTilesByPt[filename in PT1_IMAGES],
+                fi, filename, uniqueTilesByPt[IMAGE_PTS[filename]],
                 palettesByFilename[filename], handle
             )
             totalRleSize += rleSize
