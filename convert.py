@@ -73,7 +73,6 @@ IMAGE_PTS = {
     "non-_binary":         0,
     "omni-_sexual":        0,
     "pan-_sexual":         0,
-    "poly-_amory":         0,
     "poly-_sexual":        0,
     "queer":               0,
     "rainbow_6stripes":    0,
@@ -86,26 +85,34 @@ IMAGE_PTS = {
     "rainbow_progress":          1,
     "rainbow_progress_intersex": 1,
 
-    # furry, autism
-    "asexual_furry1":       2,
+    # furry, white pawprint
     "asexual_furry2":       2,
-    "autism":               2,
-    "autism_hstripes":      2,
-    "autism_vstripes":      2,
-    "bisexual_furry1":      2,
     "bisexual_furry2":      2,
-    "pan-_sexual_furry1":   2,
     "pan-_sexual_furry2":   2,
-    "rainbow_furry1":       2,
     "rainbow_furry2":       2,
-    "trans-_gender_furry1": 2,
     "trans-_gender_furry2": 2,
 
-    # misc
-    "bear":     3,
-    "leather":  3,
-    "otherkin": 3,
-    "sapphic":  3,
+    # furry, black pawprint
+    "asexual_furry1":       3,
+    "bisexual_furry1":      3,
+    "pan-_sexual_furry1":   3,
+    "rainbow_furry1":       3,
+    "trans-_gender_furry1": 3,
+
+    # misc 1
+    "autism":          4,
+    "autism_hstripes": 4,
+    "autism_vstripes": 4,
+    "bear":            4,
+    "leather":         4,
+    "poly-_amory1":    4,
+    "sapphic":         4,
+
+    # misc 2
+    "otherkin": 5,
+
+    # misc 3
+    "poly-_amory2": 6,
 
     # title screen
     "title_screen": 7,
@@ -117,28 +124,80 @@ IMAGE_PTS = {
 # these reduce the number of unique tiles a little;
 # we want colors that occur in many unique tiles to be in low indexes within
 # subpalettes to increase the likelihood of duplicates;
-# same grouping of flags as above
+# grouped by pattern table
 MANUAL_SUBPALS = {
-    # --- Other rainbow, intersex ---
+    # --- PT0 ---
+
+    # --- PT1 ---
 
     # 2 colors
     "inter-_sex": (
-        (0x28, 0x04),  # yellow, purple
+        (0x28, 0x04),        # yellow, purple
     ),
 
-    # --- Furry, autism ---
+    # --- PT2 ---
 
     # 3 colors + black
-    "asexual_furry1": (
+    "asexual_furry2": (
         (0x30, 0x14, 0x00),  # white, purple, gray
         (0x30, 0x00),        # white, gray
     ),
+    # 4 colors
+    "bisexual_furry2": (
+        (0x30, 0x13, 0x15),  # white-purple-pink
+        (0x30, 0x13, 0x12),  # white-purple-blue
+        (0x30, 0x15),        # white-pink
+        (0x30, 0x12),        # white-blue
+    ),
+    # 4 colors
+    "pan-_sexual_furry2": (
+        (0x30, 0x15, 0x21),  # white-pink-cyan
+        (0x30, 0x21),        # white-cyan
+        (0x30, 0x28),        # white-yellow
+    ),
+    # 7 colors
+    "rainbow_furry2": (
+        (0x30, 0x04, 0x27),  # white-purple-orange
+        (0x30, 0x04, 0x12),  # white-purple-blue
+        (0x30, 0x16, 0x28),  # white-red-yellow
+        (0x30, 0x19),        # white-green
+    ),
+    # 3 colors
+    "trans-_gender_furry2": (
+        (0x30, 0x21, 0x25),  # white, cyan, pink
+        (0x30, 0x25),        # white, pink
+        (0x21, 0x25),        # cyan, pink
+    ),
+
+    # --- PT3 ---
+
     # 3 colors + black
-    "asexual_furry2": (
+    "asexual_furry1": (
         (0x00,),             # gray
         (0x30,),             # white
         (0x14,),             # purple
     ),
+    # 3 colors + black
+    "bisexual_furry1": (
+        (0x15,),             # pink
+        (0x13, 0x15),        # purple-pink
+        (0x13, 0x12),        # purple-blue
+        (0x12,),             # blue
+    ),
+    # 3 colors + black
+    "pan-_sexual_furry1": (
+        (0x15,),             # red
+        (0x28,),             # yellow
+        (0x21,),             # blue
+    ),
+    # 3 colors + black
+    "trans-_gender_furry1": (
+        (0x30, 0x25),        # white, pink
+        (0x25, 0x21),        # pink, cyan
+    ),
+
+    # --- PT4 ---
+
     # 7 colors
     "autism": (
         (0x37, 0x14, 0x25),  # yellow, purple, red
@@ -159,70 +218,11 @@ MANUAL_SUBPALS = {
         (0x12, 0x30),        # blue, white
         (0x16, 0x1a, 0x12),  # red, green, blue
     ),
-    # 4 colors
-    "bisexual_furry1": (
-        (0x30, 0x13, 0x15),  # white-purple-pink
-        (0x30, 0x13, 0x12),  # white-purple-blue
-        (0x30, 0x15),        # white-pink
-        (0x30, 0x12),        # white-blue
-    ),
-    # 3 colors + black
-    "bisexual_furry2": (
-        (0x13, 0x15),        # purple-pink
-        (0x13, 0x12),        # purple-blue
-        (0x15,),             # pink
-        (0x12,),             # blue
-    ),
-    # 4 colors
-    "pan-_sexual_furry1": (
-        (0x30, 0x15, 0x21),  # white-pink-cyan
-        (0x30, 0x21),        # white-cyan
-        (0x30, 0x28),        # white-yellow
-    ),
-    # 3 colors + black
-    "pan-_sexual_furry2": (
-        (0x15,),             # red
-        (0x28,),             # yellow
-        (0x21,),             # blue
-    ),
-    # 6 colors + black
-    "rainbow_furry1": (
-        (0x16, 0x27),        # red-orange
-        (0x27, 0x28),        # orange-yellow
-        (0x11, 0x1b, 0x28),  # blue-green-yellow
-        (0x04, 0x11),        # purple-blue
-    ),
-    # 7 colors
-    "rainbow_furry2": (
-        (0x30, 0x04, 0x27),  # white-purple-orange
-        (0x30, 0x04, 0x12),  # white-purple-blue
-        (0x30, 0x16, 0x28),  # white-red-yellow
-        (0x30, 0x19),        # white-green
-    ),
-    # 3 colors
-    "trans-_gender_furry1": (
-        (0x30, 0x21, 0x25),  # white, cyan, pink
-        (0x30, 0x25),        # white, pink
-        (0x21, 0x25),        # cyan, pink
-    ),
-    # 3 colors + black
-    "trans-_gender_furry2": (
-        (0x30, 0x25),        # white, pink
-        (0x25, 0x21),        # pink, cyan
-    ),
-
-    # --- Misc ---
-
     # 6 colors + black
     "bear": (
         (0x17, 0x27, 0x37),  # darkish brown, lightish brown, light brown
         (0x00, 0x30, 0x37),  # gray, white, light brown
         (0x07, 0x17),        # dark brown, darkish brown
-    ),
-    # 3 colors + black
-    "otherkin": (
-        (0x30,),             # white
-        (0x1b, 0x03),        # green, purple
     ),
     # 4 colors
     "sapphic": (
@@ -230,7 +230,23 @@ MANUAL_SUBPALS = {
         (0x30, 0x13, 0x27),  # white, purple, yellow
     ),
 
-    # --- Title screen ---
+    # --- PT5 ---
+
+    # 3 colors + black
+    "otherkin": (
+        (0x30, 0x1b),        # white, green
+        (0x30, 0x03),        # white, purple
+    ),
+
+    # --- PT6 ---
+
+    # 3 colors + black
+    "poly-_amory2": (
+        (0x28, 0x02),        # yellow, blue
+        (0x28, 0x16),        # yellow, red
+    ),
+
+    # --- PT7 ---
 
     # 7 colors + black
     "title_screen": (
@@ -510,6 +526,7 @@ def get_subpal_index(colorSet, subpals):
     # subpals: list of 4 lists of 4 NES colors
 
     lowestScore = 999999
+    bestSubpal = -1
 
     for (si, subpal) in enumerate(subpals):
         try:
@@ -519,6 +536,12 @@ def get_subpal_index(colorSet, subpals):
         if score < lowestScore:
             lowestScore = score
             bestSubpal = si
+
+    if bestSubpal == -1:
+        sys.exit(
+            "Couldn't find proper subpalette. Error in manual palette "
+            "definition?"
+        )
 
     return bestSubpal
 
@@ -861,13 +884,13 @@ def main():
                 f"{len(ptUniqueTiles)-oldCnt:3} "
                 f"{len(ptUniqueTiles):3}"
             )
-            if any(
-                any(t.count(c) == 1 for c in range(4)) for t in uniqueTiles
-            ):
-                print(
-                    f"Warning: image has a tile with only one pixel of "
-                    "some color; consider optimizing.", file=sys.stderr
-                )
+            #if any(
+            #    any(t.count(c) == 1 for c in range(4)) for t in uniqueTiles
+            #):
+            #    print(
+            #        f"Warning: image has a tile with only one pixel of "
+            #        "some color; consider optimizing.", file=sys.stderr
+            #    )
             if len(ptUniqueTiles) > PT_MAX_TILES[pt%2]:
                 sys.exit(
                     f"Error: more than {PT_MAX_TILES[pt%2]} unique tiles "
