@@ -59,7 +59,7 @@ IMAGE_PTS = {
     "bigender":            0,
     "bisexual":            0,
     "demi-_fluid":         0,
-    "demi-_flux":          0,
+    "demiflux":            0,
     "demi-_gender":        0,
     "demigirl":            0,
     "demiguy":             0,
@@ -81,16 +81,18 @@ IMAGE_PTS = {
     "trans-_gender":       0,
 
     # other rainbow, intersex
-    "inter-_sex":                1,
+    "intersex":                  1,
     "rainbow_progress":          1,
     "rainbow_progress_intersex": 1,
 
     # furry, white pawprint
-    "asexual_furry2":       2,
-    "bisexual_furry2":      2,
-    "pan-_sexual_furry2":   2,
-    "rainbow_furry2":       2,
-    "trans-_gender_furry2": 2,
+    "asexual_furry2":         2,
+    "bisexual_furry2":        2,
+    "lesbian_5stripes_furry": 2,
+    "non-_binary_furry":      2,
+    "pan-_sexual_furry2":     2,
+    "rainbow_furry2":         2,
+    "trans-_gender_furry2":   2,
 
     # furry, black pawprint
     "asexual_furry1":       3,
@@ -131,7 +133,7 @@ MANUAL_SUBPALS = {
     # --- PT1 ---
 
     # 2 colors
-    "inter-_sex": (
+    "intersex": (
         (0x28, 0x04),        # yellow, purple
     ),
 
@@ -148,6 +150,18 @@ MANUAL_SUBPALS = {
         (0x30, 0x13, 0x12),  # white-purple-blue
         (0x30, 0x15),        # white-pink
         (0x30, 0x12),        # white-blue
+    ),
+    # 5 colors
+    "lesbian_5stripes_furry": (
+        (0x30, 0x14, 0x24),  # white, dark magenta, light magenta
+        (0x30, 0x14, 0x27),  # white, dark magenta, orange
+        (0x30, 0x17, 0x27),  # white, brown, orange
+        (0x30, 0x27),        # white, orange
+    ),
+    # 3 colors + black
+    "non-_binary_furry": (
+        (0x30, 0x13, 0x28),  # white, purple, yellow
+        (0x30, 0x28),        # white, yellow
     ),
     # 4 colors
     "pan-_sexual_furry2": (
@@ -198,25 +212,26 @@ MANUAL_SUBPALS = {
 
     # --- PT4 ---
 
-    # 7 colors
+    # 5 colors; infinity symbol (almost) always as color 2 on color 1
     "autism": (
-        (0x37, 0x14, 0x25),  # yellow, purple, red
-        (0x37, 0x21, 0x2c),  # yellow, blue, cyan
-        (0x37, 0x27, 0x29),  # yellow, orange, green
-        (0x21, 0x27)         # blue, orange
+        (0x37, 0x27),        # yellow, orange
+        (0x37, 0x21, 0x27),  # yellow, blue, orange
+        (0x37, 0x25),        # yellow, red
+        (0x37, 0x29),        # yellow, green
     ),
-    # 6 colors; getting yellow and white wrong would waste many tiles
+    # 6 colors; infinity symbol always as color 2 on color 1
     "autism_hstripes": (
-        (0x28, 0x26, 0x16),  # yellow, light red, dark red
-        (0x28, 0x30),        # yellow, white
-        (0x28, 0x2a, 0x1a),  # yellow, light green, dark green
+        (0x16, 0x26),        # dark red, light red
+        (0x28, 0x30, 0x26),  # yellow, white, light red
+        (0x28, 0x30, 0x2a),  # yellow, white, light green
+        (0x1a, 0x2a),        # dark green, light green
     ),
-    # 4 colors
+    # 4 colors; infinity symbol always as color 2 on color 1
     "autism_vstripes": (
-        (0x16, 0x30),        # red, white
-        (0x1a, 0x30),        # green, white
+        (0x16, 0x30, 0x1a),  # red, white, green
+        (0x1a, 0x30, 0x12),  # green, white, blue
         (0x12, 0x30),        # blue, white
-        (0x16, 0x1a, 0x12),  # red, green, blue
+        (0x16, 0x1a),        # red, green
     ),
     # 6 colors + black
     "bear": (
