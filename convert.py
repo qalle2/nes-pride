@@ -42,8 +42,8 @@ ASM_FILE   = "imgdata.asm"   # write all data except PTs in ASM6 format here
 
 BANK_COUNT = 4  # number of CHR banks
 
-# write PT data here (1 file = 1 bank = 2 PTs)
-PT_FILES = ("chr-bg0.bin", "chr-bg1.bin", "chr-bg2.bin", "chr-bg3.bin")
+# write PT data here
+PT_FILES = tuple(f"chr-bg{n}.bin" for n in range(BANK_COUNT * 2))
 
 # maximum number of tiles in PT0/PT1 in each bank
 PT_MAX_TILES = (256, 208)
@@ -933,16 +933,12 @@ def main():
     print("Total used tiles           :", len(allTiles))
     print("Tiles wasted by duplication:", len(allTiles) - len(set(allTiles)))
 
-    for bank in range(BANK_COUNT):
-        print(f"Writing {PT_FILES[bank]}...")
-        with open(PT_FILES[bank], "wb") as handle:
+    for pt in range(BANK_COUNT * 2):
+        with open(PT_FILES[pt], "wb") as handle:
             handle.seek(0)
-            for pt in range(2):
-                handle.write(bytes(encode_pt_data(uniqueTilesByPt[bank*2+pt])))
-                # pad
-                expectedSize = sum(PT_MAX_TILES[:pt%2+1]) * 16
-                handle.write((expectedSize - handle.tell()) * b"\xff")
-            print(f"Wrote {handle.tell()} bytes.")
+            handle.write(bytes(encode_pt_data(uniqueTilesByPt[pt])))
+            size = handle.tell()
+        print(f"Wrote {PT_FILES[pt]} ({size:4} bytes).")
     print()
 
     print(f"Writing NT/AT/PT number/palette/description data to {ASM_FILE}...")

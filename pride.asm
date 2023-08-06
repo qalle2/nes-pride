@@ -618,31 +618,39 @@ get_sect_addr   ; Get address in graphics data.
 ; --- CHR ROM -----------------------------------------------------------------
 
                 ; For each bank:
-                ; - background (256+208 tiles, different in each bank)
+                ; - background (256+208 tiles)
                 ; - sprites (48 tiles, same in each bank)
 
                 base $0000
 
                 ; bank 0
                 incbin "chr-bg0.bin"
+                pad $1000, $ff
+                incbin "chr-bg1.bin"
                 pad $1d00, $ff
                 incbin "chr-spr.bin"
                 pad $2000, $ff
 
                 ; bank 1
-                incbin "chr-bg1.bin"
+                incbin "chr-bg2.bin"
+                pad $3000, $ff
+                incbin "chr-bg3.bin"
                 pad $3d00, $ff
                 incbin "chr-spr.bin"
                 pad $4000, $ff
 
                 ; bank 2
-                incbin "chr-bg2.bin"
+                incbin "chr-bg4.bin"
+                pad $5000, $ff
+                incbin "chr-bg5.bin"
                 pad $5d00, $ff
                 incbin "chr-spr.bin"
                 pad $6000, $ff
 
                 ; bank 3
-                incbin "chr-bg3.bin"
+                incbin "chr-bg6.bin"
+                pad $7000, $ff
+                incbin "chr-bg7.bin"
                 pad $7d00, $ff
                 incbin "chr-spr.bin"
                 pad $8000, $ff

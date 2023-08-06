@@ -33,8 +33,8 @@ Source code:
 
 Other binaries (gzip compressed):
 * `chr-bin.tar.gz`: pattern table (CHR ROM) data in NES format; contains these files:
-  * `chr-bg*.bin` (background; see `convert.py` above)
-  * `chr-spr.bin` (sprites; see `chr-spr.png` above)
+  * `chr-bg*.bin`: background (one file per PT; see `convert.py` above)
+  * `chr-spr.bin`: sprites (same data in PTs 1/3/5/7; see `chr-spr.png` above)
 
 ## How to assemble
 * run `convert.py` to generate `imgdata.asm` and `chr-bg*.bin` (or just download them and extract the `.gz` files)
