@@ -105,7 +105,6 @@ IMAGE_PTS = {
     "autism":          4,
     "autism_hstripes": 4,
     "autism_vstripes": 4,
-    "bear":            4,
     "leather":         4,
     "poly-_amory1":    4,
     "sapphic":         4,
@@ -114,6 +113,7 @@ IMAGE_PTS = {
     "otherkin": 5,
 
     # misc 3
+    "bear":         6,
     "poly-_amory2": 6,
 
     # title screen
@@ -233,12 +233,6 @@ MANUAL_SUBPALS = {
         (0x12, 0x30),        # blue, white
         (0x16, 0x1a),        # red, green
     ),
-    # 6 colors + black
-    "bear": (
-        (0x17, 0x27, 0x37),  # darkish brown, lightish brown, light brown
-        (0x00, 0x30, 0x37),  # gray, white, light brown
-        (0x07, 0x17),        # dark brown, darkish brown
-    ),
     # 4 colors
     "sapphic": (
         (0x25,),             # pink
@@ -255,6 +249,12 @@ MANUAL_SUBPALS = {
 
     # --- PT6 ---
 
+    # 6 colors + black
+    "bear": (
+        (0x17, 0x27, 0x37),  # darkish brown, lightish brown, light brown
+        (0x00, 0x30, 0x37),  # gray, white, light brown
+        (0x07, 0x17),        # dark brown, darkish brown
+    ),
     # 3 colors + black
     "poly-_amory2": (
         (0x28, 0x02),        # yellow, blue
