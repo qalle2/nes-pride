@@ -610,6 +610,9 @@ get_sect_addr   ; Get address in graphics data.
 
                 rts
 
+                ; NESDev Compo requires $ffd0-$fff9 to be unused
+                pad $ffd0, $ff
+
 ; --- Interrupt vectors -------------------------------------------------------
 
                 pad $fffa, $ff
