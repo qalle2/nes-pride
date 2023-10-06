@@ -1,5 +1,5 @@
 # Qalle's Pride Flag Show II
-Browse 52 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
+Browse 53 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
 
 ![screenshot](snap1.png)
 ![screenshot](snap2.png)
@@ -93,30 +93,32 @@ You need to have Python and ASM6 installed.
   * for speed, all PPU memory updates (VRAM/palette) go through a buffer on the stack page (can be read quickly with PLA)
 
 ## Sources of flags
-* [Androgyne](https://lgbtqia.fandom.com/wiki/Androgyne) - LGBTQIA+ Wiki
-* [Aromantic Asexual](https://lgbtqia.fandom.com/wiki/Aromantic_asexual) - LGBTQIA+ Wiki
-* [Asexual Furry Pride Fandom Flag](https://www.amazon.com/Asexual-Furry-Pride-Fandom-Flag/dp/B07F1K57P1) (black pawprint) - Amazon
-* [Autism pride flag](https://commons.wikimedia.org/wiki/File:Autism_pride_flag.svg) (vertical stripes) - Wikimedia Commons
-* [Autistic Pride Flag](https://commons.wikimedia.org/wiki/File:Autistic_Pride_Flag.png) (no stripes) - Wikimedia Commons
-* [The Autistic Pride Flag](https://commons.wikimedia.org/wiki/File:The_Autistic_Pride_Flag.png) (horizontal stripes) - Wikimedia Commons
-* [Bear Brotherhood flag](https://commons.wikimedia.org/wiki/File:Bear_Brotherhood_flag.svg) - Wikimedia Commons
-* [Demigender](https://lgbtqia.fandom.com/wiki/Demigender) - LGBTQIA+ Wiki
-* [Demigirl Pride Flag](https://en.wikipedia.org/wiki/File:Demigirl_Pride-Flag.png) - Wikipedia
-* [Demiguy Pride Flag](https://en.wikipedia.org/wiki/File:Demiguy_Pride-Flag.png) - Wikipedia
-* [Furry Bisexual Pride Flag Lgbt](https://www.wackyprint.com/store/activism/lgbt/furry-bisexual-pride-flag-lgbt-colors-vibrant-bright) (black pawprint)
-* [Furry Flags](https://www.inanimorphs.com/furryflags) - Inanimorphs (Furry LGBT Pride Flags, white pawprint)
-* [Furry Pride Flag](https://commons.wikimedia.org/wiki/File:Furry_Pride_Flag.png) - Wikimedia Commons
-* [Leather, Latex, and BDSM pride - Light](https://commons.wikimedia.org/wiki/File:Leather,_Latex,_and_BDSM_pride_-_Light.svg) - Wikimedia Commons
-* [Nonhuman Unity Flag](https://en.wikipedia.org/wiki/File:Nonhuman_Unity_Flag.svg) (otherkin) - Wikimedia Commons
-* [Omnisexual](https://lgbtqia.fandom.com/wiki/Omnisexual) - LGBTQIA+ Wiki
-* [Pansexual Furry Pride Fandom Paw Flag](https://www.amazon.com/Pansexual-Furry-Pride-Fandom-Flag/dp/B07F1X4G6P) (black pawprint)
-* [Polyamory flag with infinity heart](https://commons.wikimedia.org/wiki/File:Polyamory_flag_with_infinity_heart.svg) - Wikimedia Commons (heart and infinity symbol)
-* [Polyamory Pride Flag](https://commons.wikimedia.org/wiki/File:Polyamory_Pride_Flag.svg) - Wikimedia Commons (pi symbol)
-* [Pride flag](https://en.wikipedia.org/wiki/Pride_flag) - Wikipedia (TODO: be more specific)
-* [Queer Pride Flag](https://queerintheworld.com/queer-pride-flag/) - Queer in the World
-* [Rainbow flag (LGBT)](https://en.wikipedia.org/wiki/Rainbow_flag_%28LGBT%29) - Wikipedia
-* [Sapphic](https://lgbtqia.fandom.com/wiki/Sapphic) - LGBTQIA+ Wiki
-* [Transgender Furry Pride Fandom Paw Flag](https://www.amazon.com/Transgender-Furry-Pride-Fandom-Flag/dp/B07F1Y36D2)
-* [Visually Safe Disability Pride Flag](https://commons.wikimedia.org/wiki/File:Visually_Safe_Disability_Pride_Flag.svg) - Wikimedia Commons
+* [Androgyne](https://lgbtqia.fandom.com/wiki/Androgyne) &ndash; LGBTQIA+ Wiki
+* [Aromantic Asexual](https://lgbtqia.fandom.com/wiki/Aromantic_asexual) &ndash; LGBTQIA+ Wiki
+* [Asexual Furry Pride Fandom Flag](https://www.amazon.com/Asexual-Furry-Pride-Fandom-Flag/dp/B07F1K57P1) (black pawprint) &ndash; Amazon
+* [Autism pride flag](https://commons.wikimedia.org/wiki/File:Autism_pride_flag.svg) (vertical stripes) &ndash; Wikimedia Commons
+* [Autistic Pride Flag](https://commons.wikimedia.org/wiki/File:Autistic_Pride_Flag.png) (no stripes) &ndash; Wikimedia Commons
+* [The Autistic Pride Flag](https://commons.wikimedia.org/wiki/File:The_Autistic_Pride_Flag.png) (horizontal stripes) &ndash; Wikimedia Commons
+* [Bear Brotherhood flag](https://commons.wikimedia.org/wiki/File:Bear_Brotherhood_flag.svg) &ndash; Wikimedia Commons
+* [Demigender](https://lgbtqia.fandom.com/wiki/Demigender) &ndash; LGBTQIA+ Wiki
+* [Demigirl Pride Flag](https://commons.wikimedia.org/wiki/File:Demigirl_Pride-Flag.png) &ndash; Wikimedia Commons
+* [Demiguy Pride Flag](https://commons.wikimedia.org/wiki/File:Demiguy_Pride-Flag.png) &ndash; Wikimedia Commons
+* [Furry Bisexual Pride Flag](https://www.wackyprint.com/store/activism/lgbt/furry-bisexual-pride-flag-lgbt-colors-vibrant-bright) &ndash; Wacky Print (black pawprint)
+* [Furry Flags](https://www.inanimorphs.com/furryflags) &ndash; Inanimorphs (Furry LGBT Pride Flags, white pawprint)
+* [Furry Pride Flag](https://commons.wikimedia.org/wiki/File:Furry_Pride_Flag.png) &ndash; Wikimedia Commons
+* [Leather, Latex, and BDSM pride - Light](https://commons.wikimedia.org/wiki/File:Leather,_Latex,_and_BDSM_pride_-_Light.svg) &ndash; Wikimedia Commons
+* [Nonhuman Unity Flag](https://en.wikipedia.org/wiki/File:Nonhuman_Unity_Flag.svg) (otherkin) &ndash; Wikipedia (broken link)
+* [Non-human Unity Flag](https://therian.fandom.com/wiki/Non-human_Unity_Flag) &ndash; Therian Wiki (not the flag I used, but similar to the above)
+* [Omnisexual](https://lgbtqia.fandom.com/wiki/Omnisexual) &ndash; LGBTQIA+ Wiki
+* [Pansexual Furry Pride Fandom Paw Flag](https://www.amazon.com/Pansexual-Furry-Pride-Fandom-Flag/dp/B07F1X4G6P) &ndash; Amazon (black pawprint)
+* [Polyamory flag with infinity heart](https://commons.wikimedia.org/wiki/File:Polyamory_flag_with_infinity_heart.svg) &ndash; Wikimedia Commons (heart and infinity symbol)
+* [Polyamory Pride Flag](https://commons.wikimedia.org/wiki/File:Polyamory_Pride_Flag.svg) &ndash; Wikimedia Commons (pi symbol)
+* [Pride flag](https://en.wikipedia.org/wiki/Pride_flag) &ndash; Wikipedia (TODO: be more specific)
+* [Queer Pride Flag](https://queerintheworld.com/queer-pride-flag/) &ndash; Queer in the World
+* [Rainbow flag (LGBT)](https://en.wikipedia.org/wiki/Rainbow_flag_%28LGBT%29) &ndash; Wikipedia
+* [Sapphic](https://lgbtqia.fandom.com/wiki/Sapphic) &ndash; LGBTQIA+ Wiki
+* [Transgender Furry Pride Fandom Paw Flag](https://www.amazon.com/Transgender-Furry-Pride-Fandom-Flag/dp/B07F1Y36D2) &ndash; Amazon
+* [Tricolor Polyamory Pride Flag](https://commons.wikimedia.org/wiki/File:Tricolor_Polyamory_Pride_Flag.svg) &ndash; Wikimedia Commons
+* [Visually Safe Disability Pride Flag](https://commons.wikimedia.org/wiki/File:Visually_Safe_Disability_Pride_Flag.svg) &ndash; Wikimedia Commons
 
 The license of this project does not apply to the flag images (I guess).

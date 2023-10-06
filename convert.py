@@ -110,7 +110,8 @@ IMAGE_PTS = {
     "sapphic":         4,
 
     # misc 2
-    "otherkin": 5,
+    "otherkin":     5,
+    "poly-_amory3": 5,
 
     # misc 3
     "bear":         6,
@@ -821,7 +822,7 @@ def main():
     if set(IMAGE_PTS) - set(filenames):
         sys.exit("Some files in IMAGE_PTS not found.")
     if set(filenames) - set(IMAGE_PTS):
-        sys.exit("IMAGE_PTS contains nonexistent files.")
+        sys.exit("Some files not defined in IMAGE_PTS.")
     if set(MANUAL_SUBPALS) - set(filenames):
         sys.exit(
             "Manual subpalette definitions contain nonexistent filenames."
