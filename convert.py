@@ -30,9 +30,10 @@
 #            background color is transparent
 # - OAM = object attribute memory; data for 64 sprites; stored in PPU
 
-import os, re, sys
+import os, sys
 from collections import Counter
-from itertools import chain
+from itertools import chain, combinations
+from re import search
 from PIL import Image  # Pillow, https://python-pillow.org
 
 IMAGE_DIR  = "img"           # read images from this path
@@ -48,228 +49,97 @@ PT_FILES = tuple(f"chr-bg{n}.bin" for n in range(BANK_COUNT * 2))
 # maximum number of tiles in PT0/PT1 in each bank
 PT_MAX_TILES = (256, 208)
 
-# which PT to store each image in (0-7); grouped by similarity
-IMAGE_PTS = {
-    # simple flags (11 or fewer distinct tiles each)
-    "agender":             0,
-    "andro-_gyne":         0,
-    "a-_romantic":         0,
-    "a-_romantic_asexual": 0,
-    "asexual":             0,
-    "bigender":            0,
-    "bisexual":            0,
-    "demi-_fluid":         0,
-    "demiflux":            0,
-    "demi-_gender":        0,
-    "demigirl":            0,
-    "demiguy":             0,
-    "demi-_sexual":        0,
-    "dis-_ability":        0,
-    "gay_men":             0,
-    "gender-_fluid":       0,
-    "gender-_queer":       0,
-    "lesbian_5stripes":    0,
-    "lesbian_7stripes":    0,
-    "non-_binary":         0,
-    "omni-_sexual":        0,
-    "pan-_sexual":         0,
-    "poly-_sexual":        0,
-    "queer":               0,
-    "rainbow_6stripes":    0,
-    "rainbow_7stripes":    0,
-    "rainbow_8stripes":    0,
-    "trans-_gender":       0,
-
-    # other rainbow, intersex
-    "intersex":                  1,
-    "rainbow_progress":          1,
-    "rainbow_progress_intersex": 1,
-
-    # furry, white pawprint
-    "asexual_furry2":         2,
-    "bisexual_furry2":        2,
-    "lesbian_5stripes_furry": 2,
-    "non-_binary_furry":      2,
-    "pan-_sexual_furry2":     2,
-    "rainbow_furry2":         2,
-    "trans-_gender_furry2":   2,
-
-    # furry, black pawprint
-    "asexual_furry1":       3,
-    "bisexual_furry1":      3,
-    "pan-_sexual_furry1":   3,
-    "rainbow_furry1":       3,
-    "trans-_gender_furry1": 3,
-
-    # misc 1
-    "autism":          4,
-    "autism_hstripes": 4,
-    "autism_vstripes": 4,
-    "leather":         4,
-    "poly-_amory1":    4,
-    "sapphic":         4,
-
-    # misc 2
-    "otherkin":     5,
-    "poly-_amory3": 5,
-
-    # misc 3
-    "bear":         6,
-    "poly-_amory2": 6,
-
-    # title screen
-    "title_screen": 7,
-}
+# used when assigning tiles of files to pattern tables; fudging this may
+# help if you get the "Failed to assign tiles to pattern tables" error
+PT_SCORE_FACTOR = 3
 
 # optional manually-defined palettes by filename;
 # up to 4 tuples with up to 3 NES colors each (no NES_BG_COLOR);
 # must have exactly the same colors as the image, minus NES_BG_COLOR;
-# these reduce the number of unique tiles a little;
-# we want colors that occur in many unique tiles to be in low indexes within
-# subpalettes to increase the likelihood of duplicates;
-# grouped by pattern table
+# these reduce the number of unique tiles by making sure the PT colors are
+# similar as well as the actual colors,
 MANUAL_SUBPALS = {
-    # --- PT0 ---
+    # --- autism (try to have the infinity symbol as color 2 on color 1) ---
 
-    # --- PT1 ---
-
-    # 2 colors
-    "intersex": (
-        (0x28, 0x04),        # yellow, purple
-    ),
-
-    # --- PT2 ---
-
-    # 3 colors + black
-    "asexual_furry2": (
-        (0x30, 0x14, 0x00),  # white, purple, gray
-        (0x30, 0x00),        # white, gray
-    ),
-    # 4 colors
-    "bisexual_furry2": (
-        (0x30, 0x13, 0x15),  # white-purple-pink
-        (0x30, 0x13, 0x12),  # white-purple-blue
-        (0x30, 0x15),        # white-pink
-        (0x30, 0x12),        # white-blue
-    ),
-    # 5 colors
-    "lesbian_5stripes_furry": (
-        (0x30, 0x14, 0x24),  # white, dark magenta, light magenta
-        (0x30, 0x14, 0x27),  # white, dark magenta, orange
-        (0x30, 0x17, 0x27),  # white, brown, orange
-        (0x30, 0x27),        # white, orange
-    ),
-    # 3 colors + black
-    "non-_binary_furry": (
-        (0x30, 0x13, 0x28),  # white, purple, yellow
-        (0x30, 0x28),        # white, yellow
-    ),
-    # 4 colors
-    "pan-_sexual_furry2": (
-        (0x30, 0x15, 0x21),  # white-pink-cyan
-        (0x30, 0x21),        # white-cyan
-        (0x30, 0x28),        # white-yellow
-    ),
-    # 7 colors
-    "rainbow_furry2": (
-        (0x30, 0x04, 0x27),  # white-purple-orange
-        (0x30, 0x04, 0x12),  # white-purple-blue
-        (0x30, 0x16, 0x28),  # white-red-yellow
-        (0x30, 0x19),        # white-green
-    ),
-    # 3 colors
-    "trans-_gender_furry2": (
-        (0x30, 0x21, 0x25),  # white, cyan, pink
-        (0x30, 0x25),        # white, pink
-        (0x21, 0x25),        # cyan, pink
-    ),
-
-    # --- PT3 ---
-
-    # 3 colors + black
-    "asexual_furry1": (
-        (0x00,),             # gray
-        (0x30,),             # white
-        (0x14,),             # purple
-    ),
-    # 3 colors + black
-    "bisexual_furry1": (
-        (0x15,),             # pink
-        (0x13, 0x15),        # purple-pink
-        (0x13, 0x12),        # purple-blue
-        (0x12,),             # blue
-    ),
-    # 3 colors + black
-    "pan-_sexual_furry1": (
-        (0x15,),             # red
-        (0x28,),             # yellow
-        (0x21,),             # blue
-    ),
-    # 3 colors + black
-    "trans-_gender_furry1": (
-        (0x30, 0x25),        # white, pink
-        (0x25, 0x21),        # pink, cyan
-    ),
-
-    # --- PT4 ---
-
-    # 5 colors; infinity symbol (almost) always as color 2 on color 1
-    "autism": (
+    "autism": (              # 5 colors
         (0x37, 0x27),        # yellow, orange
         (0x37, 0x21, 0x27),  # yellow, blue, orange
         (0x37, 0x25),        # yellow, red
         (0x37, 0x29),        # yellow, green
     ),
-    # 6 colors; infinity symbol always as color 2 on color 1
-    "autism_hstripes": (
+    "autism_hstripes": (     # 6 colors
         (0x16, 0x26),        # dark red, light red
         (0x28, 0x30, 0x26),  # yellow, white, light red
         (0x28, 0x30, 0x2a),  # yellow, white, light green
         (0x1a, 0x2a),        # dark green, light green
     ),
-    # 4 colors; infinity symbol always as color 2 on color 1
-    "autism_vstripes": (
+    "autism_vstripes": (     # 4 colors
         (0x16, 0x30, 0x1a),  # red, white, green
         (0x1a, 0x30, 0x12),  # green, white, blue
         (0x12, 0x30),        # blue, white
         (0x16, 0x1a),        # red, green
     ),
-    # 4 colors
-    "sapphic": (
-        (0x25,),             # pink
-        (0x30, 0x13, 0x27),  # white, purple, yellow
+
+    # --- furry1 (black pawprint) ---
+
+    "asexual_furry1": (        # 3 colors + black
+        (0x00,),               # gray
+        (0x30,),               # white
+        (0x14,),               # purple
+    ),
+    "bisexual_furry1": (       # 3 colors + black
+        (0x15,),               # pink
+        (0x13, 0x15),          # purple-pink
+        (0x13, 0x12),          # purple-blue
+        (0x12,),               # blue
+    ),
+    "pan-_sexual_furry1": (    # 3 colors + black
+        (0x15,),               # red
+        (0x28,),               # yellow
+        (0x21,),               # blue
+    ),
+    "trans-_gender_furry1": (  # 3 colors + black
+        (0x30, 0x25),          # white, pink
+        (0x25, 0x21),          # pink, cyan
     ),
 
-    # --- PT5 ---
+    # --- furry2 (white pawprint) ---
 
-    # 3 colors + black
-    "otherkin": (
-        (0x30, 0x1b),        # white, green
-        (0x30, 0x03),        # white, purple
+    "asexual_furry2": (          # 3 colors + black
+        (0x30, 0x14, 0x00),      # white, purple, gray
+        (0x30, 0x00),            # white, gray
     ),
-
-    # --- PT6 ---
-
-    # 6 colors + black
-    "bear": (
-        (0x17, 0x27, 0x37),  # darkish brown, lightish brown, light brown
-        (0x00, 0x30, 0x37),  # gray, white, light brown
-        (0x07, 0x17),        # dark brown, darkish brown
+    "bisexual_furry2": (         # 4 colors
+        (0x30, 0x13, 0x15),      # white-purple-pink
+        (0x30, 0x13, 0x12),      # white-purple-blue
+        (0x30, 0x15),            # white-pink
+        (0x30, 0x12),            # white-blue
     ),
-    # 3 colors + black
-    "poly-_amory2": (
-        (0x28, 0x02),        # yellow, blue
-        (0x28, 0x16),        # yellow, red
+    "lesbian_5stripes_furry": (  # 5 colors
+        (0x30, 0x14, 0x24),      # white, dark magenta, light magenta
+        (0x30, 0x14, 0x27),      # white, dark magenta, orange
+        (0x30, 0x17, 0x27),      # white, brown, orange
+        (0x30, 0x27),            # white, orange
     ),
-
-    # --- PT7 ---
-
-    # 7 colors + black
-    "title_screen": (
-        (0x21, 0x30, 0x13),  # cyan, white, purple
-        (0x30, 0x15),        # white, red
-        (0x30, 0x27),        # white, yellow
-        (0x30, 0x19, 0x12)   # white, green, blue
+    "non-_binary_furry": (       # 3 colors + black
+        (0x30, 0x13, 0x28),      # white, purple, yellow
+        (0x30, 0x28),            # white, yellow
+    ),
+    "pan-_sexual_furry2": (      # 4 colors
+        (0x30, 0x15, 0x21),      # white-pink-cyan
+        (0x30, 0x21),            # white-cyan
+        (0x30, 0x28),            # white-yellow
+    ),
+    "rainbow_furry2": (          # 7 colors
+        (0x30, 0x04, 0x27),      # white-purple-orange
+        (0x30, 0x04, 0x12),      # white-purple-blue
+        (0x30, 0x16, 0x28),      # white-red-yellow
+        (0x30, 0x19),            # white-green
+    ),
+    "trans-_gender_furry2": (    # 3 colors
+        (0x30, 0x21, 0x25),      # white, cyan, pink
+        (0x30, 0x25),            # white, pink
+        (0x21, 0x25),            # cyan, pink
     ),
 }
 assert all(1 <= len(p) <= 4                 for p in MANUAL_SUBPALS.values())
@@ -392,7 +262,7 @@ def get_nes_pixels(image):
     origToNes = get_color_conv_table(image)  # {origIndex: nesColorIndex, ...}
     return tuple(origToNes[i] for i in image.getdata())
 
-# --- Validation & palette generation -----------------------------------------
+# --- Image validation & palette generation -----------------------------------
 
 def validate_image(image):
     if image.width != 256 or image.height != VERT_AT_BLKS * 16:
@@ -590,10 +460,17 @@ def convert_tiles(nesPixels, atData, subpals):
         # convert NES color indexes into indexes to subpalette
         yield tuple(subpalInv[i] for i in tile)
 
+def get_unique_tiles(filename, palette):
+    # get unique tiles as tuples of 64 2-bit ints
+    with open(filename_to_path(filename), "rb") as handle:
+        handle.seek(0)
+        nesPixels = get_nes_pixels(Image.open(handle))
+    atData = [get_subpal_index(s, palette) for s in get_color_sets(nesPixels)]
+    return set(convert_tiles(nesPixels, atData, palette))
+
 def encode_pt_data(tiles):
     # generate encoded PT data for all images in one PT as 8-bit ints
     # tiles: each tile as 64 2-bit ints
-
     for tile in tiles:
         for bp in range(2):  # bitplane
             bits = [(c >> bp) & 1 for c in tile]
@@ -695,7 +572,7 @@ def rle_encode(data):
     # terminator
     yield 0x00
 
-def generate_rle_slices(nesPixels, subpals, uniqueTiles):
+def create_rle_slices(nesPixels, subpals, uniqueTiles):
     # generate RLE-compressed NT/AT data in slices
 
     atData = [get_subpal_index(s, subpals) for s in get_color_sets(nesPixels)]
@@ -726,7 +603,7 @@ def filename_to_descr(filename):
     #     "X"   -> 23 spaces + "x"
     #     "X_Y" -> 15 spaces + "x" + 7 spaces + "y"
 
-    if re.search("^[0-9a-z_-]+$", filename) is None:
+    if search("^[0-9a-z_-]+$", filename) is None:
         sys.exit(
             "Only 0-9, a-z, _, - allowed in filenames (excluding extension)."
         )
@@ -756,28 +633,30 @@ def char_to_tile_index(char):
         return 0xdb + cp - ord("a")
     sys.exit("Unknown character.")
 
-def write_asm_for_image(fileIndex, filename, uniqueTiles, subpals, dstHnd):
+def write_image_asm(index_, name, ptTiles, ptIndex, subpals, dstHnd):
     # write ASM6-compatible assembly code for one image, return RLE data size
-    # fileIndex: filename index
-    # uniqueTiles: unique tiles in correct PT
+    # index_:  file index
+    # name:    filename
+    # ptTiles: one PT as tuples of 64 2-bit ints
+    # ptIndex: which PT to use
     # subpals: 4*4 NES color indexes
-    # dstHnd: destination file handle
+    # dstHnd:  destination file handle
 
-    print(f"\t; {filename}", file=dstHnd)
+    print(f"\t; {name}", file=dstHnd)
 
     # get pixels as NES color indexes
-    with open(filename_to_path(filename), "rb") as srcHnd:
+    with open(filename_to_path(name), "rb") as srcHnd:
         srcHnd.seek(0)
         nesPixels = get_nes_pixels(Image.open(srcHnd))
 
     # RLE-compressed NT/AT data in slices
     rleDataSize = 0
-    for (si, rleSlice) in enumerate(generate_rle_slices(
-        nesPixels, subpals, uniqueTiles
+    for (si, rleSlice) in enumerate(create_rle_slices(
+        nesPixels, subpals, ptTiles
     )):
         rleDataSize += len(rleSlice)
         rleChunks = tuple(rle_slice_to_chunks(rleSlice))
-        print(f"img{fileIndex}_nt_at{si}", file=dstHnd)
+        print(f"img{index_}_nt_at{si}", file=dstHnd)
         for i in range(0, len(rleChunks), 13):
             print(
                 "\thex " + " ".join(c.hex() for c in rleChunks[i:i+13]),
@@ -785,21 +664,21 @@ def write_asm_for_image(fileIndex, filename, uniqueTiles, subpals, dstHnd):
             )
 
     # PT to use
-    print(f"img{fileIndex}_pt", file=dstHnd)
-    print(f"\tdb {IMAGE_PTS[filename]}", file=dstHnd)
+    print(f"img{index_}_pt", file=dstHnd)
+    print(f"\tdb {ptIndex}", file=dstHnd)
 
     # palette
     palette = bytes(chain.from_iterable(subpals))
     palette = " ".join(
         palette[i:i+4].hex() for i in range(0, len(palette), 4)
     )
-    print(f"img{fileIndex}_pal", file=dstHnd)
+    print(f"img{index_}_pal", file=dstHnd)
     print(f"\thex {palette}", file=dstHnd)
 
     # description
-    descr = filename_to_descr(filename).lstrip(" ")
+    descr = filename_to_descr(name).lstrip(" ")
     descr = bytes(char_to_tile_index(c) for c in descr)
-    print(f"img{fileIndex}_txt", file=dstHnd)
+    print(f"img{index_}_txt", file=dstHnd)
     print(f"\tdb {len(descr)}", file=dstHnd)
     for i in range(0, len(descr), 22):
         print(
@@ -810,7 +689,39 @@ def write_asm_for_image(fileIndex, filename, uniqueTiles, subpals, dstHnd):
 
     return rleDataSize
 
-# -----------------------------------------------------------------------------
+# --- Main --------------------------------------------------------------------
+
+def assign_tiles_to_pts(filenames, palettesByFile):
+    # automatically assign tiles in all images to pattern tables;
+    # return: {PT_index: set_of_unique_tiles, ...}
+
+    # get unique tiles in each file as tuples of 64 2-bit ints
+    tilesByFile = {}
+    for file_ in filenames:
+        tilesByFile[file_] = get_unique_tiles(file_, palettesByFile[file_])
+
+    # initialize each PT with a blank tile (for unused visible area)
+    tilesByPt = dict((k, {tuple(64 * [0])}) for k in range(8))
+
+    # process files by decreasing number of tiles
+    for file_ in sorted(
+        filenames, key=lambda f: len(tilesByFile[f]), reverse=True
+    ):
+        bestPt = bestScore = -1
+        for pt in range(BANK_COUNT * 2):
+            if len(tilesByPt[pt] | tilesByFile[file_]) <= PT_MAX_TILES[pt%2]:
+                score = (
+                    PT_SCORE_FACTOR * len(tilesByPt[pt] & tilesByFile[file_])
+                    + PT_MAX_TILES[pt%2] - len(tilesByPt[pt])
+                )
+                if score > bestScore:
+                    bestScore = score
+                    bestPt = pt
+        if bestPt == -1:
+            sys.exit("Failed to assign tiles to pattern tables.")
+        tilesByPt[bestPt].update(tilesByFile[file_])
+
+    return tilesByPt
 
 def main():
     # get filenames
@@ -819,10 +730,6 @@ def main():
         sys.exit("Must have 1-255 images.")
     if TITLE_FILE not in filenames:
         sys.exit(f"Title screen image {TITLE_FILE+IMAGE_EXT} not found.")
-    if set(IMAGE_PTS) - set(filenames):
-        sys.exit("Some files in IMAGE_PTS not found.")
-    if set(filenames) - set(IMAGE_PTS):
-        sys.exit("Some files not defined in IMAGE_PTS.")
     if set(MANUAL_SUBPALS) - set(filenames):
         sys.exit(
             "Manual subpalette definitions contain nonexistent filenames."
@@ -850,7 +757,7 @@ def main():
         "generated."
     )
     print("'Palette': 4*4 hexadecimal NES colors including background color.")
-    palettesByFilename = {}
+    palettesByFile = {}
 
     for filename in filenames:
         print(f"{'':4}{filename}:")
@@ -861,98 +768,64 @@ def main():
             validate_image(image)
             nesPixels = get_nes_pixels(image)
         # get palette and remember it, print with extra info
-        palettesByFilename[filename] = get_palette(nesPixels, filename, True)
+        palettesByFile[filename] = get_palette(nesPixels, filename, True)
         print(f"{'':8}Palette:      " + ", ".join(
-            "+".join(f"{b:02x}" for b in s)
-            for s in palettesByFilename[filename]
+            "+".join(f"{b:02x}" for b in s) for s in palettesByFile[filename]
         ))
-
     print()
-    print("Generating background PT data...")
-    print("Unique/new unique/total unique tile count after each file.")
-    uniqueTilesByPt = []
 
-    for pt in range(BANK_COUNT * 2):
-        print(f"PT {pt}...")
-        # must have a blank tile for visible unused area
-        ptUniqueTiles = {tuple(64 * [0])}
-
-        for filename in (f for f in filenames if IMAGE_PTS[f] == pt):
-            # get unique tiles as tuples of 64 2-bit ints
-            with open(filename_to_path(filename), "rb") as handle:
-                handle.seek(0)
-                nesPixels = get_nes_pixels(Image.open(handle))
-            atData = [
-                get_subpal_index(s, palettesByFilename[filename])
-                for s in get_color_sets(nesPixels)
-            ]
-            uniqueTiles = set(convert_tiles(
-                nesPixels, atData, palettesByFilename[filename]
-            ))
-            del atData
-
-            oldCnt = len(ptUniqueTiles)
-            ptUniqueTiles.update(uniqueTiles)
-
-            print(
-                f"{'':4}{filename:26}: "
-                f"{len(uniqueTiles):3} "
-                f"{len(ptUniqueTiles)-oldCnt:3} "
-                f"{len(ptUniqueTiles):3}"
-            )
-            #if any(
-            #    any(t.count(c) == 1 for c in range(4)) for t in uniqueTiles
-            #):
-            #    print(
-            #        f"Warning: image has a tile with only one pixel of "
-            #        "some color; consider optimizing.", file=sys.stderr
-            #    )
-            if len(ptUniqueTiles) > PT_MAX_TILES[pt%2]:
-                sys.exit(
-                    f"Error: more than {PT_MAX_TILES[pt%2]} unique tiles "
-                    "total."
-                )
-
-        # sort by pixels, by unique colors and by number of unique colors
-        ptUniqueTiles = sorted(ptUniqueTiles)
-        ptUniqueTiles.sort(key=lambda t: sorted(set(t)))
-        ptUniqueTiles.sort(key=lambda t: len(set(t)))
-
-        uniqueTilesByPt.append(ptUniqueTiles)
-
+    print("Assigning background tiles to pattern tables...")
+    # {PT_index: set_of_unique_tiles, ...}
+    tilesByPt = assign_tiles_to_pts(filenames, palettesByFile)
     print("Used tiles in PT0-PT7:", "/".join(
-        format(len(uniqueTilesByPt[p]), "3")
-        for p in range(BANK_COUNT * 2)
+        format(len(tilesByPt[p]), "3") for p in range(BANK_COUNT * 2)
     ))
     print("Free tiles in PT0-PT7:", "/".join(
-        format(PT_MAX_TILES[p%2] - len(uniqueTilesByPt[p]), "3")
+        format(PT_MAX_TILES[p%2] - len(tilesByPt[p]), "3")
         for p in range(BANK_COUNT * 2)
     ))
+    print("{} globally unique tiles, {} including duplicates.".format(
+        len(set(chain.from_iterable(tilesByPt.values()))),
+        sum(len(tilesByPt[pt]) for pt in tilesByPt)
+    ))
 
-    allTiles = tuple(chain.from_iterable(uniqueTilesByPt))
-    print("Globally unique tiles      :", len(set(allTiles)))
-    print("Total used tiles           :", len(allTiles))
-    print("Tiles wasted by duplication:", len(allTiles) - len(set(allTiles)))
+    # which pattern table to use for each file
+    ptsByFile = {}
+    for file_ in filenames:
+        tiles = get_unique_tiles(file_, palettesByFile[file_])
+        ptsByFile[file_] = min(
+            i for i in range(BANK_COUNT * 2) if tilesByPt[i].issuperset(tiles)
+        )
 
+    # within each pattern table, sort tiles by pixels, by unique colors and by
+    # number of unique colors (for prettiness and determinism)
+    for pt in range(BANK_COUNT * 2):
+        tiles = sorted(tilesByPt[pt])
+        tiles.sort(key=lambda t: sorted(set(t)))
+        tiles.sort(key=lambda t: len(set(t)))
+        tilesByPt[pt] = tuple(tiles)
+
+    print(f"Writing background PT data to {PT_FILES[0]} to {PT_FILES[-1]}...")
     for pt in range(BANK_COUNT * 2):
         with open(PT_FILES[pt], "wb") as handle:
             handle.seek(0)
-            handle.write(bytes(encode_pt_data(uniqueTilesByPt[pt])))
-            size = handle.tell()
-        print(f"Wrote {PT_FILES[pt]} ({size:4} bytes).")
+            handle.write(bytes(encode_pt_data(tilesByPt[pt])))
     print()
 
     print(f"Writing NT/AT/PT number/palette/description data to {ASM_FILE}...")
     print("Compressed NT/AT data size after each file.")
     totalRleSize = 0
-
     with open(ASM_FILE, "wt", encoding="ascii") as handle:
         handle.seek(0)
         write_asm_preamble(filenames, handle)
         for (fi, filename) in enumerate(filenames):
-            rleSize = write_asm_for_image(
-                fi, filename, uniqueTilesByPt[IMAGE_PTS[filename]],
-                palettesByFilename[filename], handle
+            rleSize = write_image_asm(
+                fi,
+                filename,
+                tilesByPt[ptsByFile[filename]],
+                ptsByFile[filename],
+                palettesByFile[filename],
+                handle
             )
             totalRleSize += rleSize
             print(f"{'':4}{filename:26}: {rleSize:3}")
