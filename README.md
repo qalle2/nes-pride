@@ -14,10 +14,11 @@ Table of contents:
 * [Sources of flags](#sources-of-flags)
 
 ## List of files
-Assembled NES programs (gzip compressed):
-* `pride.nes.gz`: current version (CNROM; download this if you're unsure)
-* `pride-nrom.nes.gz`: the last NROM version (old; has only 49 flags, some in poor quality)
-* `pride-compo.nes.gz`: [NESDev Compo 2022](https://itch.io/jam/nesdev-2022) version (even older; uses NROM, has only 24 flags, some in poor quality)
+Assembled NES programs (gzip compressed, from newest to oldest):
+* `pride.nes.gz`: current version (download this if you're unsure)
+* `pride-compo-2023.nes.gz`: [NESDev Compo 2023](https://itch.io/jam/nesdev-compo-2023) version
+* `pride-nrom.nes.gz`: the last NROM version
+* `pride-compo-2022.nes.gz`: [NESDev Compo 2022](https://itch.io/jam/nesdev-2022) version
 
 Images:
 * `img/*.png`: pride flags to be read by `convert.py` (256&times;192 pixels)

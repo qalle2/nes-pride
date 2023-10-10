@@ -49,9 +49,29 @@ PT_FILES = tuple(f"chr-bg{n}.bin" for n in range(BANK_COUNT * 2))
 # maximum number of tiles in PT0/PT1 in each bank
 PT_MAX_TILES = (256, 208)
 
-# used when assigning tiles of files to pattern tables; fudging this may
-# help if you get the "Failed to assign tiles to pattern tables" error
-PT_SCORE_FACTOR = 3
+# optional manually-specified pattern tables by filename;
+# makes sure similar images end up in the same PT;
+# automatic assignment takes place after this;
+# the order of this dict does not matter
+IMAGE_PTS = {
+    # white pawprint
+    "asexual_furry2":         0,
+    "bisexual_furry2":        0,
+    "lesbian_5stripes_furry": 0,
+    "non-_binary_furry":      0,
+    "pan-_sexual_furry2":     0,
+    "rainbow_furry2":         0,
+    "trans-_gender_furry2":   0,
+    # black pawprint
+    "asexual_furry1":       1,
+    "bisexual_furry1":      1,
+    "pan-_sexual_furry1":   1,
+    "trans-_gender_furry1": 1,
+    # infinity symbol
+    "autism":          2,
+    "autism_hstripes": 2,
+    "autism_vstripes": 2,
+}
 
 # optional manually-defined palettes by filename;
 # up to 4 tuples with up to 3 NES colors each (no NES_BG_COLOR);
@@ -59,51 +79,7 @@ PT_SCORE_FACTOR = 3
 # these reduce the number of unique tiles by making sure the PT colors are
 # similar as well as the actual colors,
 MANUAL_SUBPALS = {
-    # --- autism (try to have the infinity symbol as color 2 on color 1) ---
-
-    "autism": (              # 5 colors
-        (0x37, 0x27),        # yellow, orange
-        (0x37, 0x21, 0x27),  # yellow, blue, orange
-        (0x37, 0x25),        # yellow, red
-        (0x37, 0x29),        # yellow, green
-    ),
-    "autism_hstripes": (     # 6 colors
-        (0x16, 0x26),        # dark red, light red
-        (0x28, 0x30, 0x26),  # yellow, white, light red
-        (0x28, 0x30, 0x2a),  # yellow, white, light green
-        (0x1a, 0x2a),        # dark green, light green
-    ),
-    "autism_vstripes": (     # 4 colors
-        (0x16, 0x30, 0x1a),  # red, white, green
-        (0x1a, 0x30, 0x12),  # green, white, blue
-        (0x12, 0x30),        # blue, white
-        (0x16, 0x1a),        # red, green
-    ),
-
-    # --- furry1 (black pawprint) ---
-
-    "asexual_furry1": (        # 3 colors + black
-        (0x00,),               # gray
-        (0x30,),               # white
-        (0x14,),               # purple
-    ),
-    "bisexual_furry1": (       # 3 colors + black
-        (0x15,),               # pink
-        (0x13, 0x15),          # purple-pink
-        (0x13, 0x12),          # purple-blue
-        (0x12,),               # blue
-    ),
-    "pan-_sexual_furry1": (    # 3 colors + black
-        (0x15,),               # red
-        (0x28,),               # yellow
-        (0x21,),               # blue
-    ),
-    "trans-_gender_furry1": (  # 3 colors + black
-        (0x30, 0x25),          # white, pink
-        (0x25, 0x21),          # pink, cyan
-    ),
-
-    # --- furry2 (white pawprint) ---
+    # --- white pawprint ---
 
     "asexual_furry2": (          # 3 colors + black
         (0x30, 0x14, 0x00),      # white, purple, gray
@@ -140,6 +116,50 @@ MANUAL_SUBPALS = {
         (0x30, 0x21, 0x25),      # white, cyan, pink
         (0x30, 0x25),            # white, pink
         (0x21, 0x25),            # cyan, pink
+    ),
+
+    # --- black pawprint ---
+
+    "asexual_furry1": (        # 3 colors + black
+        (0x00,),               # gray
+        (0x30,),               # white
+        (0x14,),               # purple
+    ),
+    "bisexual_furry1": (       # 3 colors + black
+        (0x15,),               # pink
+        (0x13, 0x15),          # purple-pink
+        (0x13, 0x12),          # purple-blue
+        (0x12,),               # blue
+    ),
+    "pan-_sexual_furry1": (    # 3 colors + black
+        (0x15,),               # red
+        (0x28,),               # yellow
+        (0x21,),               # blue
+    ),
+    "trans-_gender_furry1": (  # 3 colors + black
+        (0x30, 0x25),          # white, pink
+        (0x25, 0x21),          # pink, cyan
+    ),
+
+    # --- autism (try to have the infinity symbol as color 2 on color 1) ---
+
+    "autism": (              # 5 colors
+        (0x37, 0x27),        # yellow, orange
+        (0x37, 0x21, 0x27),  # yellow, blue, orange
+        (0x37, 0x25),        # yellow, red
+        (0x37, 0x29),        # yellow, green
+    ),
+    "autism_hstripes": (     # 6 colors
+        (0x16, 0x26),        # dark red, light red
+        (0x28, 0x30, 0x26),  # yellow, white, light red
+        (0x28, 0x30, 0x2a),  # yellow, white, light green
+        (0x1a, 0x2a),        # dark green, light green
+    ),
+    "autism_vstripes": (     # 4 colors
+        (0x16, 0x30, 0x1a),  # red, white, green
+        (0x1a, 0x30, 0x12),  # green, white, blue
+        (0x12, 0x30),        # blue, white
+        (0x16, 0x1a),        # red, green
     ),
 }
 assert all(1 <= len(p) <= 4                 for p in MANUAL_SUBPALS.values())
@@ -218,14 +238,6 @@ NES_PALETTE = {
 }
 
 # --- Used in many places -----------------------------------------------------
-
-def get_filenames():
-    # generate image filenames without extensions
-    with os.scandir(IMAGE_DIR) as dirIter:
-        for entry in dirIter:
-            (filename, extension) = os.path.splitext(entry.name)
-            if entry.is_file() and extension == IMAGE_EXT:
-                yield filename
 
 def filename_to_path(filename):
     return os.path.join(IMAGE_DIR, filename) + IMAGE_EXT
@@ -350,25 +362,21 @@ def create_subpalettes(nesPixels):
 
     return subpals
 
-def get_palette(nesPixels, filename, extraInfo=False):
+def get_palette(nesPixels, filename):
     # return palette for image as a tuple of 4 tuples of NES color indexes
     # nesPixels: image pixels as NES color indexes
-    # extraInfo: print extra info
 
-    if extraInfo:
-        print(f"{'':8}Colors:       " + ", ".join(
-            format(c, "02x") for c in sorted(set(nesPixels) - {NES_BG_COLOR})
-        ))
-        colorSets = get_sorted_color_sets(nesPixels)
-        print(f"{'':8}Color sets:   " + ", ".join(
-            "+".join(f"{c:02x}" for c in sorted(s)) for s in colorSets
-        ))
+    print(f"\t\tUnique colors: " + ", ".join(
+        format(c, "02x") for c in sorted(set(nesPixels) - {NES_BG_COLOR})
+    ))
+    colorSets = get_sorted_color_sets(nesPixels)
+    print(f"\t\tColor sets   : " + ", ".join(
+        "+".join(f"{c:02x}" for c in sorted(s)) for s in colorSets
+    ))
 
     # get subpalettes
     if filename in MANUAL_SUBPALS:
         # manually-defined
-        if extraInfo:
-            print(f"{'':8}Palette type: manual")
         subpals = MANUAL_SUBPALS[filename]
         definedColors = set(chain.from_iterable(subpals))
         actualColors = set(nesPixels) - {NES_BG_COLOR}
@@ -391,8 +399,6 @@ def get_palette(nesPixels, filename, extraInfo=False):
         )
     else:
         # get automatically
-        if extraInfo:
-            print(f"{'':8}Palette type: automatic")
         subpals = create_subpalettes(nesPixels)
         # order subpalettes, restore background color and pad each subpalette
         subpals = tuple(
@@ -689,11 +695,75 @@ def write_image_asm(index_, name, ptTiles, ptIndex, subpals, dstHnd):
 
     return rleDataSize
 
-# --- Main --------------------------------------------------------------------
+# --- High-level functions ----------------------------------------------------
+
+def get_filenames():
+    # generate image filenames without extensions
+    with os.scandir(IMAGE_DIR) as dirIter:
+        for entry in dirIter:
+            (filename, extension) = os.path.splitext(entry.name)
+            if entry.is_file() and extension == IMAGE_EXT:
+                yield filename
+
+def validate_filenames(filenames):
+    if not 1 <= len(filenames) <= 255:
+        sys.exit("Must have 1-255 images.")
+    if TITLE_FILE not in filenames:
+        sys.exit(f"Title screen image {TITLE_FILE+IMAGE_EXT} not found.")
+    if set(IMAGE_PTS) - set(filenames):
+        sys.exit("IMAGE_PTS contains nonexistent filenames.")
+    if set(MANUAL_SUBPALS) - set(filenames):
+        sys.exit("MANUAL_SUBPALS contains nonexistent filenames.")
+
+def sort_filenames(filenames):
+    # sort without punctuation, title screen first
+    filenames.sort()
+    filenames.sort(key=lambda f: f.replace("_", "").replace("-", ""))
+    filenames.sort(key=lambda f: f != TITLE_FILE)
+    return tuple(filenames)
+
+def get_palette_from_file(filename):
+    # validate image; print and return its palette
+
+    print(f"\t{filename}:")
+
+    # validate image and get pixels as NES color indexes
+    with open(filename_to_path(filename), "rb") as handle:
+        handle.seek(0)
+        image = Image.open(handle)
+        validate_image(image)
+        nesPixels = get_nes_pixels(image)
+
+    # print and return palette
+    palette = get_palette(nesPixels, filename)
+    print(f"\t\tPalette      : " + ", ".join(
+        "+".join(f"{b:02x}" for b in s) for s in palette
+    ))
+
+    return palette
+
+def find_best_pt(fileTiles, tilesByPt):
+    # automatically find the best pattern table for a file's tiles;
+    # return: PT index, or -1 on error
+
+    bestPt = bestScore = -1
+
+    for pt in range(BANK_COUNT * 2):
+        if len(tilesByPt[pt] | fileTiles) <= PT_MAX_TILES[pt%2]:
+            # based on number of shared tiles and free tiles
+            score = (
+                10 * len(tilesByPt[pt] & fileTiles)
+                + PT_MAX_TILES[pt%2] - len(tilesByPt[pt])
+            )
+            if score > bestScore:
+                bestScore = score
+                bestPt = pt
+
+    return bestPt
 
 def assign_tiles_to_pts(filenames, palettesByFile):
     # automatically assign tiles in all images to pattern tables;
-    # return: {PT_index: set_of_unique_tiles, ...}
+    # return a tuple with one set of tiles per PT
 
     # get unique tiles in each file as tuples of 64 2-bit ints
     tilesByFile = {}
@@ -703,99 +773,50 @@ def assign_tiles_to_pts(filenames, palettesByFile):
     # initialize each PT with a blank tile (for unused visible area)
     tilesByPt = dict((k, {tuple(64 * [0])}) for k in range(8))
 
-    # process files by decreasing number of tiles
-    for file_ in sorted(
+    # process files: first those with manually-specified PTs, then by
+    # decreasing tile count
+    fileOrder = sorted(
         filenames, key=lambda f: len(tilesByFile[f]), reverse=True
-    ):
-        bestPt = bestScore = -1
-        for pt in range(BANK_COUNT * 2):
-            if len(tilesByPt[pt] | tilesByFile[file_]) <= PT_MAX_TILES[pt%2]:
-                score = (
-                    PT_SCORE_FACTOR * len(tilesByPt[pt] & tilesByFile[file_])
-                    + PT_MAX_TILES[pt%2] - len(tilesByPt[pt])
-                )
-                if score > bestScore:
-                    bestScore = score
-                    bestPt = pt
-        if bestPt == -1:
-            sys.exit("Failed to assign tiles to pattern tables.")
+    )
+    fileOrder.sort(key=lambda f: f in IMAGE_PTS, reverse=True)
+    for file_ in fileOrder:
+        if file_ in IMAGE_PTS:
+            # get PT manually
+            bestPt = IMAGE_PTS[file_]
+            if len(tilesByPt[bestPt] | tilesByFile[file_]) \
+            > PT_MAX_TILES[bestPt%2]:
+                sys.exit("Cannot satisfy IMAGE_PTS definitions.")
+        else:
+            # get PT automatically
+            bestPt = find_best_pt(tilesByFile[file_], tilesByPt)
+            if bestPt == -1:
+                sys.exit("Failed to autoassign tiles to pattern tables.")
+        # add tiles to that PT
+        sharedTileCnt = len(tilesByPt[bestPt] & tilesByFile[file_])
         tilesByPt[bestPt].update(tilesByFile[file_])
-
-    return tilesByPt
-
-def main():
-    # get filenames
-    filenames = list(get_filenames())
-    if not 1 <= len(filenames) <= 255:
-        sys.exit("Must have 1-255 images.")
-    if TITLE_FILE not in filenames:
-        sys.exit(f"Title screen image {TITLE_FILE+IMAGE_EXT} not found.")
-    if set(MANUAL_SUBPALS) - set(filenames):
-        sys.exit(
-            "Manual subpalette definitions contain nonexistent filenames."
-        )
-
-    print("Images:", len(filenames))
-    print()
-
-    # sort filenames without punctuation, title screen first
-    filenames.sort()
-    filenames.sort(key=lambda f: f.replace("_", "").replace("-", ""))
-    filenames = tuple(sorted(filenames, key=lambda f: f != TITLE_FILE))
-
-    print("Palette test...")
-    print(
-        "'Colors': hexadecimal NES colors excluding background color "
-        f"${NES_BG_COLOR:02x}."
-    )
-    print(
-        "'Color sets': sets of hexadecimal NES colors used in AT blocks "
-        "excluding background color; subsets of other sets excluded."
-    )
-    print(
-        "'Palette type': manual = predefined, automatic = automatically "
-        "generated."
-    )
-    print("'Palette': 4*4 hexadecimal NES colors including background color.")
-    palettesByFile = {}
-
-    for filename in filenames:
-        print(f"{'':4}{filename}:")
-        # validate image, get pixels as NES color indexes
-        with open(filename_to_path(filename), "rb") as handle:
-            handle.seek(0)
-            image = Image.open(handle)
-            validate_image(image)
-            nesPixels = get_nes_pixels(image)
-        # get palette and remember it, print with extra info
-        palettesByFile[filename] = get_palette(nesPixels, filename, True)
-        print(f"{'':8}Palette:      " + ", ".join(
-            "+".join(f"{b:02x}" for b in s) for s in palettesByFile[filename]
+        print("{:4}{:26} ({:3} tiles): PT{} ({:3} shared, {:3} free)".format(
+            "",
+            file_,
+            len(tilesByFile[file_]),
+            bestPt,
+            sharedTileCnt,
+            PT_MAX_TILES[bestPt%2] - len(tilesByPt[bestPt])
         ))
-    print()
 
-    print("Assigning background tiles to pattern tables...")
-    # {PT_index: set_of_unique_tiles, ...}
-    tilesByPt = assign_tiles_to_pts(filenames, palettesByFile)
-    print("Used tiles in PT0-PT7:", "/".join(
-        format(len(tilesByPt[p]), "3") for p in range(BANK_COUNT * 2)
-    ))
-    print("Free tiles in PT0-PT7:", "/".join(
-        format(PT_MAX_TILES[p%2] - len(tilesByPt[p]), "3")
-        for p in range(BANK_COUNT * 2)
-    ))
-    print("{} globally unique tiles, {} including duplicates.".format(
-        len(set(chain.from_iterable(tilesByPt.values()))),
-        sum(len(tilesByPt[pt]) for pt in tilesByPt)
-    ))
+    return tuple(tilesByPt[pt] for pt in range(BANK_COUNT * 2))
 
-    # which pattern table to use for each file
-    ptsByFile = {}
+def get_pattern_tables_for_files(filenames, palettesByFile, tilesByPt):
+    # which pattern table to use for each file;
+    # generate: (filename, PT)
     for file_ in filenames:
         tiles = get_unique_tiles(file_, palettesByFile[file_])
-        ptsByFile[file_] = min(
+        pt = min(
             i for i in range(BANK_COUNT * 2) if tilesByPt[i].issuperset(tiles)
         )
+        yield (file_, pt)
+
+def sort_pattern_table_data(tilesByPt):
+    # sort pattern table data; yield one PT per call
 
     # within each pattern table, sort tiles by pixels, by unique colors and by
     # number of unique colors (for prettiness and determinism)
@@ -803,17 +824,58 @@ def main():
         tiles = sorted(tilesByPt[pt])
         tiles.sort(key=lambda t: sorted(set(t)))
         tiles.sort(key=lambda t: len(set(t)))
-        tilesByPt[pt] = tuple(tiles)
+        yield tuple(tiles)
+
+def main():
+    filenames = list(get_filenames())
+    validate_filenames(filenames)
+    filenames = sort_filenames(filenames)
+
+    print("Images:", len(filenames))
+    print()
+
+    print("Generating palettes...")
+    print(
+        "All colors are hexadecimal NES colors. 'Unique colors' and 'color "
+        f"sets' don't include the background color {NES_BG_COLOR:02x}."
+    )
+    palettesByFile = dict((f, get_palette_from_file(f)) for f in filenames)
+    print()
+
+    print("Assigning background tiles to pattern tables...")
+    # one set per PT in a tuple
+    tilesByPt = assign_tiles_to_pts(filenames, palettesByFile)
+
+    print("Used tiles in PT0-PT7:", "/".join(
+        format(len(pt), "3") for pt in tilesByPt
+    ))
+    print("Free tiles in PT0-PT7:", "/".join(
+        format(PT_MAX_TILES[i%2] - len(pt), "3")
+        for (i, pt) in enumerate(tilesByPt)
+    ))
+    print("{} globally unique tiles, {} including duplicates.".format(
+        len(set(chain.from_iterable(tilesByPt))),
+        sum(len(pt) for pt in tilesByPt)
+    ))
+
+    # which pattern table to use for each file (while tilesByPt still contains
+    # sets)
+    ptsByFile = dict(get_pattern_tables_for_files(
+        filenames, palettesByFile, tilesByPt
+    ))
+
+    # sort pattern table data (one tuple per PT in a tuple)
+    tilesByPt = tuple(sort_pattern_table_data(tilesByPt))
 
     print(f"Writing background PT data to {PT_FILES[0]} to {PT_FILES[-1]}...")
-    for pt in range(BANK_COUNT * 2):
-        with open(PT_FILES[pt], "wb") as handle:
+    for (i, tiles) in enumerate(tilesByPt):
+        with open(PT_FILES[i], "wb") as handle:
             handle.seek(0)
-            handle.write(bytes(encode_pt_data(tilesByPt[pt])))
+            handle.write(bytes(encode_pt_data(tiles)))
     print()
 
     print(f"Writing NT/AT/PT number/palette/description data to {ASM_FILE}...")
-    print("Compressed NT/AT data size after each file.")
+    print("Compressed NT&AT data size after each file.")
     totalRleSize = 0
     with open(ASM_FILE, "wt", encoding="ascii") as handle:
         handle.seek(0)
@@ -828,9 +890,9 @@ def main():
                 handle
             )
             totalRleSize += rleSize
-            print(f"{'':4}{filename:26}: {rleSize:3}")
+            print(f"\t{filename:26}: {rleSize:3}")
 
-    print("Total compressed NT/AT data size:", totalRleSize)
+    print("Total compressed NT&AT data size:", totalRleSize)
     print()
 
 main()
