@@ -55,18 +55,19 @@ PT_MAX_TILES = (256, 208)
 # the order of this dict does not matter
 IMAGE_PTS = {
     # white pawprint
-    "asexual_furry2":         0,
-    "bisexual_furry2":        0,
-    "lesbian_5stripes_furry": 0,
-    "non-_binary_furry":      0,
-    "pan-_sexual_furry2":     0,
-    "rainbow_furry2":         0,
-    "trans-_gender_furry2":   0,
+    "asexual_furry2":          0,
+    "bisexual_furry2":         0,
+    "lesbian_5stripes_furry2": 0,
+    "non-_binary_furry":       0,
+    "pan-_sexual_furry2":      0,
+    "rainbow_furry2":          0,
+    "trans-_gender_furry2":    0,
     # black pawprint
-    "asexual_furry1":       1,
-    "bisexual_furry1":      1,
-    "pan-_sexual_furry1":   1,
-    "trans-_gender_furry1": 1,
+    "asexual_furry1":          1,
+    "bisexual_furry1":         1,
+    "lesbian_5stripes_furry1": 1,
+    "pan-_sexual_furry1":      1,
+    "trans-_gender_furry1":    1,
     # infinity symbol
     "autism":          2,
     "autism_hstripes": 2,
@@ -79,69 +80,75 @@ IMAGE_PTS = {
 # these reduce the number of unique tiles by making sure the PT colors are
 # similar as well as the actual colors,
 MANUAL_SUBPALS = {
-    # --- white pawprint ---
+    # --- white pawprint (white as color 1) ---
 
-    "asexual_furry2": (          # 3 colors + black
-        (0x30, 0x14, 0x00),      # white, purple, gray
-        (0x30, 0x00),            # white, gray
+    "asexual_furry2": (      # 3 colors + black
+        (0x30, 0x14, 0x00),  # white, purple, gray
+        (0x30, 0x00),        # white, gray
     ),
-    "bisexual_furry2": (         # 4 colors
-        (0x30, 0x13, 0x15),      # white-purple-pink
-        (0x30, 0x13, 0x12),      # white-purple-blue
-        (0x30, 0x15),            # white-pink
-        (0x30, 0x12),            # white-blue
+    "bisexual_furry2": (     # 4 colors
+        (0x30, 0x13, 0x15),  # white, purple, pink
+        (0x30, 0x13, 0x12),  # white, purple, blue
+        (0x30, 0x15),        # white, pink
+        (0x30, 0x12),        # white, blue
     ),
-    "lesbian_5stripes_furry": (  # 5 colors
-        (0x30, 0x14, 0x24),      # white, dark magenta, light magenta
-        (0x30, 0x14, 0x27),      # white, dark magenta, orange
-        (0x30, 0x17, 0x27),      # white, brown, orange
-        (0x30, 0x27),            # white, orange
+    "lesbian_5stripes_furry2": (  # 5 colors
+        (0x30, 0x14, 0x24),       # white, dark magenta, light magenta
+        (0x30, 0x14, 0x27),       # white, dark magenta, orange
+        (0x30, 0x17, 0x27),       # white, brown, orange
+        (0x30, 0x27),             # white, orange
     ),
-    "non-_binary_furry": (       # 3 colors + black
-        (0x30, 0x13, 0x28),      # white, purple, yellow
-        (0x30, 0x28),            # white, yellow
+    "non-_binary_furry": (   # 3 colors + black
+        (0x30, 0x13, 0x28),  # white, purple, yellow
+        (0x30, 0x28),        # white, yellow
     ),
-    "pan-_sexual_furry2": (      # 4 colors
-        (0x30, 0x15, 0x21),      # white-pink-cyan
-        (0x30, 0x21),            # white-cyan
-        (0x30, 0x28),            # white-yellow
+    "pan-_sexual_furry2": (  # 4 colors
+        (0x30, 0x15, 0x21),  # white, pink, cyan
+        (0x30, 0x21),        # white, cyan
+        (0x30, 0x28),        # white, yellow
     ),
-    "rainbow_furry2": (          # 7 colors
-        (0x30, 0x04, 0x27),      # white-purple-orange
-        (0x30, 0x04, 0x12),      # white-purple-blue
-        (0x30, 0x16, 0x28),      # white-red-yellow
-        (0x30, 0x19),            # white-green
+    "rainbow_furry2": (      # 7 colors
+        (0x30, 0x04, 0x27),  # white, purple, orange
+        (0x30, 0x04, 0x12),  # white, purple, blue
+        (0x30, 0x16, 0x28),  # white, red, yellow
+        (0x30, 0x19),        # white, green
     ),
-    "trans-_gender_furry2": (    # 3 colors
-        (0x30, 0x21, 0x25),      # white, cyan, pink
-        (0x30, 0x25),            # white, pink
-        (0x21, 0x25),            # cyan, pink
+    "trans-_gender_furry2": (  # 3 colors
+        (0x30, 0x21, 0x25),    # white, cyan, pink
+        (0x30, 0x25),          # white, pink
+        (0x21, 0x25),          # cyan, pink
     ),
 
-    # --- black pawprint ---
+    # --- black pawprint (area surrounding the pawprint as color 1) ---
 
-    "asexual_furry1": (        # 3 colors + black
-        (0x00,),               # gray
-        (0x30,),               # white
-        (0x14,),               # purple
+    "asexual_furry1": (  # 3 colors + black
+        (0x00,),  # gray
+        (0x30,),  # white
+        (0x14,),  # purple
     ),
-    "bisexual_furry1": (       # 3 colors + black
-        (0x15,),               # pink
-        (0x13, 0x15),          # purple-pink
-        (0x13, 0x12),          # purple-blue
-        (0x12,),               # blue
+    "bisexual_furry1": (  # 3 colors + black
+        (0x15,),       # pink
+        (0x13, 0x15),  # purple, pink
+        (0x13, 0x12),  # purple, blue
+        (0x12,),       # blue
     ),
-    "pan-_sexual_furry1": (    # 3 colors + black
-        (0x15,),               # red
-        (0x28,),               # yellow
-        (0x21,),               # blue
+    "lesbian_5stripes_furry1": (  # 5 colors + black
+        (0x17, 0x27),  # brown, orange
+        (0x27, 0x30),  # orange, white
+        (0x30, 0x24),  # white, light magenta
+        (0x24, 0x14),  # light magenta, dark magenta
+    ),
+    "pan-_sexual_furry1": (  # 3 colors + black
+        (0x15,),             # red
+        (0x28,),             # yellow
+        (0x21,),             # blue
     ),
     "trans-_gender_furry1": (  # 3 colors + black
         (0x30, 0x25),          # white, pink
         (0x25, 0x21),          # pink, cyan
     ),
 
-    # --- autism (try to have the infinity symbol as color 2 on color 1) ---
+    # --- autism (infinity symbol as color 2 on color 1) ---
 
     "autism": (              # 5 colors
         (0x37, 0x27),        # yellow, orange
