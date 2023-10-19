@@ -201,7 +201,7 @@ MANUAL_SUBPALS = {
     ),
     "sapphic": (             # 4 colors
         (0x30, 0x13, 0x27),  # white, purple, orange
-		(0x25,),             # pink
+        (0x25,),             # pink
     ),
     "therian,_otherkin": (  # 3 colors + black
         (0x30, 0x1b),       # white, green
