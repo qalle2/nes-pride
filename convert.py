@@ -168,6 +168,51 @@ MANUAL_SUBPALS = {
         (0x12, 0x30),        # blue, white
         (0x16, 0x1a),        # red, green
     ),
+
+    # --- misc ---
+
+    "aego-_sexual1": (  # 3 colors + black
+        (0x00, 0x30),   # gray, white
+        (0x14,)         # purple
+    ),
+    "intersex": (      # 2 colors
+        (0x28, 0x04),  # yellow, purple
+    ),
+    "poly-_amory1": (  # 3 colors + black
+        (0x16, 0x28),  # red, yellow
+        (0x02,),       # blue
+    ),
+    "poly-_amory2": (  # 3 colors + black
+        (0x02, 0x28),  # blue, yellow
+        (0x16, 0x28),  # red, yellow
+        (0x28,),       # yellow
+    ),
+    "poly-_amory3": (  # 5 colors
+        (0x30, 0x28),  # white, yellow
+        (0x30, 0x21),  # white, blue
+        (0x30, 0x15),  # white, red
+        (0x30, 0x03),  # white, purple
+    ),
+    "rainbow_furry1": (      # 6 colors + black
+        (0x16, 0x27),        # red, orange
+        (0x27, 0x28, 0x1b),  # orange, yellow, green
+        (0x11, 0x1b),        # blue, green
+        (0x04, 0x11),        # magenta, blue
+    ),
+    "sapphic": (             # 4 colors
+        (0x30, 0x13, 0x27),  # white, purple, orange
+		(0x25,),             # pink
+    ),
+    "therian,_otherkin": (  # 3 colors + black
+        (0x30, 0x1b),       # white, green
+        (0x30, 0x03),       # white, purple
+    ),
+    "title_screen": (        # 7 colors + black
+        (0x21, 0x30, 0x13),  # cyan, white, purple
+        (0x30, 0x15),        # white, red
+        (0x30, 0x27),        # white, yellow
+        (0x30, 0x19, 0x12),  # white, green, blue
+    ),
 }
 assert all(1 <= len(p) <= 4                 for p in MANUAL_SUBPALS.values())
 assert all(all(1 <= len(s) <= 3 for s in p) for p in MANUAL_SUBPALS.values())
