@@ -616,9 +616,10 @@ def filename_to_descr(filename):
     #     "X"   -> 23 spaces + "x"
     #     "X_Y" -> 15 spaces + "x" + 7 spaces + "y"
 
-    if search("^[0-9a-z_-]+$", filename) is None:
+    if search("^[0-9a-z,_-]+$", filename) is None:
         sys.exit(
-            "Only 0-9, a-z, _, - allowed in filenames (excluding extension)."
+            "Only 0-9, a-z, underscore, comma, hyphen allowed in filenames "
+            "(excluding extension)."
         )
 
     lines = filename.split("_")
@@ -637,13 +638,15 @@ def char_to_tile_index(char):
     # convert character into NES tile index
     if char == " ":
         return 0x00
+    if char == ",":
+        return 0xf4
     if char == "-":
-        return 0xd0
+        return 0xf5
     cp = ord(char)
     if ord("0") <= cp <= ord("9"):
-        return 0xd1 + cp - ord("0")
+        return 0xd0 + cp - ord("0")
     if ord("a") <= cp <= ord("z"):
-        return 0xdb + cp - ord("a")
+        return 0xda + cp - ord("a")
     sys.exit("Unknown character.")
 
 def write_image_asm(index_, name, ptTiles, ptIndex, subpals, dstHnd):

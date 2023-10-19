@@ -1,5 +1,5 @@
 # Qalle's Pride Flag Show II
-Browse 54 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
+Browse 65 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
 
 ![screenshot](snap1.png)
 ![screenshot](snap2.png)
@@ -51,32 +51,31 @@ Other binaries (gzip compressed):
 ## How to add new flags
 You can add flags of your own to the NES program.
 You need to have Python and ASM6 installed.
-1. Open your flag image in an image editor (e.g. GIMP).
+1. Open your flag image in an image editor (e.g. GNU IMP).
 2. Resize the image to 256&times;192 pixels.
 3. Convert the image into indexed color (so it has a palette).
 4. Because of NES hardware limitations, the colors need to be optimized manually and the pixels may need to be edited as well. This is tricky, but follow these rules:
    * No more than 12 unique colors in addition to black.
-   * All unique colors should be clearly distinct from each other. (Try copying colors from existing flags.)
-   * Put a 16&times;16-pixel grid on the image (in GIMP, Image &rarr; Configure Grid&hellip; and View &rarr; Show Grid).
+   * All unique colors should be clearly distinct from each other.
+   * Put a 16&times;16-pixel grid on the image (in GNU IMP, Image &rarr; Configure Grid&hellip; and View &rarr; Show Grid).
    * No grid square can have more than three distinct colors in addition to black.
    * In all grid squares combined, you can't use more than four unique sets of three distinct colors in addition to black.
 5. Save the image in PNG format under the `img` directory. The filename before the extension (`.png`) is important:
    * It will be the flag description text (up to 8&times;3 characters) inside the NES program.
-   * 24 characters or less.
-   * Only `a`&ndash;`z`, `0`&ndash;`9`, hyphen (`-`) and underscore (`_`) are allowed.
+   * 26 characters or less.
+   * Only `a`&ndash;`z`, `0`&ndash;`9`, comma (`,`), hyphen (`-`) and underscore (`_`) are allowed.
    * Underscores will be converted into newlines.
    * No more than two underscores.
    * No more than eight consecutive non-underscore characters.
    * See the existing filenames for examples.
-6. In `convert.py`, add the image filename without extension to `IMAGE_PTS`.
-7. Run `python3 convert.py`. It should not print any errors. However, the palette creation algorithm isn't very smart, so if you're sure you followed step 4 correctly and the program still complains, you can define the palette manually: edit `MANUAL_SUBPALS` in `convert.py`. The output just before the error message and `NES_PALETTE` in `convert.py` will be helpful.
-8. Extract `chr-spr.bin` from the `.gz` file. (Use e.g. `gunzip` on Linux or 7-Zip on Windows.)
-9. Assemble: `asm6 pride.asm pride.nes` &ndash; again, it should not print any errors.
-10. Run `pride.nes` on an NES emulator (e.g. FCEUX, Nestopia, Mednafen).
+6. Run `python3 convert.py`. It should not print any errors. However, the palette creation algorithm isn't very smart, so if you're sure you followed step 4 correctly and the program still complains, you can define the palette manually: edit `MANUAL_SUBPALS` in `convert.py`. The output just before the error message and `NES_PALETTE` in `convert.py` will be helpful.
+7. Extract `chr-spr.bin` from the `.gz` file. (Use e.g. `gunzip` on Linux or 7-Zip on Windows.)
+8. Assemble: `asm6 pride.asm pride.nes` &ndash; again, it should not print any errors.
+9. Run `pride.nes` on an NES emulator (e.g. FCEUX, Nestopia, Mednafen).
 
 ## Technical info on the NES program
 * mapper: CNROM (iNES mapper #3)
-* PRG ROM: 16 KiB
+* PRG ROM: 32 KiB
 * CHR ROM: 32 KiB
 * name table mirroring: vertical
 * pattern table 0 in each bank: background (flag images)
@@ -94,20 +93,28 @@ You need to have Python and ASM6 installed.
   * for speed, all PPU memory updates (VRAM/palette) go through a buffer on the stack page (can be read quickly with PLA)
 
 ## Sources of flags
+* [Abrosexuality](https://sexuality.fandom.com/wiki/Abrosexuality)
+* [Aegosexual](https://www.lgbtqia.wiki/wiki/Aegosexual) (black/gray/green/purple)
+* [Aegosexuality](https://sexuality.fandom.com/wiki/Aegosexuality) (black/gray/white/purple)
 * [Androgyne](https://lgbtqia.fandom.com/wiki/Androgyne) &ndash; LGBTQIA+ Wiki
+* [Androsexual](https://sexuality.fandom.com/wiki/Androsexual)
 * [Aromantic Asexual](https://lgbtqia.fandom.com/wiki/Aromantic_asexual) &ndash; LGBTQIA+ Wiki
 * [Asexual Furry Pride Fandom Flag](https://www.amazon.com/Asexual-Furry-Pride-Fandom-Flag/dp/B07F1K57P1) (black pawprint) &ndash; Amazon
 * [Autism pride flag](https://commons.wikimedia.org/wiki/File:Autism_pride_flag.svg) (vertical stripes) &ndash; Wikimedia Commons
 * [Autistic Pride Flag](https://commons.wikimedia.org/wiki/File:Autistic_Pride_Flag.png) (no stripes) &ndash; Wikimedia Commons
-* [The Autistic Pride Flag](https://commons.wikimedia.org/wiki/File:The_Autistic_Pride_Flag.png) (horizontal stripes) &ndash; Wikimedia Commons
+* [Autistic Pride Flag](https://commons.wikimedia.org/wiki/File:The_Autistic_Pride_Flag.png) (horizontal stripes) &ndash; Wikimedia Commons
+* [Autosexuality](https://sexuality.fandom.com/wiki/Autosexuality)
 * [Bear Brotherhood flag](https://commons.wikimedia.org/wiki/File:Bear_Brotherhood_flag.svg) &ndash; Wikimedia Commons
 * [Demigender](https://lgbtqia.fandom.com/wiki/Demigender) &ndash; LGBTQIA+ Wiki
 * [Demigirl Pride Flag](https://commons.wikimedia.org/wiki/File:Demigirl_Pride-Flag.png) &ndash; Wikimedia Commons
 * [Demiguy Pride Flag](https://commons.wikimedia.org/wiki/File:Demiguy_Pride-Flag.png) &ndash; Wikimedia Commons
+* [Fraysexual](https://sexuality.fandom.com/wiki/Fraysexual)
 * [Furry Bisexual Pride Flag](https://www.wackyprint.com/store/activism/lgbt/furry-bisexual-pride-flag-lgbt-colors-vibrant-bright) &ndash; Wacky Print (black pawprint)
 * [Furry Flags](https://www.inanimorphs.com/furryflags) &ndash; Inanimorphs (Furry LGBT Pride Flags, white pawprint)
 * [Furry Pride Flag](https://commons.wikimedia.org/wiki/File:Furry_Pride_Flag.png) &ndash; Wikimedia Commons
+* [Graysexual](https://sexuality.fandom.com/wiki/Graysexual)
 * [Leather, Latex, and BDSM pride - Light](https://commons.wikimedia.org/wiki/File:Leather,_Latex,_and_BDSM_pride_-_Light.svg) &ndash; Wikimedia Commons
+* [Neptunic](https://www.lgbtqia.wiki/wiki/Neptunic)
 * [Nonhuman Unity Flag](https://en.wikipedia.org/wiki/File:Nonhuman_Unity_Flag.svg) (otherkin) &ndash; Wikipedia (broken link)
 * [Non-human Unity Flag](https://therian.fandom.com/wiki/Non-human_Unity_Flag) &ndash; Therian Wiki (not the flag I used, but similar to the above)
 * [Omnisexual](https://lgbtqia.fandom.com/wiki/Omnisexual) &ndash; LGBTQIA+ Wiki
@@ -117,9 +124,12 @@ You need to have Python and ASM6 installed.
 * [Pride flag](https://en.wikipedia.org/wiki/Pride_flag) &ndash; Wikipedia (TODO: be more specific)
 * [Queer Pride Flag](https://queerintheworld.com/queer-pride-flag/) &ndash; Queer in the World
 * [Rainbow flag (LGBT)](https://en.wikipedia.org/wiki/Rainbow_flag_%28LGBT%29) &ndash; Wikipedia
+* [Sapiosexual](https://sexuality.fandom.com/wiki/Sapiosexual) (green/brown/blue)
+* [Sapiosexual](https://www.lgbtqia.wiki/wiki/Sapiosexual) (gray/red/blue)
 * [Sapphic](https://lgbtqia.fandom.com/wiki/Sapphic) &ndash; LGBTQIA+ Wiki
 * [Transgender Furry Pride Fandom Paw Flag](https://www.amazon.com/Transgender-Furry-Pride-Fandom-Flag/dp/B07F1Y36D2) &ndash; Amazon
 * [Tricolor Polyamory Pride Flag](https://commons.wikimedia.org/wiki/File:Tricolor_Polyamory_Pride_Flag.svg) &ndash; Wikimedia Commons
+* [Uranic](https://www.lgbtqia.wiki/wiki/Uranic)
 * [Visually Safe Disability Pride Flag](https://commons.wikimedia.org/wiki/File:Visually_Safe_Disability_Pride_Flag.svg) &ndash; Wikimedia Commons
 
 The license of this project does not apply to the flag images (I guess).

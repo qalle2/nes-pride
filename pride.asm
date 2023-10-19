@@ -53,13 +53,13 @@ joypad2         equ $4017
                 ;
                 base $0000
                 db "NES", $1a            ; file id
-                db 1, 4                  ; 16 KiB PRG ROM, 32 KiB CHR ROM
+                db 2, 4                  ; 32 KiB PRG ROM, 32 KiB CHR ROM
                 db %00110001, %00000000  ; CNROM (mapper 3), vertical mirroring
                 pad $0010, $00           ; unused
 
 ; --- Start of PRG ROM --------------------------------------------------------
 
-                base $c000              ; last 16 KiB of CPU address space
+                base $8000              ; last 32 KiB of CPU address space
 
 ; --- Interrupt routines (here for page alignment) ----------------------------
 
