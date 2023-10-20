@@ -1,5 +1,6 @@
 # Qalle's Pride Flag Show II
 Browse 65 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
+This program can also be downloaded from [Itch.io](https://qalle.itch.io/qalles-pride-flag-show).
 
 ![screenshot](snap1.png)
 ![screenshot](snap2.png)
@@ -75,7 +76,7 @@ You need to have Python and ASM6 installed.
 
 ## Technical info on the NES program
 * mapper: CNROM (iNES mapper #3)
-* PRG ROM: 32 KiB
+* PRG ROM: 16 KiB
 * CHR ROM: 32 KiB
 * name table mirroring: vertical
 * pattern table 0 in each bank: background (flag images)

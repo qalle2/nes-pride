@@ -2,6 +2,13 @@
 
 image_count equ 66
 
+image_pts
+	db 4, 7, 2, 1, 1, 2, 0, 1, 1, 0, 1, 0, 2, 2, 2, 0
+	db 5, 1, 7, 1, 0, 1, 1, 1, 1, 1, 2, 7, 0, 1, 7, 0
+	db 1, 7, 7, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 2, 6
+	db 1, 0, 1, 0, 1, 0, 5, 0, 2, 2, 0, 0, 7, 3, 1, 1
+	db 0, 0
+
 image_ptrs
 	dw img0_ptrs, img1_ptrs, img2_ptrs, img3_ptrs, img4_ptrs
 	dw img5_ptrs, img6_ptrs, img7_ptrs, img8_ptrs, img9_ptrs
@@ -20,268 +27,202 @@ image_ptrs
 
 img0_ptrs
 	dw img0_nt_at0, img0_nt_at1, img0_nt_at2, img0_nt_at3
-	dw img0_nt_at4, img0_nt_at5, img0_pt, img0_pal
-	dw img0_txt
+	dw img0_nt_at4, img0_nt_at5, img0_pal, img0_txt
 img1_ptrs
 	dw img1_nt_at0, img1_nt_at1, img1_nt_at2, img1_nt_at3
-	dw img1_nt_at4, img1_nt_at5, img1_pt, img1_pal
-	dw img1_txt
+	dw img1_nt_at4, img1_nt_at5, img1_pal, img1_txt
 img2_ptrs
 	dw img2_nt_at0, img2_nt_at1, img2_nt_at2, img2_nt_at3
-	dw img2_nt_at4, img2_nt_at5, img2_pt, img2_pal
-	dw img2_txt
+	dw img2_nt_at4, img2_nt_at5, img2_pal, img2_txt
 img3_ptrs
 	dw img3_nt_at0, img3_nt_at1, img3_nt_at2, img3_nt_at3
-	dw img3_nt_at4, img3_nt_at5, img3_pt, img3_pal
-	dw img3_txt
+	dw img3_nt_at4, img3_nt_at5, img3_pal, img3_txt
 img4_ptrs
 	dw img4_nt_at0, img4_nt_at1, img4_nt_at2, img4_nt_at3
-	dw img4_nt_at4, img4_nt_at5, img4_pt, img4_pal
-	dw img4_txt
+	dw img4_nt_at4, img4_nt_at5, img4_pal, img4_txt
 img5_ptrs
 	dw img5_nt_at0, img5_nt_at1, img5_nt_at2, img5_nt_at3
-	dw img5_nt_at4, img5_nt_at5, img5_pt, img5_pal
-	dw img5_txt
+	dw img5_nt_at4, img5_nt_at5, img5_pal, img5_txt
 img6_ptrs
 	dw img6_nt_at0, img6_nt_at1, img6_nt_at2, img6_nt_at3
-	dw img6_nt_at4, img6_nt_at5, img6_pt, img6_pal
-	dw img6_txt
+	dw img6_nt_at4, img6_nt_at5, img6_pal, img6_txt
 img7_ptrs
 	dw img7_nt_at0, img7_nt_at1, img7_nt_at2, img7_nt_at3
-	dw img7_nt_at4, img7_nt_at5, img7_pt, img7_pal
-	dw img7_txt
+	dw img7_nt_at4, img7_nt_at5, img7_pal, img7_txt
 img8_ptrs
 	dw img8_nt_at0, img8_nt_at1, img8_nt_at2, img8_nt_at3
-	dw img8_nt_at4, img8_nt_at5, img8_pt, img8_pal
-	dw img8_txt
+	dw img8_nt_at4, img8_nt_at5, img8_pal, img8_txt
 img9_ptrs
 	dw img9_nt_at0, img9_nt_at1, img9_nt_at2, img9_nt_at3
-	dw img9_nt_at4, img9_nt_at5, img9_pt, img9_pal
-	dw img9_txt
+	dw img9_nt_at4, img9_nt_at5, img9_pal, img9_txt
 img10_ptrs
 	dw img10_nt_at0, img10_nt_at1, img10_nt_at2, img10_nt_at3
-	dw img10_nt_at4, img10_nt_at5, img10_pt, img10_pal
-	dw img10_txt
+	dw img10_nt_at4, img10_nt_at5, img10_pal, img10_txt
 img11_ptrs
 	dw img11_nt_at0, img11_nt_at1, img11_nt_at2, img11_nt_at3
-	dw img11_nt_at4, img11_nt_at5, img11_pt, img11_pal
-	dw img11_txt
+	dw img11_nt_at4, img11_nt_at5, img11_pal, img11_txt
 img12_ptrs
 	dw img12_nt_at0, img12_nt_at1, img12_nt_at2, img12_nt_at3
-	dw img12_nt_at4, img12_nt_at5, img12_pt, img12_pal
-	dw img12_txt
+	dw img12_nt_at4, img12_nt_at5, img12_pal, img12_txt
 img13_ptrs
 	dw img13_nt_at0, img13_nt_at1, img13_nt_at2, img13_nt_at3
-	dw img13_nt_at4, img13_nt_at5, img13_pt, img13_pal
-	dw img13_txt
+	dw img13_nt_at4, img13_nt_at5, img13_pal, img13_txt
 img14_ptrs
 	dw img14_nt_at0, img14_nt_at1, img14_nt_at2, img14_nt_at3
-	dw img14_nt_at4, img14_nt_at5, img14_pt, img14_pal
-	dw img14_txt
+	dw img14_nt_at4, img14_nt_at5, img14_pal, img14_txt
 img15_ptrs
 	dw img15_nt_at0, img15_nt_at1, img15_nt_at2, img15_nt_at3
-	dw img15_nt_at4, img15_nt_at5, img15_pt, img15_pal
-	dw img15_txt
+	dw img15_nt_at4, img15_nt_at5, img15_pal, img15_txt
 img16_ptrs
 	dw img16_nt_at0, img16_nt_at1, img16_nt_at2, img16_nt_at3
-	dw img16_nt_at4, img16_nt_at5, img16_pt, img16_pal
-	dw img16_txt
+	dw img16_nt_at4, img16_nt_at5, img16_pal, img16_txt
 img17_ptrs
 	dw img17_nt_at0, img17_nt_at1, img17_nt_at2, img17_nt_at3
-	dw img17_nt_at4, img17_nt_at5, img17_pt, img17_pal
-	dw img17_txt
+	dw img17_nt_at4, img17_nt_at5, img17_pal, img17_txt
 img18_ptrs
 	dw img18_nt_at0, img18_nt_at1, img18_nt_at2, img18_nt_at3
-	dw img18_nt_at4, img18_nt_at5, img18_pt, img18_pal
-	dw img18_txt
+	dw img18_nt_at4, img18_nt_at5, img18_pal, img18_txt
 img19_ptrs
 	dw img19_nt_at0, img19_nt_at1, img19_nt_at2, img19_nt_at3
-	dw img19_nt_at4, img19_nt_at5, img19_pt, img19_pal
-	dw img19_txt
+	dw img19_nt_at4, img19_nt_at5, img19_pal, img19_txt
 img20_ptrs
 	dw img20_nt_at0, img20_nt_at1, img20_nt_at2, img20_nt_at3
-	dw img20_nt_at4, img20_nt_at5, img20_pt, img20_pal
-	dw img20_txt
+	dw img20_nt_at4, img20_nt_at5, img20_pal, img20_txt
 img21_ptrs
 	dw img21_nt_at0, img21_nt_at1, img21_nt_at2, img21_nt_at3
-	dw img21_nt_at4, img21_nt_at5, img21_pt, img21_pal
-	dw img21_txt
+	dw img21_nt_at4, img21_nt_at5, img21_pal, img21_txt
 img22_ptrs
 	dw img22_nt_at0, img22_nt_at1, img22_nt_at2, img22_nt_at3
-	dw img22_nt_at4, img22_nt_at5, img22_pt, img22_pal
-	dw img22_txt
+	dw img22_nt_at4, img22_nt_at5, img22_pal, img22_txt
 img23_ptrs
 	dw img23_nt_at0, img23_nt_at1, img23_nt_at2, img23_nt_at3
-	dw img23_nt_at4, img23_nt_at5, img23_pt, img23_pal
-	dw img23_txt
+	dw img23_nt_at4, img23_nt_at5, img23_pal, img23_txt
 img24_ptrs
 	dw img24_nt_at0, img24_nt_at1, img24_nt_at2, img24_nt_at3
-	dw img24_nt_at4, img24_nt_at5, img24_pt, img24_pal
-	dw img24_txt
+	dw img24_nt_at4, img24_nt_at5, img24_pal, img24_txt
 img25_ptrs
 	dw img25_nt_at0, img25_nt_at1, img25_nt_at2, img25_nt_at3
-	dw img25_nt_at4, img25_nt_at5, img25_pt, img25_pal
-	dw img25_txt
+	dw img25_nt_at4, img25_nt_at5, img25_pal, img25_txt
 img26_ptrs
 	dw img26_nt_at0, img26_nt_at1, img26_nt_at2, img26_nt_at3
-	dw img26_nt_at4, img26_nt_at5, img26_pt, img26_pal
-	dw img26_txt
+	dw img26_nt_at4, img26_nt_at5, img26_pal, img26_txt
 img27_ptrs
 	dw img27_nt_at0, img27_nt_at1, img27_nt_at2, img27_nt_at3
-	dw img27_nt_at4, img27_nt_at5, img27_pt, img27_pal
-	dw img27_txt
+	dw img27_nt_at4, img27_nt_at5, img27_pal, img27_txt
 img28_ptrs
 	dw img28_nt_at0, img28_nt_at1, img28_nt_at2, img28_nt_at3
-	dw img28_nt_at4, img28_nt_at5, img28_pt, img28_pal
-	dw img28_txt
+	dw img28_nt_at4, img28_nt_at5, img28_pal, img28_txt
 img29_ptrs
 	dw img29_nt_at0, img29_nt_at1, img29_nt_at2, img29_nt_at3
-	dw img29_nt_at4, img29_nt_at5, img29_pt, img29_pal
-	dw img29_txt
+	dw img29_nt_at4, img29_nt_at5, img29_pal, img29_txt
 img30_ptrs
 	dw img30_nt_at0, img30_nt_at1, img30_nt_at2, img30_nt_at3
-	dw img30_nt_at4, img30_nt_at5, img30_pt, img30_pal
-	dw img30_txt
+	dw img30_nt_at4, img30_nt_at5, img30_pal, img30_txt
 img31_ptrs
 	dw img31_nt_at0, img31_nt_at1, img31_nt_at2, img31_nt_at3
-	dw img31_nt_at4, img31_nt_at5, img31_pt, img31_pal
-	dw img31_txt
+	dw img31_nt_at4, img31_nt_at5, img31_pal, img31_txt
 img32_ptrs
 	dw img32_nt_at0, img32_nt_at1, img32_nt_at2, img32_nt_at3
-	dw img32_nt_at4, img32_nt_at5, img32_pt, img32_pal
-	dw img32_txt
+	dw img32_nt_at4, img32_nt_at5, img32_pal, img32_txt
 img33_ptrs
 	dw img33_nt_at0, img33_nt_at1, img33_nt_at2, img33_nt_at3
-	dw img33_nt_at4, img33_nt_at5, img33_pt, img33_pal
-	dw img33_txt
+	dw img33_nt_at4, img33_nt_at5, img33_pal, img33_txt
 img34_ptrs
 	dw img34_nt_at0, img34_nt_at1, img34_nt_at2, img34_nt_at3
-	dw img34_nt_at4, img34_nt_at5, img34_pt, img34_pal
-	dw img34_txt
+	dw img34_nt_at4, img34_nt_at5, img34_pal, img34_txt
 img35_ptrs
 	dw img35_nt_at0, img35_nt_at1, img35_nt_at2, img35_nt_at3
-	dw img35_nt_at4, img35_nt_at5, img35_pt, img35_pal
-	dw img35_txt
+	dw img35_nt_at4, img35_nt_at5, img35_pal, img35_txt
 img36_ptrs
 	dw img36_nt_at0, img36_nt_at1, img36_nt_at2, img36_nt_at3
-	dw img36_nt_at4, img36_nt_at5, img36_pt, img36_pal
-	dw img36_txt
+	dw img36_nt_at4, img36_nt_at5, img36_pal, img36_txt
 img37_ptrs
 	dw img37_nt_at0, img37_nt_at1, img37_nt_at2, img37_nt_at3
-	dw img37_nt_at4, img37_nt_at5, img37_pt, img37_pal
-	dw img37_txt
+	dw img37_nt_at4, img37_nt_at5, img37_pal, img37_txt
 img38_ptrs
 	dw img38_nt_at0, img38_nt_at1, img38_nt_at2, img38_nt_at3
-	dw img38_nt_at4, img38_nt_at5, img38_pt, img38_pal
-	dw img38_txt
+	dw img38_nt_at4, img38_nt_at5, img38_pal, img38_txt
 img39_ptrs
 	dw img39_nt_at0, img39_nt_at1, img39_nt_at2, img39_nt_at3
-	dw img39_nt_at4, img39_nt_at5, img39_pt, img39_pal
-	dw img39_txt
+	dw img39_nt_at4, img39_nt_at5, img39_pal, img39_txt
 img40_ptrs
 	dw img40_nt_at0, img40_nt_at1, img40_nt_at2, img40_nt_at3
-	dw img40_nt_at4, img40_nt_at5, img40_pt, img40_pal
-	dw img40_txt
+	dw img40_nt_at4, img40_nt_at5, img40_pal, img40_txt
 img41_ptrs
 	dw img41_nt_at0, img41_nt_at1, img41_nt_at2, img41_nt_at3
-	dw img41_nt_at4, img41_nt_at5, img41_pt, img41_pal
-	dw img41_txt
+	dw img41_nt_at4, img41_nt_at5, img41_pal, img41_txt
 img42_ptrs
 	dw img42_nt_at0, img42_nt_at1, img42_nt_at2, img42_nt_at3
-	dw img42_nt_at4, img42_nt_at5, img42_pt, img42_pal
-	dw img42_txt
+	dw img42_nt_at4, img42_nt_at5, img42_pal, img42_txt
 img43_ptrs
 	dw img43_nt_at0, img43_nt_at1, img43_nt_at2, img43_nt_at3
-	dw img43_nt_at4, img43_nt_at5, img43_pt, img43_pal
-	dw img43_txt
+	dw img43_nt_at4, img43_nt_at5, img43_pal, img43_txt
 img44_ptrs
 	dw img44_nt_at0, img44_nt_at1, img44_nt_at2, img44_nt_at3
-	dw img44_nt_at4, img44_nt_at5, img44_pt, img44_pal
-	dw img44_txt
+	dw img44_nt_at4, img44_nt_at5, img44_pal, img44_txt
 img45_ptrs
 	dw img45_nt_at0, img45_nt_at1, img45_nt_at2, img45_nt_at3
-	dw img45_nt_at4, img45_nt_at5, img45_pt, img45_pal
-	dw img45_txt
+	dw img45_nt_at4, img45_nt_at5, img45_pal, img45_txt
 img46_ptrs
 	dw img46_nt_at0, img46_nt_at1, img46_nt_at2, img46_nt_at3
-	dw img46_nt_at4, img46_nt_at5, img46_pt, img46_pal
-	dw img46_txt
+	dw img46_nt_at4, img46_nt_at5, img46_pal, img46_txt
 img47_ptrs
 	dw img47_nt_at0, img47_nt_at1, img47_nt_at2, img47_nt_at3
-	dw img47_nt_at4, img47_nt_at5, img47_pt, img47_pal
-	dw img47_txt
+	dw img47_nt_at4, img47_nt_at5, img47_pal, img47_txt
 img48_ptrs
 	dw img48_nt_at0, img48_nt_at1, img48_nt_at2, img48_nt_at3
-	dw img48_nt_at4, img48_nt_at5, img48_pt, img48_pal
-	dw img48_txt
+	dw img48_nt_at4, img48_nt_at5, img48_pal, img48_txt
 img49_ptrs
 	dw img49_nt_at0, img49_nt_at1, img49_nt_at2, img49_nt_at3
-	dw img49_nt_at4, img49_nt_at5, img49_pt, img49_pal
-	dw img49_txt
+	dw img49_nt_at4, img49_nt_at5, img49_pal, img49_txt
 img50_ptrs
 	dw img50_nt_at0, img50_nt_at1, img50_nt_at2, img50_nt_at3
-	dw img50_nt_at4, img50_nt_at5, img50_pt, img50_pal
-	dw img50_txt
+	dw img50_nt_at4, img50_nt_at5, img50_pal, img50_txt
 img51_ptrs
 	dw img51_nt_at0, img51_nt_at1, img51_nt_at2, img51_nt_at3
-	dw img51_nt_at4, img51_nt_at5, img51_pt, img51_pal
-	dw img51_txt
+	dw img51_nt_at4, img51_nt_at5, img51_pal, img51_txt
 img52_ptrs
 	dw img52_nt_at0, img52_nt_at1, img52_nt_at2, img52_nt_at3
-	dw img52_nt_at4, img52_nt_at5, img52_pt, img52_pal
-	dw img52_txt
+	dw img52_nt_at4, img52_nt_at5, img52_pal, img52_txt
 img53_ptrs
 	dw img53_nt_at0, img53_nt_at1, img53_nt_at2, img53_nt_at3
-	dw img53_nt_at4, img53_nt_at5, img53_pt, img53_pal
-	dw img53_txt
+	dw img53_nt_at4, img53_nt_at5, img53_pal, img53_txt
 img54_ptrs
 	dw img54_nt_at0, img54_nt_at1, img54_nt_at2, img54_nt_at3
-	dw img54_nt_at4, img54_nt_at5, img54_pt, img54_pal
-	dw img54_txt
+	dw img54_nt_at4, img54_nt_at5, img54_pal, img54_txt
 img55_ptrs
 	dw img55_nt_at0, img55_nt_at1, img55_nt_at2, img55_nt_at3
-	dw img55_nt_at4, img55_nt_at5, img55_pt, img55_pal
-	dw img55_txt
+	dw img55_nt_at4, img55_nt_at5, img55_pal, img55_txt
 img56_ptrs
 	dw img56_nt_at0, img56_nt_at1, img56_nt_at2, img56_nt_at3
-	dw img56_nt_at4, img56_nt_at5, img56_pt, img56_pal
-	dw img56_txt
+	dw img56_nt_at4, img56_nt_at5, img56_pal, img56_txt
 img57_ptrs
 	dw img57_nt_at0, img57_nt_at1, img57_nt_at2, img57_nt_at3
-	dw img57_nt_at4, img57_nt_at5, img57_pt, img57_pal
-	dw img57_txt
+	dw img57_nt_at4, img57_nt_at5, img57_pal, img57_txt
 img58_ptrs
 	dw img58_nt_at0, img58_nt_at1, img58_nt_at2, img58_nt_at3
-	dw img58_nt_at4, img58_nt_at5, img58_pt, img58_pal
-	dw img58_txt
+	dw img58_nt_at4, img58_nt_at5, img58_pal, img58_txt
 img59_ptrs
 	dw img59_nt_at0, img59_nt_at1, img59_nt_at2, img59_nt_at3
-	dw img59_nt_at4, img59_nt_at5, img59_pt, img59_pal
-	dw img59_txt
+	dw img59_nt_at4, img59_nt_at5, img59_pal, img59_txt
 img60_ptrs
 	dw img60_nt_at0, img60_nt_at1, img60_nt_at2, img60_nt_at3
-	dw img60_nt_at4, img60_nt_at5, img60_pt, img60_pal
-	dw img60_txt
+	dw img60_nt_at4, img60_nt_at5, img60_pal, img60_txt
 img61_ptrs
 	dw img61_nt_at0, img61_nt_at1, img61_nt_at2, img61_nt_at3
-	dw img61_nt_at4, img61_nt_at5, img61_pt, img61_pal
-	dw img61_txt
+	dw img61_nt_at4, img61_nt_at5, img61_pal, img61_txt
 img62_ptrs
 	dw img62_nt_at0, img62_nt_at1, img62_nt_at2, img62_nt_at3
-	dw img62_nt_at4, img62_nt_at5, img62_pt, img62_pal
-	dw img62_txt
+	dw img62_nt_at4, img62_nt_at5, img62_pal, img62_txt
 img63_ptrs
 	dw img63_nt_at0, img63_nt_at1, img63_nt_at2, img63_nt_at3
-	dw img63_nt_at4, img63_nt_at5, img63_pt, img63_pal
-	dw img63_txt
+	dw img63_nt_at4, img63_nt_at5, img63_pal, img63_txt
 img64_ptrs
 	dw img64_nt_at0, img64_nt_at1, img64_nt_at2, img64_nt_at3
-	dw img64_nt_at4, img64_nt_at5, img64_pt, img64_pal
-	dw img64_txt
+	dw img64_nt_at4, img64_nt_at5, img64_pal, img64_txt
 img65_ptrs
 	dw img65_nt_at0, img65_nt_at1, img65_nt_at2, img65_nt_at3
-	dw img65_nt_at4, img65_nt_at5, img65_pt, img65_pal
-	dw img65_txt
+	dw img65_nt_at4, img65_nt_at5, img65_pal, img65_txt
 
 	; title_screen
 img0_nt_at0
@@ -320,9 +261,8 @@ img0_nt_at5
 	hex 8143 01 811a 8120 814c 812e 8135 811d 8131 8108 810c 810d 8110
 	hex 8109 02 9300 8110 8100 8110 8400 8144 8156 815f 8255 8300 8144
 	hex 815d 8156 8157 8155 8300 8104 810d 8117 8106 8117 9100 00
-img0_pt
-	db 4
 img0_pal
+	db 16
 	hex 0f213013 0f30150f 0f30270f 0f301912
 img0_txt
 	db 13
@@ -341,10 +281,9 @@ img1_nt_at4
 	hex 03 30 a07d bc01 00
 img1_nt_at5
 	hex 00 c401 08 8850 9055 20 00
-img1_pt
-	db 7
 img1_pal
-	hex 0f253035 0f2b303b 0f0f0f0f 0f0f0f0f
+	db 8
+	hex 0f253035 0f2b303b
 img1_txt
 	db 13
 	hex da db eb e8 f5 00 00 ec de f1 ee da e5
@@ -366,10 +305,9 @@ img2_nt_at4
 img2_nt_at5
 	hex 00 54 8850 8104 8605 8101 08 8350 8110 8140 8350 8805 08
 	hex 00
-img2_pt
-	db 2
 img2_pal
-	hex 0f00300f 0f140f0f 0f0f0f0f 0f0f0f0f
+	db 6
+	hex 0f00300f 0f14
 img2_txt
 	db 13
 	hex da de e0 e8 f5 00 ec de f1 ee da e5 d1
@@ -387,10 +325,9 @@ img3_nt_at4
 	hex 78 10 c001 a05a 9c02 00
 img3_nt_at5
 	hex 02 44 c000 00
-img3_pt
-	db 1
 img3_pal
-	hex 0f10131c 0f0f0f0f 0f0f0f0f 0f0f0f0f
+	db 4
+	hex 0f10131c
 img3_txt
 	db 13
 	hex da de e0 e8 f5 00 ec de f1 ee da e5 d2
@@ -408,10 +345,9 @@ img4_nt_at4
 	hex 78 10 c001 a048 9c00 00
 img4_nt_at5
 	hex 00 7f 05 00
-img4_pt
-	db 1
 img4_pal
-	hex 0f002930 0f0f0f0f 0f0f0f0f 0f0f0f0f
+	db 4
+	hex 0f002930
 img4_txt
 	db 7
 	hex da e0 de e7 dd de eb
@@ -435,10 +371,9 @@ img5_nt_at4
 img5_nt_at5
 	hex 03 04 8a02 8174 8a01 81a6 0a 8a02 8174 8a01 81a6 0a c000
 	hex 00
-img5_pt
-	db 2
 img5_pal
-	hex 0f13152c 0f0f0f0f 0f0f0f0f 0f0f0f0f
+	db 4
+	hex 0f13152c
 img5_txt
 	db 14
 	hex da e7 dd eb e8 f5 00 00 00 00 e0 f2 e7 de
@@ -456,10 +391,9 @@ img6_nt_at4
 	hex 03 7f 0d 00
 img6_nt_at5
 	hex 03 44 c000 00
-img6_pt
-	db 0
 img6_pal
-	hex 0f172124 0f0f0f0f 0f0f0f0f 0f0f0f0f
+	db 4
+	hex 0f172124
 img6_txt
 	db 14
 	hex da e7 dd eb e8 f5 00 00 ec de f1 ee da e5
@@ -477,10 +411,9 @@ img7_nt_at4
 	hex 01 30 a03d bc00 00
 img7_nt_at5
 	hex 00 4c 8850 8855 28 00
-img7_pt
-	db 1
 img7_pal
-	hex 0f002930 0f1a290f 0f0f0f0f 0f0f0f0f
+	db 7
+	hex 0f002930 0f1a29
 img7_txt
 	db 10
 	hex da f5 eb e8 e6 da e7 ed e2 dc
@@ -498,10 +431,9 @@ img8_nt_at4
 	hex 02 30 a06e bc01 00
 img8_nt_at5
 	hex 00 c401 08 8850 9055 20 00
-img8_pt
-	db 1
 img8_pal
-	hex 0f0c2130 0f172830 0f0f0f0f 0f0f0f0f
+	db 8
+	hex 0f0c2130 0f172830
 img8_txt
 	db 18
 	hex da f5 eb e8 e6 da e7 ed e2 dc 00 da ec de f1 ee da e5
@@ -519,10 +451,9 @@ img9_nt_at4
 	hex 03 10 fc02 00
 img9_nt_at5
 	hex 02 44 c000 00
-img9_pt
-	db 0
 img9_pal
-	hex 0f001430 0f0f0f0f 0f0f0f0f 0f0f0f0f
+	db 4
+	hex 0f001430
 img9_txt
 	db 7
 	hex da ec de f1 ee da e5
@@ -547,10 +478,9 @@ img10_nt_at4
 	hex 01 8116 8109 810c 8120 7f 09 00
 img10_nt_at5
 	hex 55 c401 a000 8850 03 8151 8154 03 88aa 880a 00
-img10_pt
-	db 1
 img10_pal
-	hex 0f000f0f 0f300f0f 0f140f0f 0f0f0f0f
+	db 10
+	hex 0f000f0f 0f300f0f 0f14
 img10_txt
 	db 15
 	hex da ec de f1 ee da e5 00 00 df ee eb eb f2 d1
@@ -585,10 +515,9 @@ img11_nt_at4
 	hex 28 00
 img11_nt_at5
 	hex 00 c402 18 8255 04 8255 8205 04 8205 18 00
-img11_pt
-	db 0
 img11_pal
-	hex 0f301400 0f30000f 0f0f0f0f 0f0f0f0f
+	db 7
+	hex 0f301400 0f3000
 img11_txt
 	db 15
 	hex da ec de f1 ee da e5 00 00 df ee eb eb f2 d2
@@ -617,10 +546,9 @@ img12_nt_at4
 img12_nt_at5
 	hex 00 c401 19 8188 8122 01 8150 81dd 8133 02 81aa 01 8154
 	hex 8115 01 81ff 02 8188 8166 8105 01 81cc 8133 11 00
-img12_pt
-	db 2
 img12_pal
-	hex 0f37270f 0f372127 0f37250f 0f37290f
+	db 15
+	hex 0f37270f 0f372127 0f37250f 0f3729
 img12_txt
 	db 6
 	hex da ee ed e2 ec e6
@@ -648,10 +576,9 @@ img13_nt_at4
 	hex a4 10 c002 a09f 9c01 00
 img13_nt_at5
 	hex 01 44 9800 9055 88a5 88ff 880f 00
-img13_pt
-	db 2
 img13_pal
-	hex 0f16260f 0f283026 0f28302a 0f1a2a0f
+	db 15
+	hex 0f16260f 0f283026 0f28302a 0f1a2a
 img13_txt
 	db 14
 	hex da ee ed e2 ec e6 e1 ec ed eb e2 e9 de ec
@@ -687,10 +614,9 @@ img14_nt_at5
 	hex 81c0 8250 8190 82a0 02 81cc 8255 8199 82aa 03 8255 8199 82aa
 	hex 02 81cc 8255 8199 82aa 03 8255 8199 82aa 02 81cc 8255 8199
 	hex 82aa 02 810c 8205 8109 820a 00
-img14_pt
-	db 2
 img14_pal
-	hex 0f16301a 0f1a3012 0f12300f 0f161a0f
+	db 15
+	hex 0f16301a 0f1a3012 0f12300f 0f161a
 img14_txt
 	db 14
 	hex da ee ed e2 ec e6 ef ec ed eb e2 e9 de ec
@@ -708,10 +634,9 @@ img15_nt_at4
 	hex 01 7f 0d 00
 img15_nt_at5
 	hex 01 44 c000 00
-img15_pt
-	db 0
 img15_pal
-	hex 0f00310f 0f0f0f0f 0f0f0f0f 0f0f0f0f
+	db 3
+	hex 0f0031
 img15_txt
 	db 13
 	hex da ee ed e8 f5 00 00 ec de f1 ee da e5
@@ -736,10 +661,9 @@ img16_nt_at4
 	hex 7a 10 c001 a031 9c00 00
 img16_nt_at5
 	hex 00 4c 8850 8855 81a5 81a9 81a0 85a5 880a 18 00
-img16_pt
-	db 5
 img16_pal
-	hex 0f003037 0f071727 0f27370f 0f0f0f0f
+	db 11
+	hex 0f003037 0f071727 0f2737
 img16_txt
 	db 4
 	hex db de da eb
@@ -757,10 +681,9 @@ img17_nt_at4
 	hex 7f 10 c002 a072 9c01 00
 img17_nt_at5
 	hex 00 c401 08 8850 8855 88a5 88aa 880a 10 00
-img17_pt
-	db 1
 img17_pal
-	hex 0f112133 0f142433 0f30330f 0f0f0f0f
+	db 11
+	hex 0f112133 0f142433 0f3033
 img17_txt
 	db 8
 	hex db e2 e0 de e7 dd de eb
@@ -778,10 +701,9 @@ img18_nt_at4
 	hex 01 7f 0d 00
 img18_nt_at5
 	hex 01 44 c000 00
-img18_pt
-	db 7
 img18_pal
-	hex 0f121315 0f0f0f0f 0f0f0f0f 0f0f0f0f
+	db 4
+	hex 0f121315
 img18_txt
 	db 8
 	hex db e2 ec de f1 ee da e5
@@ -806,10 +728,9 @@ img19_nt_at4
 	hex 01 8116 8109 810c 8120 7f 09 00
 img19_nt_at5
 	hex fa c401 9800 8850 8855 03 81f2 81f8 03 88ff 880f 00
-img19_pt
-	db 1
 img19_pal
-	hex 0f150f0f 0f13150f 0f13120f 0f120f0f
+	db 14
+	hex 0f150f0f 0f13150f 0f13120f 0f12
 img19_txt
 	db 16
 	hex db e2 ec de f1 ee da e5 00 00 df ee eb eb f2 d1
@@ -846,10 +767,9 @@ img20_nt_at4
 img20_nt_at5
 	hex 00 c402 08 88a0 82aa 812a 820a 818a 82aa 820a 04 820a 08
 	hex 82f5 8110 02 8140 82f5 82ff 81f7 82f0 81fd 82ff 880f 00
-img20_pt
-	db 0
 img20_pal
-	hex 0f301315 0f301312 0f30150f 0f30120f
+	db 15
+	hex 0f301315 0f301312 0f30150f 0f3012
 img20_txt
 	db 16
 	hex db e2 ec de f1 ee da e5 00 00 df ee eb eb f2 d2
@@ -868,10 +788,9 @@ img21_nt_at4
 img21_nt_at5
 	hex 00 c401 10 8850 8455 82aa 02 88aa 8455 82aa 02 8805 08
 	hex 00
-img21_pt
-	db 1
 img21_pal
-	hex 0f001031 0f103538 0f10303b 0f0f0f0f
+	db 12
+	hex 0f001031 0f103538 0f10303b
 img21_txt
 	db 13
 	hex dd de e6 e2 f5 00 00 00 df e5 ee e2 dd
@@ -889,10 +808,9 @@ img22_nt_at4
 	hex 01 907f 40 a072 1c 00
 img22_nt_at5
 	hex 00 c401 10 8850 8855 88a5 880a 8805 08 00
-img22_pt
-	db 1
 img22_pal
-	hex 0f001031 0f103638 0f31380f 0f0f0f0f
+	db 11
+	hex 0f001031 0f103638 0f3138
 img22_txt
 	db 8
 	hex dd de e6 e2 df e5 ee f1
@@ -910,10 +828,9 @@ img23_nt_at4
 	hex 7f 10 c002 a072 9c01 00
 img23_nt_at5
 	hex 00 c401 18 8850 8855 8805 10 00
-img23_pt
-	db 1
 img23_pal
-	hex 0f001038 0f30380f 0f0f0f0f 0f0f0f0f
+	db 7
+	hex 0f001038 0f3038
 img23_txt
 	db 13
 	hex dd de e6 e2 f5 00 00 e0 de e7 dd de eb
@@ -931,10 +848,9 @@ img24_nt_at4
 	hex 7f 10 c002 a072 9c01 00
 img24_nt_at5
 	hex 00 c401 18 8850 8855 8805 10 00
-img24_pt
-	db 1
 img24_pal
-	hex 0f001035 0f30350f 0f0f0f0f 0f0f0f0f
+	db 7
+	hex 0f001035 0f3035
 img24_txt
 	db 8
 	hex dd de e6 e2 e0 e2 eb e5
@@ -952,10 +868,9 @@ img25_nt_at4
 	hex 7f 10 c002 a072 9c01 00
 img25_nt_at5
 	hex 00 c401 18 8850 8855 8805 10 00
-img25_pt
-	db 1
 img25_pal
-	hex 0f001031 0f30310f 0f0f0f0f 0f0f0f0f
+	db 7
+	hex 0f001031 0f3031
 img25_txt
 	db 7
 	hex dd de e6 e2 e0 ee f2
@@ -978,10 +893,9 @@ img26_nt_at4
 	hex 19 00
 img26_nt_at5
 	hex 02 04 8100 810a 1e 810a 1f c000 00
-img26_pt
-	db 2
 img26_pal
-	hex 0f041030 0f0f0f0f 0f0f0f0f 0f0f0f0f
+	db 4
+	hex 0f041030
 img26_txt
 	db 13
 	hex dd de e6 e2 f5 00 00 ec de f1 ee da e5
@@ -1019,10 +933,9 @@ img27_nt_at5
 	hex 8102 810c 16 8106 8101 815e 8102 8182 8103 817c 8101 815e 8102
 	hex 810c 08 8150 07 8145 8151 07 8145 8151 07 8145 8151 07
 	hex 8145 8151 07 8145 8151 07 8105 8101 01 00
-img27_pt
-	db 7
 img27_pal
-	hex 0f212a30 0f262830 0f0f0f0f 0f0f0f0f
+	db 8
+	hex 0f212a30 0f262830
 img27_txt
 	db 12
 	hex dd e2 ec f5 00 da db e2 e5 e2 ed f2
@@ -1040,10 +953,9 @@ img28_nt_at4
 	hex 03 10 fc01 00
 img28_nt_at5
 	hex 00 c401 18 8855 8805 18 00
-img28_pt
-	db 0
 img28_pal
-	hex 0f001130 0f3c0f0f 0f0f0f0f 0f0f0f0f
+	db 6
+	hex 0f001130 0f3c
 img28_txt
 	db 13
 	hex df eb da f2 f5 00 00 ec de f1 ee da e5
@@ -1061,10 +973,9 @@ img29_nt_at4
 	hex 7f 10 c002 a072 9c01 00
 img29_nt_at5
 	hex 00 c401 08 8850 8855 88a5 88aa 880a 10 00
-img29_pt
-	db 1
 img29_pal
-	hex 0f031222 0f0b1b2b 0f222b30 0f0f0f0f
+	db 12
+	hex 0f031222 0f0b1b2b 0f222b30
 img29_txt
 	db 11
 	hex e0 da f2 00 00 00 00 00 e6 de e7
@@ -1082,10 +993,9 @@ img30_nt_at4
 	hex 00 30 a005 bc01 00
 img30_nt_at5
 	hex 01 44 b000 8855 8805 00
-img30_pt
-	db 7
 img30_pal
-	hex 0f142530 0f020f0f 0f0f0f0f 0f0f0f0f
+	db 6
+	hex 0f142530 0f02
 img30_txt
 	db 15
 	hex e0 de e7 dd de eb f5 00 00 00 df e5 ee e2 dd
@@ -1103,10 +1013,9 @@ img31_nt_at4
 	hex 02 7f 0d 00
 img31_nt_at5
 	hex 02 44 c000 00
-img31_pt
-	db 0
 img31_pal
-	hex 0f131930 0f0f0f0f 0f0f0f0f 0f0f0f0f
+	db 4
+	hex 0f131930
 img31_txt
 	db 15
 	hex e0 de e7 dd de eb f5 00 00 00 ea ee de de eb
@@ -1124,10 +1033,9 @@ img32_nt_at4
 	hex 01 30 a05f bc02 00
 img32_nt_at5
 	hex 02 44 c000 00
-img32_pt
-	db 1
 img32_pal
-	hex 0f101330 0f0f0f0f 0f0f0f0f 0f0f0f0f
+	db 4
+	hex 0f101330
 img32_txt
 	db 13
 	hex e0 eb de f2 f5 00 00 ec de f1 ee da e5
@@ -1150,10 +1058,9 @@ img33_nt_at4
 	hex 01 7f 0d 00
 img33_nt_at5
 	hex 01 44 c000 00
-img33_pt
-	db 7
 img33_pal
-	hex 0f28040f 0f0f0f0f 0f0f0f0f 0f0f0f0f
+	db 3
+	hex 0f2804
 img33_txt
 	db 8
 	hex e2 e7 ed de eb ec de f1
@@ -1174,10 +1081,9 @@ img34_nt_at4
 	hex 00 10 a004 c001 9c07 00
 img34_nt_at5
 	hex 00 8407 7f 01 00
-img34_pt
-	db 7
 img34_pal
-	hex 0f011530 0f0f0f0f 0f0f0f0f 0f0f0f0f
+	db 4
+	hex 0f011530
 img34_txt
 	db 7
 	hex e5 de da ed e1 de eb
@@ -1195,10 +1101,9 @@ img35_nt_at4
 	hex 02 30 a06e bc01 00
 img35_nt_at5
 	hex 00 c401 08 8850 9055 20 00
-img35_pt
-	db 1
 img35_pal
-	hex 0f142430 0f172730 0f0f0f0f 0f0f0f0f
+	db 8
+	hex 0f142430 0f172730
 img35_txt
 	db 15
 	hex e5 de ec db e2 da e7 d5 ec ed eb e2 e9 de ec
@@ -1223,10 +1128,9 @@ img36_nt_at4
 	hex 16 01 8109 810c 8120 ac01 a05f bc02 00
 img36_nt_at5
 	hex fa c402 9800 8855 88aa 03 81f2 81f8 03 88ff 880f 00
-img36_pt
-	db 1
 img36_pal
-	hex 0f17270f 0f27300f 0f30240f 0f24140f
+	db 15
+	hex 0f17270f 0f27300f 0f30240f 0f2414
 img36_txt
 	db 23
 	hex e5 de ec db e2 da e7 d5 ec ed eb e2 e9 de ec 00 00 df ee eb eb f2
@@ -1264,10 +1168,9 @@ img37_nt_at4
 img37_nt_at5
 	hex 00 c402 08 88a0 83aa 820a 83aa 82ff 8101 02 8104 82ff 20
 	hex 00
-img37_pt
-	db 0
 img37_pal
-	hex 0f301424 0f301427 0f301727 0f30270f
+	db 15
+	hex 0f301424 0f301427 0f301727 0f3027
 img37_txt
 	db 23
 	hex e5 de ec db e2 da e7 d5 ec ed eb e2 e9 de ec 00 00 df ee eb eb f2
@@ -1286,10 +1189,9 @@ img38_nt_at4
 	hex 7f 10 c002 a072 9c01 00
 img38_nt_at5
 	hex 00 c401 08 8850 8855 88a5 88aa 880a 10 00
-img38_pt
-	db 1
 img38_pal
-	hex 0f041424 0f071727 0f242730 0f0f0f0f
+	db 12
+	hex 0f041424 0f071727 0f242730
 img38_txt
 	db 15
 	hex e5 de ec db e2 da e7 d7 ec ed eb e2 e9 de ec
@@ -1307,10 +1209,9 @@ img39_nt_at4
 	hex 02 7f 0d 00
 img39_nt_at5
 	hex 00 c402 18 8850 9055 8805 08 00
-img39_pt
-	db 0
 img39_pal
-	hex 0f1c222c 0f30323c 0f0f0f0f 0f0f0f0f
+	db 8
+	hex 0f1c222c 0f30323c
 img39_txt
 	db 8
 	hex e7 de e9 ed ee e7 e2 dc
@@ -1328,10 +1229,9 @@ img40_nt_at4
 	hex 01 10 fc00 00
 img40_nt_at5
 	hex 00 7f 05 00
-img40_pt
-	db 0
 img40_pal
-	hex 0f132830 0f0f0f0f 0f0f0f0f 0f0f0f0f
+	db 4
+	hex 0f132830
 img40_txt
 	db 12
 	hex e7 e8 e7 f5 00 00 db e2 e7 da eb f2
@@ -1365,10 +1265,9 @@ img41_nt_at4
 	hex 811a 8117 28 00
 img41_nt_at5
 	hex 00 4c 8850 8255 8115 8205 8145 8255 28 00
-img41_pt
-	db 0
 img41_pal
-	hex 0f301328 0f30280f 0f0f0f0f 0f0f0f0f
+	db 7
+	hex 0f301328 0f3028
 img41_txt
 	db 20
 	hex e7 e8 e7 f5 00 00 db e2 e7 da eb f2 00 00 00 df ee eb eb f2
@@ -1386,10 +1285,9 @@ img42_nt_at4
 	hex 01 30 a05f bc02 00
 img42_nt_at5
 	hex 00 c402 08 8850 9055 20 00
-img42_pt
-	db 1
 img42_pal
-	hex 0f22320f 0f25350f 0f0f0f0f 0f0f0f0f
+	db 7
+	hex 0f22320f 0f2535
 img42_txt
 	db 13
 	hex e8 e6 e7 e2 f5 00 00 ec de f1 ee da e5
@@ -1407,10 +1305,9 @@ img43_nt_at4
 	hex 02 7f 0d 00
 img43_nt_at5
 	hex 02 44 c000 00
-img43_pt
-	db 0
 img43_pal
-	hex 0f152128 0f0f0f0f 0f0f0f0f 0f0f0f0f
+	db 4
+	hex 0f152128
 img43_txt
 	db 12
 	hex e9 da e7 f5 00 00 ec de f1 ee da e5
@@ -1434,10 +1331,9 @@ img44_nt_at4
 	hex 01 8116 8109 810c 8120 7f 09 00
 img44_nt_at5
 	hex a5 c401 9800 8850 8855 03 81a1 81a4 03 88aa 880a 00
-img44_pt
-	db 1
 img44_pal
-	hex 0f150f0f 0f280f0f 0f210f0f 0f0f0f0f
+	db 10
+	hex 0f150f0f 0f280f0f 0f21
 img44_txt
 	db 20
 	hex e9 da e7 f5 00 00 ec de f1 ee da e5 00 00 df ee eb eb f2 d1
@@ -1473,10 +1369,9 @@ img45_nt_at4
 img45_nt_at5
 	hex 00 c402 18 82a0 04 82a0 82aa 04 82aa 825a 04 825a 8255
 	hex 8151 8250 8154 8255 8805 00
-img45_pt
-	db 0
 img45_pal
-	hex 0f301521 0f30210f 0f30280f 0f0f0f0f
+	db 11
+	hex 0f301521 0f30210f 0f3028
 img45_txt
 	db 20
 	hex e9 da e7 f5 00 00 ec de f1 ee da e5 00 00 df ee eb eb f2 d2
@@ -1497,10 +1392,9 @@ img46_nt_at4
 	hex 00 7f 0d 00
 img46_nt_at5
 	hex 00 4c 8850 8855 8805 20 00
-img46_pt
-	db 2
 img46_pal
-	hex 0f16280f 0f020f0f 0f0f0f0f 0f0f0f0f
+	db 6
+	hex 0f16280f 0f02
 img46_txt
 	db 13
 	hex e9 e8 e5 f2 f5 00 00 da e6 e8 eb f2 d1
@@ -1535,10 +1429,9 @@ img47_nt_at4
 	hex 810a 811d 811e 8111 1d 810b 8112 2b 00
 img47_nt_at5
 	hex 00 5c 8850 8855 8205 84a5 8205 03 818a 812a 0b 00
-img47_pt
-	db 6
 img47_pal
-	hex 0f02280f 0f16280f 0f280f0f 0f0f0f0f
+	db 10
+	hex 0f02280f 0f16280f 0f28
 img47_txt
 	db 13
 	hex e9 e8 e5 f2 f5 00 00 da e6 e8 eb f2 d2
@@ -1564,10 +1457,9 @@ img48_nt_at4
 img48_nt_at5
 	hex 00 8402 8101 8162 9e02 8162 9f02 0a 8650 02 8104 8555 03
 	hex 8184 84a5 02 8180 85aa 01 81c0 86fa 81c0 87ff 880f 00
-img48_pt
-	db 1
 img48_pal
-	hex 0f30280f 0f30210f 0f30150f 0f30030f
+	db 15
+	hex 0f30280f 0f30210f 0f30150f 0f3003
 img48_txt
 	db 13
 	hex e9 e8 e5 f2 f5 00 00 da e6 e8 eb f2 d3
@@ -1585,10 +1477,9 @@ img49_nt_at4
 	hex 02 7f 0d 00
 img49_nt_at5
 	hex 02 44 c000 00
-img49_pt
-	db 0
 img49_pal
-	hex 0f14212b 0f0f0f0f 0f0f0f0f 0f0f0f0f
+	db 4
+	hex 0f14212b
 img49_txt
 	db 13
 	hex e9 e8 e5 f2 f5 00 00 ec de f1 ee da e5
@@ -1606,10 +1497,9 @@ img50_nt_at4
 	hex 01 10 a05a c002 9c54 00
 img50_nt_at5
 	hex 00 8454 58 88a0 88aa 885a 8855 08 00
-img50_pt
-	db 1
 img50_pal
-	hex 0f21310f 0f26350f 0f282930 0f0f0f0f
+	db 12
+	hex 0f21310f 0f26350f 0f282930
 img50_txt
 	db 5
 	hex ea ee de de eb
@@ -1627,10 +1517,9 @@ img51_nt_at4
 	hex 02 50 bc01 00
 img51_nt_at5
 	hex 00 c401 10 8850 9055 8805 10 00
-img51_pt
-	db 0
 img51_pal
-	hex 0f041216 0f192728 0f0f0f0f 0f0f0f0f
+	db 8
+	hex 0f041216 0f192728
 img51_txt
 	db 15
 	hex eb da e2 e7 db e8 f0 d6 ec ed eb e2 e9 de ec
@@ -1648,10 +1537,9 @@ img52_nt_at4
 	hex 78 10 c001 a05a 9c02 00
 img52_nt_at5
 	hex 00 c402 08 8850 8855 88a5 88aa 18 00
-img52_pt
-	db 1
 img52_pal
-	hex 0f03042c 0f162728 0f19282c 0f0f0f0f
+	db 12
+	hex 0f03042c 0f162728 0f19282c
 img52_txt
 	db 15
 	hex eb da e2 e7 db e8 f0 d7 ec ed eb e2 e9 de ec
@@ -1669,10 +1557,9 @@ img53_nt_at4
 	hex 02 10 e001 1c 00
 img53_nt_at5
 	hex 00 c402 08 8850 8855 88ff 88af 88aa 10 00
-img53_pt
-	db 0
 img53_pal
-	hex 0f03040f 0f16250f 0f192c0f 0f27280f
+	db 15
+	hex 0f03040f 0f16250f 0f192c0f 0f2728
 img53_txt
 	db 15
 	hex eb da e2 e7 db e8 f0 d8 ec ed eb e2 e9 de ec
@@ -1717,10 +1604,9 @@ img54_nt_at5
 	hex 8102 8170 8102 8170 08 81b0 8150 06 81cf 81b6 8151 8110 05
 	hex 81cf 81a6 8155 05 81cc 81fb 81b6 8151 06 81cf 81b6 8151 06
 	hex 81cf 81b6 8151 06 810f 8106 8101 00
-img54_pt
-	db 5
 img54_pal
-	hex 0f16270f 0f27281b 0f111b0f 0f04110f
+	db 15
+	hex 0f16270f 0f27281b 0f111b0f 0f0411
 img54_txt
 	db 15
 	hex eb da e2 e7 db e8 f0 00 00 df ee eb eb f2 d1
@@ -1757,10 +1643,9 @@ img55_nt_at4
 img55_nt_at5
 	hex 00 c402 08 88a0 880a 82a0 04 82a0 82fa 04 82fa 825f 8110
 	hex 02 8140 825f 8305 02 8305 08 00
-img55_pt
-	db 0
 img55_pal
-	hex 0f300427 0f300412 0f301628 0f30190f
+	db 15
+	hex 0f300427 0f300412 0f301628 0f3019
 img55_txt
 	db 15
 	hex eb da e2 e7 db e8 f0 00 00 df ee eb eb f2 d2
@@ -1796,10 +1681,9 @@ img56_nt_at5
 	hex 01 04 8102 8186 01 8109 8100 8104 1a 8186 01 8109 8100
 	hex 8104 1b 8900 87a0 8110 8108 86fa 8155 8110 810c 85ff 8255 8100
 	hex 818c 84af 8155 01 8180 85aa 01 8140 865a 8100 8705 00
-img56_pt
-	db 2
 img56_pal
-	hex 0f082125 0f042530 0f121619 0f27280f
+	db 15
+	hex 0f082125 0f042530 0f121619 0f2728
 img56_txt
 	db 15
 	hex eb da e2 e7 db e8 f0 e9 eb e8 e0 eb de ec ec
@@ -1843,9 +1727,8 @@ img57_nt_at5
 	hex 86f0 8108 8165 815d 85ff 01 8108 8165 815d 840f 02 8188 8155
 	hex 81d1 83f0 01 8180 8156 8195 84af 8180 8156 8115 850a 8106 8105
 	hex 06 00
-img57_pt
-	db 2
 img57_pal
+	db 16
 	hex 0f042830 0f082125 0f122530 0f161927
 img57_txt
 	db 23
@@ -1865,10 +1748,9 @@ img58_nt_at4
 	hex 01 7f 0d 00
 img58_nt_at5
 	hex 01 44 c000 00
-img58_pt
-	db 0
 img58_pal
-	hex 0f121819 0f0f0f0f 0f0f0f0f 0f0f0f0f
+	db 4
+	hex 0f121819
 img58_txt
 	db 14
 	hex ec da e9 e2 e8 f5 00 ec de f1 ee da e5 d1
@@ -1886,10 +1768,9 @@ img59_nt_at4
 	hex 03 7f 0d 00
 img59_nt_at5
 	hex 03 44 c000 00
-img59_pt
-	db 0
 img59_pal
-	hex 0f101521 0f0f0f0f 0f0f0f0f 0f0f0f0f
+	db 4
+	hex 0f101521
 img59_txt
 	db 14
 	hex ec da e9 e2 e8 f5 00 ec de f1 ee da e5 d2
@@ -1910,10 +1791,9 @@ img60_nt_at4
 	hex 01 7f 0d 00
 img60_nt_at5
 	hex 00 c401 08 8850 8855 8805 08 8850 8855 8805 00
-img60_pt
-	db 7
 img60_pal
-	hex 0f301327 0f250f0f 0f0f0f0f 0f0f0f0f
+	db 6
+	hex 0f301327 0f25
 img60_txt
 	db 7
 	hex ec da e9 e9 e1 e2 dc
@@ -1947,10 +1827,9 @@ img61_nt_at4
 img61_nt_at5
 	hex 00 c402 28 8250 8110 02 8140 8250 8355 8151 8154 8355 8805
 	hex 00
-img61_pt
-	db 3
 img61_pal
-	hex 0f301b0f 0f30030f 0f0f0f0f 0f0f0f0f
+	db 7
+	hex 0f301b0f 0f3003
 img61_txt
 	db 16
 	hex ed e1 de eb e2 da e7 f4 e8 ed e1 de eb e4 e2 e7
@@ -1968,10 +1847,9 @@ img62_nt_at4
 	hex 02 30 a06e bc01 00
 img62_nt_at5
 	hex 01 44 c000 00
-img62_pt
-	db 1
 img62_pal
-	hex 0f212530 0f0f0f0f 0f0f0f0f 0f0f0f0f
+	db 4
+	hex 0f212530
 img62_txt
 	db 14
 	hex ed eb da e7 ec f5 00 00 e0 de e7 dd de eb
@@ -1996,10 +1874,9 @@ img63_nt_at4
 	hex 16 01 8109 810c 8120 ac01 a05f bc02 00
 img63_nt_at5
 	hex 00 c402 08 8850 8855 8805 08 8850 8855 8805 00
-img63_pt
-	db 1
 img63_pal
-	hex 0f30250f 0f25210f 0f0f0f0f 0f0f0f0f
+	db 7
+	hex 0f30250f 0f2521
 img63_txt
 	db 22
 	hex ed eb da e7 ec f5 00 00 e0 de e7 dd de eb 00 00 df ee eb eb f2 d1
@@ -2036,10 +1913,9 @@ img64_nt_at4
 img64_nt_at5
 	hex 00 c401 08 88a0 82aa 810a 02 810a 82aa 8255 04 8255 08
 	hex 8255 04 8255 82aa 81a0 02 81a0 82aa 880a 00
-img64_pt
-	db 0
 img64_pal
-	hex 0f302125 0f30250f 0f21250f 0f0f0f0f
+	db 11
+	hex 0f302125 0f30250f 0f2125
 img64_txt
 	db 22
 	hex ed eb da e7 ec f5 00 00 e0 de e7 dd de eb 00 00 df ee eb eb f2 d2
@@ -2057,10 +1933,9 @@ img65_nt_at4
 	hex 01 50 bc03 00
 img65_nt_at5
 	hex 03 44 a000 8850 9055 8805 00
-img65_pt
-	db 0
 img65_pal
-	hex 0f011121 0f303138 0f0f0f0f 0f0f0f0f
+	db 8
+	hex 0f011121 0f303138
 img65_txt
 	db 6
 	hex ee eb da e7 e2 dc
