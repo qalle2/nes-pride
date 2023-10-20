@@ -265,9 +265,10 @@ reset           ; initialize the NES;
 
 ; --- Main loop ---------------------------------------------------------------
 
-main_loop       ; wait until NMI routine sets flag
+main_loop       ; wait until NMI routine sets flag, then clear it
                 bit run_main_loop
                 bpl main_loop
+                lsr run_main_loop
 
                 ; update PRNG (there are only image_count-1 values because we
                 ; never want the random flag to be the current flag)
@@ -300,10 +301,6 @@ main_loop       ; wait until NMI routine sets flag
                 ; update copy of PPU memory/registers in main RAM according to
                 ; ppu_upd_phase
                 jsr prep_ppu_upd
-
-                ; clear flag (do this last to prevent PPU buffer being
-                ; overwritten)
-                lsr run_main_loop
 
                 jmp main_loop
 
