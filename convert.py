@@ -489,42 +489,49 @@ def get_subpal_index(colorSet, subpals):
 
     return bestSubpal
 
-def get_tiles(nesPixels):
-    # generate each tile as NES color indexes (a tuple of 64 ints)
-    # nesPixels: image pixels as NES color indexes
+def group_pixels_by_tiles(nesPixels):
+    # group image pixels by tiles
+    # nesPixels: image pixels left to right, top to bottom
+    # generate:  each tile as a tuple of 8*8 pixels; order of tiles and pixels
+    #            is left to right, top to bottom
 
     pixels = []
-
-    for ty in range(VERT_AT_BLKS * 2):  # tile Y
-        for tx in range(32):  # tile X
+    for ty in range(VERT_AT_BLKS * 2):             # tile Y
+        for tx in range(32):                       # tile X
             pixels.clear()
-            for py in range(8):  # pixel Y
+            for py in range(8):                    # pixel Y
                 si = (ty * 8 + py) * 256 + tx * 8  # source index
                 pixels.extend(nesPixels[si:si+8])
             yield tuple(pixels)
 
+def nt_index_to_at_index(ntInd):
+    # convert tile index in name table to tile index in attribute table;
+    # bits: YYYYyXXXXx -> YYYYXXXX
+    return ((ntInd >> 2) & 0b11110000) | ((ntInd >> 1) & 0b00001111)
+
 def convert_tiles(nesPixels, atData, subpals):
-    # generate each tile as a tuple of 64 2-bit ints
-    # nesPixels: image pixels as NES color indexes
-    # subpals: a tuple of 4 tuples of 4 NES color indexes
+    # convert image into two-bit tiles according to AT and palette data
+    #   nesPixels: image pixels as six-bit NES color indexes
+    #   atData:    attribute table data as 16*VERT_AT_BLKS two-bit ints
+    #   subpals:   a tuple of 4 tuples of 4 six-bit NES color indexes
+    #   generate:  each tile as 64 two-bit ints
 
     # invert subpalettes: [{nesColorIndex: indexInSubpal, ...}, ...]
     subpalsInv = [dict((c, s.index(c)) for c in set(s)) for s in subpals]
 
-    for (ntI, tile) in enumerate(get_tiles(nesPixels)):
-        # get inverted subpalette for tile;
-        # bits: NT index YYYYyXXXXx -> AT index YYYYXXXX
-        subpalInv = subpalsInv[atData[(ntI >> 2) & 0xf0 | (ntI >> 1) & 0xf]]
+    for (ntInd, tile) in enumerate(group_pixels_by_tiles(nesPixels)):
+        # get inverted subpalette for tile
+        subpalInv = subpalsInv[atData[nt_index_to_at_index(ntInd)]]
         # convert NES color indexes into indexes to subpalette
         yield tuple(subpalInv[i] for i in tile)
 
-def get_unique_tiles(filename, palette):
-    # get unique tiles as tuples of 64 2-bit ints
+def get_image_tiles(filename, palette):
+    # generate image tiles (including duplicates) as tuples of 64 two-bit ints
     with open(filename_to_path(filename), "rb") as handle:
         handle.seek(0)
         nesPixels = get_nes_pixels(Image.open(handle))
     atData = [get_subpal_index(s, palette) for s in get_color_sets(nesPixels)]
-    return set(convert_tiles(nesPixels, atData, palette))
+    yield from convert_tiles(nesPixels, atData, palette)
 
 def encode_pt_data(tiles):
     # generate encoded PT data for all images in one PT as 8-bit ints
@@ -806,6 +813,38 @@ def get_palette_from_file(filename):
 
     return palette
 
+def print_color_stats(palettesByFile):
+    # count each color only once per flag
+    colorCounts = Counter(chain.from_iterable(
+        set(chain.from_iterable(p)) for p in palettesByFile.values()
+    ))
+    del colorCounts[NES_BG_COLOR]
+
+    print("All colors used:")
+    for i in range(0x00, 0x40, 0x10):
+        print("\t" + " ".join(
+            format(c, "02x") if c in colorCounts else "  "
+            for c in range(i, i + 0x10)
+        ))
+    print("Colors used in only one flag:")
+    print("\t" + " ".join(
+        format(c, "02x") for c in sorted(colorCounts) if colorCounts[c] == 1
+    ))
+
+def print_tile_stats(filenames, palettesByFile):
+    # print statistics about tiles
+
+    tileCounts = Counter(chain.from_iterable(
+        get_image_tiles(f, palettesByFile[f]) for f in filenames
+    ))
+    print("\t{} globally unique tiles, {} of which used only once.".format(
+        len(tileCounts), sum(1 for t in tileCounts if tileCounts[t] == 1)
+    ))
+    print("\tGlobally unique tiles with 1/2/3/4 colors:", "/".join(
+        str(sum(1 for t in tileCounts if len(set(t)) == i))
+        for i in range(1, 5)
+    ))
+
 def find_best_pt(fileTiles, tilesByPt):
     # automatically find the best pattern table for a file's tiles;
     # return: PT index, or -1 on error
@@ -832,7 +871,7 @@ def assign_tiles_to_pts(filenames, palettesByFile):
     # get unique tiles in each file as tuples of 64 2-bit ints
     tilesByFile = {}
     for file_ in filenames:
-        tilesByFile[file_] = get_unique_tiles(file_, palettesByFile[file_])
+        tilesByFile[file_] = set(get_image_tiles(file_, palettesByFile[file_]))
 
     # initialize each PT with a blank tile (for unused visible area)
     tilesByPt = dict((k, {tuple(64 * [0])}) for k in range(8))
@@ -858,8 +897,7 @@ def assign_tiles_to_pts(filenames, palettesByFile):
         # add tiles to that PT
         sharedTileCnt = len(tilesByPt[bestPt] & tilesByFile[file_])
         tilesByPt[bestPt].update(tilesByFile[file_])
-        print("{:4}{:26} ({:3} tiles): PT{} ({:3} shared, {:3} free)".format(
-            "",
+        print("\t{:26} ({:3} tiles): PT{} ({:3} shared, {:3} free)".format(
             file_,
             len(tilesByFile[file_]),
             bestPt,
@@ -873,7 +911,7 @@ def get_pattern_tables_for_files(filenames, palettesByFile, tilesByPt):
     # which pattern table to use for each file;
     # generate: (filename, PT)
     for file_ in filenames:
-        tiles = get_unique_tiles(file_, palettesByFile[file_])
+        tiles = set(get_image_tiles(file_, palettesByFile[file_]))
         pt = min(
             i for i in range(BANK_COUNT * 2) if tilesByPt[i].issuperset(tiles)
         )
@@ -904,8 +942,11 @@ def main():
         f"sets' don't include the background color {NES_BG_COLOR:02x}."
     )
     palettesByFile = dict((f, get_palette_from_file(f)) for f in filenames)
+    print_color_stats(palettesByFile)
     print()
 
+    print("Getting tile stats...")
+    print_tile_stats(filenames, palettesByFile)
     print("Assigning background tiles to pattern tables...")
     # one set per PT in a tuple
     tilesByPt = assign_tiles_to_pts(filenames, palettesByFile)
@@ -917,8 +958,7 @@ def main():
         format(PT_MAX_TILES[i%2] - len(pt), "3")
         for (i, pt) in enumerate(tilesByPt)
     ))
-    print("{} globally unique tiles, {} including duplicates.".format(
-        len(set(chain.from_iterable(tilesByPt))),
+    print("{} unique tiles including duplicates across PTs.".format(
         sum(len(pt) for pt in tilesByPt)
     ))
 
