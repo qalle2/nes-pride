@@ -223,13 +223,15 @@ assert all(all(1 <= len(s) <= 3 for s in p) for p in MANUAL_SUBPALS.values())
 # bottom of NT), which is why supporting other BG colors is not useful at all
 NES_BG_COLOR = 0x0f  # black
 VERT_AT_BLKS = 12  # image height in AT blocks
-# RLE-compressed NT/AT data slices: count, uncompressed size (last one may be
-# smaller)
+# RLE-compressed NT/AT data slices: count, uncompressed length
 RLE_SLICE_COUNT = 6
-RLE_SLICE_SIZE = 140
+RLE_SLICE_LEN   = 140  # last one may be smaller
+LAST_RLE_SLICE_LEN \
+= VERT_AT_BLKS * 2 * 32 + 8 * 8 - (RLE_SLICE_COUNT - 1) * RLE_SLICE_LEN
 
-# NT data size + AT data size <= storage capacity
-assert VERT_AT_BLKS * 2 * 32 + 8 * 8 <= RLE_SLICE_COUNT * RLE_SLICE_SIZE
+assert 0 <= LAST_RLE_SLICE_LEN <= RLE_SLICE_LEN
+assert RLE_SLICE_LEN      % 4 == 0
+assert LAST_RLE_SLICE_LEN % 4 == 0
 
 # NES master palette
 # key=index, value=(red, green, blue); source: FCEUX (fceux.pal)
@@ -555,7 +557,11 @@ def write_asm_preamble(filenames, ptsByFile, handle):
     )
     print("", file=handle)
 
-    print("image_count equ " + str(len(filenames)), file=handle)
+    print(f"IMAGE_COUNT        equ {len(filenames)}", file=handle)
+    print(f"BG_COLOR           equ ${NES_BG_COLOR:02x}", file=handle)
+    print(f"RLE_SLICE_LEN      equ {RLE_SLICE_LEN}", file=handle)
+    print(f"LAST_RLE_SLICE_LEN equ {LAST_RLE_SLICE_LEN}", file=handle)
+    print(f"NT_TOP_PADDING     equ {(15-VERT_AT_BLKS)*2*32}", file=handle)
     print("", file=handle)
 
     # pattern tables to use
@@ -604,8 +610,8 @@ def encode_at_data(atData):
                 | (atData[si+16+1] << 6)
             )
 
-def rle_encode_raw(data):
-    # generate runs: (length, byte); length = 1-127
+def rle_encode_raw(data, maxLen):
+    # generate runs: (length, byte); length = 1-maxLen
 
     start = -1  # start position of current run
     prev = -1   # previous byte
@@ -614,7 +620,7 @@ def rle_encode_raw(data):
         if start == -1:
             # start first run
             start = i
-        elif prev != byte or i - start == 127:
+        elif prev != byte or i - start == maxLen:
             # restart run
             yield (i - start, prev)
             start = i
@@ -624,26 +630,34 @@ def rle_encode_raw(data):
         yield (len(data) - start, prev)
 
 def rle_encode(data):
-    # generate bytes: direct_byte, run, run, ..., 0
-    # 1st byte of data is the direct (implied) byte; other bytes are runs of
+    # generate bytes: direct_bytes, run, run, ..., 0
+    # first 3 bytes are the direct (implied) bytes; other bytes are runs of
     # 1-2 bytes:
     #     0x00     : terminator (end of data)
-    #     0x80     : (unused)
-    #     0x01-0x7f: output direct_byte    1-127 times
-    #     0x81-0xff: output following byte 1-127 times
+    #     0x01-0x3f: output direct_byte1   1-63 times
+    #     0x41-0x7f: output direct_byte2   1-63 times
+    #     0x81-0xbf: output direct_byte3   1-63 times
+    #     0xc1-0xff: output following byte 1-63 times
 
-    rawRleData = tuple(rle_encode_raw(data))
+    rawRleData = tuple(rle_encode_raw(data, 63))
 
-    # direct byte (the most common byte that begins a run)
-    directByte = Counter(r[1] for r in rawRleData).most_common(1)[0][0]
-    yield directByte
+    # direct bytes (the most common bytes that begin a run)
+    directBytes = Counter(r[1] for r in rawRleData).most_common(3)
+    # pad if there are less than 3 unique bytes
+    directBytes = ([d[0] for d in directBytes] + [0, 0])[:3]
+    directBytes.sort()
+    yield from directBytes
 
     # RLE data itself
     for (length, byte) in rawRleData:
-        if byte == directByte:
-            yield length
-        else:
+        if byte == directBytes[0]:
+            yield 0x00 | length
+        elif byte == directBytes[1]:
+            yield 0x40 | length
+        elif byte == directBytes[2]:
             yield 0x80 | length
+        else:
+            yield 0xc0 | length
             yield byte
 
     # terminator
@@ -660,7 +674,7 @@ def create_rle_slices(nesPixels, subpals, uniqueTiles):
 
     for si in range(RLE_SLICE_COUNT):
         yield bytes(rle_encode(
-            ntAtData[si*RLE_SLICE_SIZE:(si+1)*RLE_SLICE_SIZE]
+            ntAtData[si*RLE_SLICE_LEN:(si+1)*RLE_SLICE_LEN]
         ))
 
 def rle_slice_to_chunks(rleSlice):
@@ -668,9 +682,14 @@ def rle_slice_to_chunks(rleSlice):
     # human-readability
     i = 0
     while True:
-        chunkLen = 2 if i > 0 and rleSlice[i] & 0x80 else 1
+        if i == 0:
+            chunkLen = 3
+        elif rleSlice[i] >= 0xc1:
+            chunkLen = 2
+        else:
+            chunkLen = 1
         yield rleSlice[i:i+chunkLen]
-        if i > 0 and rleSlice[i] == 0x00:
+        if i >= 3 and rleSlice[i] == 0x00:
             break  # terminator
         i += chunkLen
 
