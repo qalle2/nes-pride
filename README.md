@@ -1,5 +1,5 @@
 # Qalle's Pride Flag Show II
-Browse 65 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
+Browse 68 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
 This program can also be downloaded from [Itch.io](https://qalle.itch.io/qalles-pride-flag-show).
 
 ![screenshot](snap1.png)
@@ -106,6 +106,7 @@ You need to have Python and ASM6 installed.
 * [Autistic Pride Flag](https://commons.wikimedia.org/wiki/File:The_Autistic_Pride_Flag.png) (horizontal stripes) &ndash; Wikimedia Commons
 * [Autosexuality](https://sexuality.fandom.com/wiki/Autosexuality)
 * [Bear Brotherhood flag](https://commons.wikimedia.org/wiki/File:Bear_Brotherhood_flag.svg) &ndash; Wikimedia Commons
+* [Butch Lesbian Pride Flag](https://www.sexualdiversity.org/edu/flags/1097.php) &ndash; SexualDiversity
 * [Demigender](https://lgbtqia.fandom.com/wiki/Demigender) &ndash; LGBTQIA+ Wiki
 * [Demigirl Pride Flag](https://commons.wikimedia.org/wiki/File:Demigirl_Pride-Flag.png) &ndash; Wikimedia Commons
 * [Demiguy Pride Flag](https://commons.wikimedia.org/wiki/File:Demiguy_Pride-Flag.png) &ndash; Wikimedia Commons
@@ -119,10 +120,11 @@ You need to have Python and ASM6 installed.
 * [Nonhuman Unity Flag](https://en.wikipedia.org/wiki/File:Nonhuman_Unity_Flag.svg) (otherkin) &ndash; Wikipedia (broken link)
 * [Non-human Unity Flag](https://therian.fandom.com/wiki/Non-human_Unity_Flag) &ndash; Therian Wiki (not the flag I used, but similar to the above)
 * [Omnisexual](https://lgbtqia.fandom.com/wiki/Omnisexual) &ndash; LGBTQIA+ Wiki
+* [Pangender](https://gender.fandom.com/wiki/Pangender) &ndash; Gender Wiki (2nd flag by Cats670)
 * [Pansexual Furry Pride Fandom Paw Flag](https://www.amazon.com/Pansexual-Furry-Pride-Fandom-Flag/dp/B07F1X4G6P) &ndash; Amazon (black pawprint)
 * [Polyamory flag with infinity heart](https://commons.wikimedia.org/wiki/File:Polyamory_flag_with_infinity_heart.svg) &ndash; Wikimedia Commons (heart and infinity symbol)
 * [Polyamory Pride Flag](https://commons.wikimedia.org/wiki/File:Polyamory_Pride_Flag.svg) &ndash; Wikimedia Commons (pi symbol)
-* [Pride flag](https://en.wikipedia.org/wiki/Pride_flag) &ndash; Wikipedia (TODO: be more specific)
+* [Pride flag](https://en.wikipedia.org/wiki/Pride_flag) &ndash; Wikipedia (many flags)
 * [Queer Pride Flag](https://queerintheworld.com/queer-pride-flag/) &ndash; Queer in the World
 * [Rainbow flag (LGBT)](https://en.wikipedia.org/wiki/Rainbow_flag_%28LGBT%29) &ndash; Wikipedia
 * [Sapiosexual](https://sexuality.fandom.com/wiki/Sapiosexual) (green/brown/blue)
