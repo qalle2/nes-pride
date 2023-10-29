@@ -1,5 +1,5 @@
 # Qalle's Pride Flag Show II
-Browse 68 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
+Browse 71 pride flags on the [NES](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
 This program can also be downloaded from [Itch.io](https://qalle.itch.io/qalles-pride-flag-show).
 
 ![screenshot](snap1.png)
@@ -132,6 +132,7 @@ You need to have Python and ASM6 installed.
 * [Sapphic](https://lgbtqia.fandom.com/wiki/Sapphic) &ndash; LGBTQIA+ Wiki
 * [Transgender Furry Pride Fandom Paw Flag](https://www.amazon.com/Transgender-Furry-Pride-Fandom-Flag/dp/B07F1Y36D2) &ndash; Amazon
 * [Tricolor Polyamory Pride Flag](https://commons.wikimedia.org/wiki/File:Tricolor_Polyamory_Pride_Flag.svg) &ndash; Wikimedia Commons
+* [Trigender Pride Flag](https://www.sexualdiversity.org/edu/flags/1120.php) &ndash; SexualDiversity
 * [Uranic](https://www.lgbtqia.wiki/wiki/Uranic)
 * [Visually Safe Disability Pride Flag](https://commons.wikimedia.org/wiki/File:Visually_Safe_Disability_Pride_Flag.svg) &ndash; Wikimedia Commons
 
