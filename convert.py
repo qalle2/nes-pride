@@ -614,54 +614,71 @@ def rle_encode_raw(data, maxLen):
     # generate runs: (length, byte); length = 1-maxLen
 
     start = -1  # start position of current run
-    prev = -1   # previous byte
+    prev  = -1  # previous byte
 
     for (i, byte) in enumerate(data):
         if start == -1:
-            # start first run
-            start = i
+            start = i                    # start first run
         elif prev != byte or i - start == maxLen:
-            # restart run
-            yield (i - start, prev)
-            start = i
+            yield (i - start, prev)      # end run
+            start = i                    # start new run
         prev = byte
     if start > -1:
-        # end last run
-        yield (len(data) - start, prev)
+        yield (len(data) - start, prev)  # end last run
+
+assert tuple(rle_encode_raw(b"AAABABBABAAA", 5)) \
+== ((3, 65), (1, 66), (1, 65), (2, 66), (1, 65), (1, 66), (3, 65))
+
+def rle_encode_medium(data, maxLen, minCompLen):
+    # RLE compress data.
+    #     data:       bytes
+    #     minCompLen: compress runs of at least this length
+    #     maxLen:     maximum length of runs
+    # for each run, generate: (type, length, bytes):
+    #     type:   0 = uncompressed, 1 = compressed
+    #     length: 1-maxLen
+    #     bytes:  length bytes if uncompressed, 1 byte if compressed
+
+    uBuffer = bytearray()  # buffer for uncompressed runs
+
+    for (length, byte) in rle_encode_raw(data, maxLen):
+        if length >= minCompLen:
+            if uBuffer:
+                yield (0, len(uBuffer), bytes(uBuffer))    # flush
+                uBuffer.clear()
+            yield (1, length, bytes((byte,)))            # output as compressed
+        else:
+            uBuffer.extend(length * bytes((byte,)))
+            if len(uBuffer) > maxLen:
+                yield (0, maxLen, bytes(uBuffer[:maxLen]))  # flush start
+                uBuffer = uBuffer[maxLen:]
+
+    if uBuffer:
+        yield (0, len(uBuffer), bytes(uBuffer))            # flush
+
+assert tuple(rle_encode_medium(b"AAABABBABAAA", 5, 3)) \
+== ((1, 3, b"A"), (0, 5, b"BABBA"), (0, 1, b"B"), (1, 3, b"A"))
 
 def rle_encode(data):
-    # generate bytes: direct_bytes, run, run, ..., 0
-    # first 3 bytes are the direct (implied) bytes; other bytes are runs of
-    # 1-2 bytes:
-    #     0x00     : terminator (end of data)
-    #     0x01-0x3f: output direct_byte1   1-63 times
-    #     0x41-0x7f: output direct_byte2   1-63 times
-    #     0x81-0xbf: output direct_byte3   1-63 times
-    #     0xc1-0xff: output following byte 1-63 times
+    # generate bytes: one or more runs; first byte of run:
+    #     0x01-0x7f: uncompressed (output the next 1-127 bytes verbatim)
+    #     0x81-0xff: compressed   (output the next       byte  1-127 times)
+    #     0x00:      terminator
+    #     0x80:      unused
 
-    rawRleData = tuple(rle_encode_raw(data, 63))
-
-    # direct bytes (the most common bytes that begin a run)
-    directBytes = Counter(r[1] for r in rawRleData).most_common(3)
-    # pad if there are less than 3 unique bytes
-    directBytes = ([d[0] for d in directBytes] + [0, 0])[:3]
-    directBytes.sort()
-    yield from directBytes
-
-    # RLE data itself
-    for (length, byte) in rawRleData:
-        if byte == directBytes[0]:
-            yield 0x00 | length
-        elif byte == directBytes[1]:
-            yield 0x40 | length
-        elif byte == directBytes[2]:
-            yield 0x80 | length
+    for (runType, runLength, runBytes) in rle_encode_medium(data, 127, 3):
+        if runType == 0:
+            yield 0x00 | runLength
+            yield from runBytes
         else:
-            yield 0xc0 | length
-            yield byte
+            yield 0x80 | runLength
+            yield runBytes[0]
 
     # terminator
     yield 0x00
+
+assert bytes(rle_encode(b"AAABABBABAAA")) \
+== bytes.fromhex("8341 06424142424142 8341 00")
 
 def create_rle_slices(nesPixels, subpals, uniqueTiles):
     # generate RLE-compressed NT/AT data in slices
@@ -676,22 +693,6 @@ def create_rle_slices(nesPixels, subpals, uniqueTiles):
         yield bytes(rle_encode(
             ntAtData[si*RLE_SLICE_LEN:(si+1)*RLE_SLICE_LEN]
         ))
-
-def rle_slice_to_chunks(rleSlice):
-    # generate RLE slice (bytes) as chunks (1 or 2 bytes each) for
-    # human-readability
-    i = 0
-    while True:
-        if i == 0:
-            chunkLen = 3
-        elif rleSlice[i] >= 0xc1:
-            chunkLen = 2
-        else:
-            chunkLen = 1
-        yield rleSlice[i:i+chunkLen]
-        if i >= 3 and rleSlice[i] == 0x00:
-            break  # terminator
-        i += chunkLen
 
 def filename_to_descr(filename):
     # format a string (filename without extension) into three eight-character
@@ -753,34 +754,23 @@ def write_image_asm(index_, name, ptTiles, subpals, dstHnd):
         nesPixels, subpals, ptTiles
     )):
         rleDataSize += len(rleSlice)
-        rleChunks = tuple(rle_slice_to_chunks(rleSlice))
         print(f"img{index_}_nt_at{si}", file=dstHnd)
-        for i in range(0, len(rleChunks), 13):
-            print(
-                "\thex " + " ".join(c.hex() for c in rleChunks[i:i+13]),
-                file=dstHnd
-            )
+        for i in range(0, len(rleSlice), 32):
+            print("\thex " + rleSlice[i:i+32].hex(), file=dstHnd)
 
     # palette (strip trailing unused colors)
     palette = bytes(chain.from_iterable(subpals))
     palette = palette.rstrip(bytes((NES_BG_COLOR,)))
-    paletteHex = " ".join(
-        palette[i:i+4].hex() for i in range(0, len(palette), 4)
-    )
     print(f"img{index_}_pal", file=dstHnd)
     print(f"\tdb {len(palette)}", file=dstHnd)
-    print(f"\thex {paletteHex}", file=dstHnd)
+    print("\thex " + palette.hex(), file=dstHnd)
 
     # description
     descr = filename_to_descr(name).lstrip(" ")
     descr = bytes(char_to_tile_index(c) for c in descr)
     print(f"img{index_}_txt", file=dstHnd)
     print(f"\tdb {len(descr)}", file=dstHnd)
-    for i in range(0, len(descr), 22):
-        print(
-            f"\thex " + " ".join(f"{b:02x}" for b in descr[i:i+22]),
-            file=dstHnd
-        )
+    print("\thex " + descr.hex(), file=dstHnd)
     print("", file=dstHnd)
 
     return rleDataSize

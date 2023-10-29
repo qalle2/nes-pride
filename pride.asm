@@ -30,8 +30,8 @@ ppu_buf_length  equ $0b    ; length of ppu_buffer
 stack_ptr       equ $0c    ; copy of stack pointer
 rle_src_ind     equ $0d    ; RLE decoder - source index
 rle_dst_ind     equ $0e    ; RLE decoder - destination index
-rle_dir_bytes   equ $0f    ; RLE decoder - 3 direct (implied) bytes
-chr_bank        equ $12    ; CHR bank to switch to
+chr_bank        equ $0f    ; CHR bank to switch to
+temp            equ $10    ; temporary variable
 ppu_buffer      equ $0100  ; see above (140 bytes)
 sprite_data     equ $0200  ; OAM page ($100 bytes)
 
@@ -409,64 +409,53 @@ prep_ppu_upd    ; update ppu_buffer, ppu_ctrl_copy or sprite_data according to
 nt_at_to_buffer ; copy one sixth of NT/AT data of current image (up to 140
                 ; bytes) to ppu_buffer according to ppu_upd_phase (must be 0-5)
 
-                ; get RLE data address
-                ldy ppu_upd_phase
+                ldy ppu_upd_phase       ; get RLE data address
                 jsr get_sect_addr       ; address -> grafix_ptr
 
-                ; decode RLE data from grafix_ptr and write it to ppu_buffer
-                ;
-                ; first 3 bytes in data:
-                ;     rle_dir_bytes, i.e., the direct (implied) bytes
-                ; other bytes:
-                ;     $00    : terminator (end of data)
-                ;     $01-$3f: output rle_dir_bytes+0 1-63 times
-                ;     $41-$7f: output rle_dir_bytes+1 1-63 times
-                ;     $81-$bf: output rle_dir_bytes+2 1-63 times
-                ;     $c1-$ff: output following byte  1-63 times
+                ; decode RLE data from grafix_ptr and write it to ppu_buffer;
+                ; first byte of each run:
+                ;     $00:     terminator   (end of data)
+                ;     $01-$7f: uncompressed (output next 1-127 bytes verbatim)
+                ;     $81-$ff: compressed   (output next byte 1-127 times)
 
-                ldy #0
-                sty rle_dst_ind         ; destination index
--               lda (grafix_ptr),y      ; the 3 direct bytes
-                sta rle_dir_bytes,y
-                iny
-                cpy #3
-                bne -
-                sty rle_src_ind         ; source index
+                lda #0                  ; clear source & destination index
+                sta rle_src_ind
+                sta rle_dst_ind
 
 rle_loop        ldy rle_src_ind
                 lda (grafix_ptr),y
                 beq rle_end             ; terminator?
+                bmi +                   ; compressed run?
                 ;
+                clc                     ; uncompressed run
+                adc rle_dst_ind         ; temp = current dst + length
+                sta temp
+                ;
+                ldx rle_dst_ind         ; copy from (grafix_ptr) to buffer
                 iny
+-               lda (grafix_ptr),y
+                iny
+                sta ppu_buffer,x
+                inx
+                cpx temp
+                bne -
+                sty rle_src_ind
+                stx rle_dst_ind
+                jmp rle_loop
                 ;
-                pha                     ; length (1-63) -> X
-                and #%00111111
++               and #%01111111          ; compressed run; X = length, A = byte
                 tax
-                pla
-                ;
-                asl a                   ; mode (0-3) -> A
-                rol a
-                rol a
-                and #%00000011
-                cmp #3                  ; special case for mode 3
-                beq +
-                ;
-                sty rle_src_ind         ; copy one of direct bytes to A
-                tay
-                lda rle_dir_bytes,y
-                jmp ++
-                ;
-+               lda (grafix_ptr),y      ; copy following byte to A
+                iny
+                lda (grafix_ptr),y
                 iny
                 sty rle_src_ind
                 ;
-++              ldy rle_dst_ind         ; write A to buffer X times
+                ldy rle_dst_ind         ; copy A to buffer X times
 -               sta ppu_buffer,y
                 iny
                 dex
                 bne -
                 sty rle_dst_ind
-                ;
                 jmp rle_loop
 
 rle_end         ; PPU destination address
